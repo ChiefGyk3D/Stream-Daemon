@@ -3,3 +3,4 @@ Mastodon.py==1.5.1
 boto3==1.17.21
 hvac==0.10.14
 tweepy==4.14.0
+zipp>=3.19.1 # not directly required, pinned by Snyk to avoid a vulnerability
