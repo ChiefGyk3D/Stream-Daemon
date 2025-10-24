@@ -1,179 +1,454 @@
-# Twitch-and-toot
+<div align="center">
 
-Twitch-and-toot is an open source project that allows you to post to Mastodon when a streamer is live on Twitch. It's now built on Python and can run on a RaspberryPi, Single Board Computer, Linux VPS, AWS Lambda, or a private server.
+![Stream Daemon Banner](media/stream_daemon_banner.png)
 
-## Requirements and Prerequisites
+# Stream Daemon
 
-- Python 3 installed on the device that you plan to run the script on.
-- A Twitch API key (client ID and secret) which can be obtained from the Twitch Developer Dashboard.
-- A Mastodon API key (access token) which can be obtained from your Mastodon instance.
+**Automate your streams across Twitch, YouTube, Kick, Mastodon, Bluesky, and Discord**
 
-## Installation
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-1. Clone the Github repository to your device: `git clone https://github.com/ChiefGyk3D/twitch-and-toot.git`
-2. Install the required packages: `pip install -r requirements.txt`
-3. Create a `config.ini` file based on the `config_template.ini` file in the repository. Fill in the required information such as Twitch API key, Mastodon API key, and the channel name you want to track, messages, and any other changes needed.
-4. Run the script: `python twitch-and-toot.py`
+Monitor multiple streaming platforms and automatically post to your social media when you go live!
 
-## Configuration
+[Features](#-features) • [Quick Start](#-quick-start) • [Configuration](#-configuration) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
-The config.ini file is used to store the required information such as the Twitch API key, Mastodon API key, and the channel name you want to track. You can also customize the messages that will be posted to Mastodon when the streamer is live and when the stream has ended. These messages are stored in separate text files and are referenced in the config.ini.
+</div>
 
-Here's an example structure for the config.ini file:
+---
+
+## 🎯 What is Stream Daemon?
+
+Stream Daemon is a powerful, open-source automation tool that monitors your live streams across **Twitch, YouTube, and Kick**, and automatically posts announcements to your social media platforms including **Mastodon, Bluesky, and Discord** when you go live or end your stream.
+
+**Perfect for streamers who want to:**
+- 📢 Automatically notify followers when going live
+- 🌐 Post to multiple social platforms simultaneously
+- ✨ Customize messages per platform
+- 🔒 Keep credentials secure with secrets managers
+- 🐳 Deploy easily with Docker
+- ⚡ Run efficiently on any platform (Raspberry Pi, VPS, Cloud)
+
+---
+
+## ✨ Features
+
+### 🎥 Multi-Platform Streaming Support
+- **Twitch** - Full API integration with async support
+- **YouTube Live** - Auto-resolves channel from @handle
+- **Kick** - OAuth authentication with automatic fallback
+
+### 📱 Social Media Integration
+- **Mastodon** - Post to any Mastodon instance
+- **Bluesky** - Native Bluesky protocol support
+- **Discord** - Webhook support with role mentions
+
+### 🔐 Enterprise-Grade Security
+- **AWS Secrets Manager** - Store credentials in AWS
+- **HashiCorp Vault** - Vault integration for secrets
+- **Doppler** - Modern secrets management platform
+- Environment variable fallback for all platforms
+
+### 🎨 Customization
+- **Platform-specific messages** - Different messages per platform
+- **Message templates** - Use variables like stream title, viewers, URLs
+- **Flexible scheduling** - Configurable check intervals
+- **Clickable URLs** - Auto-generated stream links
+
+### 🐳 Deployment Options
+- **Docker** - Production-ready container
+- **Docker Compose** - Multi-container orchestration
+- **Systemd** - Native Linux service
+- **Bare Metal** - Direct Python execution
+- **Cloud** - AWS Lambda, Google Cloud Run, etc.
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Python 3.10 or higher
+- API credentials for your streaming platforms
+- Social media platform credentials (Mastodon/Bluesky/Discord)
+- (Optional) Doppler, AWS, or Vault account for secrets management
+
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
+   cd twitch-and-toot
+   ```
+
+2. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your credentials
+   nano .env
+   ```
+
+4. **Configure message templates** (optional)
+   ```bash
+   # Edit messages.txt and end_messages.txt
+   # Use [DEFAULT], [TWITCH], [YOUTUBE], [KICK] sections
+   nano messages.txt
+   ```
+
+5. **Run the daemon**
+   ```bash
+   python3 stream-daemon.py
+   ```
+
+### Docker Quick Start
+
+```bash
+# Build and run with Docker Compose
+cd Docker
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+```
+
+---
+
+## ⚙️ Configuration
+
+Stream Daemon uses **pure environment variables** for configuration - no config files needed! This makes it perfect for Docker, Kubernetes, and cloud deployments.
+
+### Basic Configuration
+
+```bash
+# Streaming Platforms
+TWITCH_ENABLE=True
+TWITCH_USERNAME=your_username
+# Credentials via Doppler/Vault/AWS or direct:
+TWITCH_CLIENT_ID=your_client_id
+TWITCH_CLIENT_SECRET=your_client_secret
+
+YOUTUBE_ENABLE=True
+YOUTUBE_USERNAME=@YourHandle
+# Channel ID is optional - auto-resolves from username!
+
+KICK_ENABLE=True
+KICK_USERNAME=your_username
+# Optional authentication for better rate limits
+```
+
+### Social Media Platforms
+
+```bash
+# Mastodon
+MASTODON_ENABLE=True
+MASTODON_INSTANCE_URL=https://mastodon.social
+MASTODON_ACCESS_TOKEN=your_token
+
+# Bluesky
+BLUESKY_ENABLE=True
+BLUESKY_HANDLE=your.handle.bsky.social
+BLUESKY_APP_PASSWORD=your_app_password
+
+# Discord
+DISCORD_ENABLE=True
+DISCORD_WEBHOOK_URL=your_webhook_url
+DISCORD_ROLE_TWITCH=@everyone  # Role to mention for Twitch
+```
+
+### Secrets Management (Recommended)
+
+```bash
+# Use Doppler (recommended)
+SECRETS_SECRET_MANAGER=doppler
+DOPPLER_TOKEN=your_doppler_token
+SECRETS_DOPPLER_TWITCH_SECRET_NAME=twitch
+SECRETS_DOPPLER_YOUTUBE_SECRET_NAME=youtube
+
+# Or AWS Secrets Manager
+SECRETS_SECRET_MANAGER=aws
+SECRETS_AWS_TWITCH_SECRET_NAME=prod/stream-daemon/twitch
+
+# Or HashiCorp Vault
+SECRETS_SECRET_MANAGER=vault
+SECRETS_VAULT_URL=https://vault.example.com
+SECRETS_VAULT_TOKEN=your_vault_token
+```
+
+### Message Customization
+
+Edit `messages.txt` and `end_messages.txt` with INI-style sections:
 
 ```ini
-[Twitch]
-client_id = YOUR_TWITCH_CLIENT_ID
-client_secret = YOUR_TWITCH_CLIENT_SECRET
-user_login = YOUR_TWITCH_USERNAME
+[DEFAULT]
+🔴 I'm live! Come watch: {url}
 
-[Mastodon]
-app_name = YOUR_APP_NAME
-api_base_url = YOUR_INSTANCE_URL
-client_id = YOUR_CLIENT_ID
-client_secret = YOUR_CLIENT_SECRET
-access_token = YOUR_ACCESS_TOKEN
-messages_file = MESSAGES_FILE_PATH
-end_messages_file = END_MESSAGES_FILE_PATH
-post_end_stream_message = BOOLEAN_VALUE
+[TWITCH]
+🎮 Live on Twitch! Playing {title}
+Watch: {url}
 
-[Secrets]
-secret_manager = YOUR_SECRET_MANAGER_TYPE 
-aws_twitch_secret_name = YOUR_TWITCH_SECRET_NAME_IN_AWS_SECRETS_MANAGER
-aws_mastodon_secret_name = YOUR_MASTODON_SECRET_NAME_IN_AWS_SECRETS_MANAGER
-vault_url = YOUR_VAULT_URL
-vault_token = YOUR_VAULT_TOKEN
-vault_twitch_secret_path = YOUR_TWITCH_SECRET_PATH_IN_VAULT
-vault_mastodon_secret_path = YOUR_MASTODON_SECRET_PATH_IN_VAULT
+[YOUTUBE]
+📺 Streaming now on YouTube!
+{url}
 
-[Settings]
-post_interval = YOUR_PREFERRED_POST_INTERVAL_IN_HOURS
-check_interval = YOUR_PREFERRED_CHECK_INTERVAL_IN_MINUTES
-```
-Please note, the config.ini should be modified to match your needs.
-
-## Twitter Integration
-
-While Twitch-and-toot is fundamentally a Mastodon-first project, we understand that some users may also want to post updates on Twitter. As of the current version, we have incorporated optional Twitter functionality. This feature allows users to post live stream updates not only on Mastodon but also on Twitter.
-
-**Please note, as of the current version, Twitter functionality has not been added to the Docker version yet.**
-
-# Requirements for Twitter Integration
-
-To use the Twitter feature, you would need:
-
-    Twitter API keys (API key & secret, Access token & secret). You can obtain these from the Twitter Developer Dashboard.
-
-# Adding Twitter Integration
-
-The process to add Twitter integration is similar to that of Mastodon. In the config.ini file, a new section needs to be added for Twitter configuration.
-
-```ini
-[Twitter]
-api_key = YOUR_TWITTER_API_KEY
-api_key_secret = YOUR_TWITTER_API_KEY_SECRET
-access_token = YOUR_TWITTER_ACCESS_TOKEN
-access_token_secret = YOUR_TWITTER_ACCESS_TOKEN_SECRET
+[KICK]
+⚡ Live on Kick! {url}
 ```
 
-Again, please be careful not to commit your config.ini with sensitive information to a public repository.
+**Toggle behavior:**
+```bash
+# Use platform-specific messages if available, fall back to DEFAULT
+MESSAGES_USE_PLATFORM_SPECIFIC_MESSAGES=True
 
-Now, when you run python twitch-and-toot.py, it should post updates to both Mastodon and Twitter, if correctly configured.
-### Caution
+# Only use DEFAULT section for all platforms
+MESSAGES_USE_PLATFORM_SPECIFIC_MESSAGES=False
+```
 
-As stated before, placing secrets directly into the config.ini file is not a recommended practice for production environments. We are currently working on supporting secure storage and retrieval of Twitter API keys with AWS Secrets Manager and HashiCorp Vault. Please stay tuned for updates.
+---
 
-Moreover, please remember that this is an optional feature and Mastodon remains the primary focus of Twitch-and-toot. The addition of Twitter is intended to offer greater flexibility to our users and is not a shift from our Mastodon-first philosophy. If you experience any issues with the Twitter integration, please feel free to report them.
+## 📚 Documentation
 
-## AWS Secrets Manager Integration
+### Core Documentation
+- [Platform Guide](PLATFORM_GUIDE.md) - Detailed platform setup guides
+- [Doppler Guide](DOPPLER_GUIDE.md) - Secrets management with Doppler
+- [Messages Format](MESSAGES_FORMAT.md) - Message customization guide
+- [Migration Guide](MIGRATION.md) - Upgrading from v1 to v2
 
-The script supports optional integration with AWS Secrets Manager for secure storage and retrieval of Twitch and Mastodon API keys. To use this feature, store the credentials as secrets in AWS Secrets Manager and provide the secret names in the config.ini file.
+### Test Suite Documentation
+- [Test Suite Overview](tests/README.md) - Running the test suite
+- [Doppler Secrets Guide](tests/DOPPLER_SECRETS.md) - Secret naming conventions
+- [Quick Reference](tests/QUICK_REFERENCE.md) - Commands cheat sheet
+- [Kick Auth Guide](tests/KICK_AUTH_GUIDE.md) - Kick API authentication
 
-**Please note that this feature is still in testing and any issues should be reported.**
+### Docker Documentation
+- [Docker Setup](Docker/README.md) - Running in Docker
+- [Docker Compose](Docker/docker-compose.yml) - Multi-container setup
 
-## HashiCorp Vault Integration
+---
 
-The script also supports optional integration with HashiCorp Vault for secure storage and retrieval of Twitch and Mastodon API keys. To use this feature, store the credentials in Vault and provide the necessary Vault information in the config.ini file.
+## 🧪 Testing
 
-**Please note that this feature is still in testing and any issues should be reported.**
+Stream Daemon includes a comprehensive test suite to validate your configuration:
 
-# Docker 
+```bash
+# Test all platforms
+python3 tests/test_doppler_all.py
 
-Twitch-and-toot is also available to be run in a Docker container. This can make the setup process easier and more consistent across different environments. It also allows for better scalability if you are running the bot for multiple Twitch channels.
+# Test individual platforms
+python3 tests/test_doppler_twitch.py
+python3 tests/test_doppler_youtube.py
+python3 tests/test_doppler_kick.py
 
-## Requirements and Prerequisites for Docker
+# Or use the test runner
+./run_tests.sh all
+./run_tests.sh twitch
+```
 
-- Docker installed on your device.
-- Docker Compose installed on your device (optional, only needed for docker-compose).
+**Tests validate:**
+- ✅ Secret fetching from Doppler/AWS/Vault
+- ✅ API authentication for each platform
+- ✅ Stream detection functionality
+- ✅ Credential security (all secrets are masked)
 
-## Docker Installation
+---
 
-1. Navigate to the Docker directory in the project: `cd twitch-and-toot/Docker`
-2. Build the Docker image: `docker build -t twitch-and-toot .`
+## 🏗️ Architecture
 
-If you are using Docker Compose, you can instead run:
+```
+stream-daemon.py          # Main daemon application
+├── Streaming Platforms   # Monitor live streams
+│   ├── TwitchPlatform   # Twitch API (async)
+│   ├── YouTubePlatform  # YouTube Data API v3
+│   └── KickPlatform     # Kick OAuth + fallback
+├── Social Platforms     # Post announcements
+│   ├── MastodonPlatform # Mastodon API
+│   ├── BlueskyPlatform  # AT Protocol
+│   └── DiscordPlatform  # Webhook API
+└── Secrets Management   # Secure credentials
+    ├── Doppler SDK
+    ├── AWS Secrets Manager
+    └── HashiCorp Vault
+```
 
-`docker-compose up --build`
+**Flow:**
+1. Daemon checks configured streaming platforms every `CHECK_INTERVAL` (default: 5min)
+2. Detects when stream goes live or ends
+3. Posts to all enabled social platforms once (not repeatedly!)
+4. While live: continues checking every `POST_INTERVAL` minutes to detect when stream ends
+5. When offline: checks every `CHECK_INTERVAL` minutes to detect when you go live
 
-This will build and start the Docker container in one command.
+**Note:** Stream Daemon only posts when state **changes** (offline→live or live→offline). It won't spam your followers with posts every check cycle.
 
-## Docker Configuration
+---
 
-Configuration in Docker is done using environment variables instead of a `config.ini` file. These can be passed into the Docker container using the `-e` option with `docker run`:
+## 🔧 Advanced Configuration
 
-`docker run -e TWITCH_CLIENT_ID=your_client_id -e TWITCH_CLIENT_SECRET=your_client_secret ... twitch-and-toot`
+### Intervals
 
-If you are using Docker Compose, you can put these variables into the `docker-compose.yml` file:
+```bash
+# How often to check when OFFLINE (minutes)
+SETTINGS_CHECK_INTERVAL=5
+
+# How often to check when LIVE (minutes)
+# Should be same or lower than CHECK_INTERVAL for fast stream-end detection
+SETTINGS_POST_INTERVAL=5
+```
+
+### Message Files
+
+```bash
+MESSAGES_MESSAGES_FILE=messages.txt          # Live stream messages
+MESSAGES_END_MESSAGES_FILE=end_messages.txt  # Stream ended messages
+```
+
+### Discord Role Mentions
+
+```bash
+DISCORD_ROLE_TWITCH=@Twitch Viewers
+DISCORD_ROLE_YOUTUBE=@YouTube Subscribers
+DISCORD_ROLE_KICK=@everyone
+```
+
+---
+
+## 🐳 Docker Deployment
+
+### Using Docker Compose (Recommended)
 
 ```yaml
-version: '3'
-
+version: '3.8'
 services:
-  twitch-and-toot:
+  stream-daemon:
     build: .
     environment:
-      TWITCH_CLIENT_ID: your_client_id
-      TWITCH_CLIENT_SECRET: your_client_secret
-      TWITCH_USER_LOGIN: your_user_login
-      MASTODON_CLIENT_ID: your_client_id
-      MASTODON_CLIENT_SECRET: your_client_secret
-      MASTODON_ACCESS_TOKEN: your_access_token
-      MASTODON_API_BASE_URL: your_api_base_url
-      MESSAGES_FILE: messages.txt
-      END_MESSAGES_FILE: end_messages.txt
-      POST_END_STREAM_MESSAGE: 'True'
-      SECRET_MANAGER: your_secret_manager
-      AWS_TWITCH_SECRET_NAME: your_aws_twitch_secret_name
-      AWS_MASTODON_SECRET_NAME: your_aws_mastodon_secret_name
-      VAULT_URL: your_vault_url
-      VAULT_TOKEN: your_vault_token
-      VAULT_TWITCH_SECRET_PATH: your_vault_twitch_secret_path
-      VAULT_MASTODON_SECRET_PATH: your_vault_mastodon_secret_path
-      POST_INTERVAL_IN_HOURS: your_post_interval_in_hours
-      CHECK_INTERVAL_IN_MINUTES: your_check_interval_in_minutes
+      - DOPPLER_TOKEN=${DOPPLER_TOKEN}
+      - TWITCH_ENABLE=True
+      - TWITCH_USERNAME=your_username
+      # ... other config
+    volumes:
+      - ./messages.txt:/app/messages.txt
+      - ./end_messages.txt:/app/end_messages.txt
+    restart: unless-stopped
 ```
-These environment variables correspond to the options in the config.ini file.
 
-Please note: If you are using a secrets manager with Docker, you will need to set up a network that allows the Docker container to access the secrets manager.
+```bash
+cd Docker
+docker-compose up -d
+```
 
-Remember to replace the necessary values with your actual data.
-## Future plans
+### Manual Docker Build
 
-- Add support for more streaming platforms.
+```bash
+docker build -t stream-daemon .
+docker run -d \
+  --name stream-daemon \
+  --env-file .env \
+  -v $(pwd)/messages.txt:/app/messages.txt \
+  stream-daemon
+```
 
-## Donations and Tips
+---
 
-If you would like to support the development of Twitch-and-toot, you can donate through the following links: [Donate](https://links.chiefgyk3d.com)
+## 🤝 Contributing
 
-You can also tip the author with the following cryptocurrency addresses:
+Contributions are welcome! Here's how you can help:
 
-- Bitcoin: bc1q5grpa7ramcct4kjmwexfrh74dvjuw9wczn4w2f
-- Monero: 85YxVz8Xd7sW1xSiyzUC5PNqSjYLYk4W8FMERVkvznR38jGTBEViWQSLCnzRYZjmxgUkUKGhxTt2JSFNpJuAqghQLhHgPS5
-- PIVX: DS1CuBQkiidwwPhkfVfQAGUw4RTWPnBXVM
-- Ethereum: 0x2a460d48ab404f191b14e9e0df05ee829cbf3733
+1. **Report Bugs** - Open an issue with details and reproduction steps
+2. **Suggest Features** - Share your ideas for improvements
+3. **Submit PRs** - Fix bugs or add features
+4. **Improve Docs** - Help make documentation clearer
+5. **Test** - Try it on different platforms and report issues
 
-## Authors
+### Development Setup
 
-- ChiefGyk3D is the author of Twitch-and-toot
-- [ChiefGyk3D's Mastodon Account](https://social.chiefgyk3d.com/@chiefgyk3d)
-- ChatGPT, an AI developed by OpenAI, helped build about 80% of the Python version of Twitch-and-toot.
+```bash
+# Clone and setup
+git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
+cd twitch-and-toot
+
+# Install dev dependencies
+pip install -r requirements.txt
+
+# Configure Doppler for testing
+cp .env.example .env
+# Add your test credentials
+
+# Run tests
+./run_tests.sh all
+```
+
+---
+
+## 📋 Roadmap
+
+### Coming Soon
+- [ ] **Discord Support** - Post to Discord Channels
+- [ ] **Matrix Support** - Post to Matrix rooms
+- [ ] **LLM Integration** - AI-generated stream announcements
+- [ ] **Systemd Service Files** - Easy Linux service setup
+
+### Under Consideration
+- **Web Dashboard** - Configure and monitor via web UI
+- **Webhooks** - Trigger custom actions on stream events
+- **Analytics** - Track stream performance across platforms
+
+Want to see a feature? [Open an issue](https://github.com/ChiefGyk3D/twitch-and-toot/issues)!
+
+---
+
+
+## 📄 License
+
+Stream Daemon is available under a dual-license model:
+
+- **Open Source License:** Mozilla Public License 2.0 (MPL 2.0)
+- **Commercial License:** Available for organizations that cannot comply with MPL 2.0 terms.
+
+For commercial licensing inquiries, please contact:
+
+See [LICENSE.md](LICENSE.md) for details.
+
+---
+
+## 🙏 Acknowledgments
+
+- Built with [twitchAPI](https://github.com/Teekeks/pyTwitchAPI)
+- Powered by [Doppler](https://www.doppler.com/) for secrets management
+- Inspired by the open-source streaming community
+
+---
+
+## 💬 Support
+
+- **Issues**: [GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- **Documentation**: See the [docs folder](#-documentation)
+
+---
+
+## 💝 Donations and Tips
+
+If you find Stream Daemon useful, consider supporting development:
+
+**Donate**: [links.chiefgyk3d.com](https://links.chiefgyk3d.com)
+
+**Cryptocurrency**:
+- Bitcoin: `bc1q5grpa7ramcct4kjmwexfrh74dvjuw9wczn4w2f`
+- Monero: `85YxVz8Xd7sW1xSiyzUC5PNqSjYLYk4W8FMERVkvznR38jGTBEViWQSLCnzRYZjmxgUkUKGhxTt2JSFNpJuAqghQLhHgPS5`
+- PIVX: `DS1CuBQkiidwwPhkfVfQAGUw4RTWPnBXVM`
+- Ethereum: `0x2a460d48ab404f191b14e9e0df05ee829cbf3733`
+
+---
+
+<div align="center">
+
+Made with ❤️ by [ChiefGyk3D](https://github.com/ChiefGyk3D)
+
+**If Stream Daemon helps you, consider ⭐ starring the repo!**
+
+</div>

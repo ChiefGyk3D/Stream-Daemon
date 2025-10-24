@@ -1,17 +1,38 @@
 # Use an official Python runtime as a parent image
-FROM python:3.8-alpine
+# Python 3.13 is the latest STABLE version with full package support
+# Python 3.14 is too new - many packages don't support it yet
+FROM python:3.13-alpine
 
 # Set the working directory in the container to /app
 WORKDIR /app
 
-# Add the current directory contents into the container at /app
-ADD . /app
+# Install system dependencies needed for Python packages
+# Alpine uses apk, not apt-get
+RUN apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    openssl-dev \
+    python3-dev \
+    cargo \
+    build-base
+
+# Create and activate virtual environment
+ENV VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Copy requirements first for better caching
+COPY requirements.txt /app/
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Now installs into the virtual environment
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
-# Make port 80 available to the world outside this container
-EXPOSE 80
+# Add the current directory contents into the container at /app
+COPY . /app
 
-# Run twitch-and-toot.py when the container launches
-CMD ["python", "twitch-and-toot-docker.py"]
+# Run stream-daemon.py when the container launches
+# Virtual environment is already in PATH, so python will use venv
+CMD ["python", "stream-daemon-docker.py"]

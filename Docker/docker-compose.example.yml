@@ -1,0 +1,98 @@
+version: '3.8'
+
+services:
+  twitch-and-toot:
+    build: .
+    container_name: twitch-and-toot
+    restart: unless-stopped
+    
+    # Uncomment to use a pre-built image instead of building
+    # image: ghcr.io/chiefgyk3d/twitch-and-toot:latest
+    
+    environment:
+      # ===========================================
+      # TWITCH CONFIGURATION (Required)
+      # Get from: https://dev.twitch.tv/console
+      # ===========================================
+      TWITCH_CLIENT_ID: "your_twitch_client_id_here"
+      TWITCH_CLIENT_SECRET: "your_twitch_client_secret_here"
+      TWITCH_USER_LOGIN: "your_twitch_username"
+      
+      # ===========================================
+      # MASTODON CONFIGURATION (Required)
+      # Get from: Your Mastodon instance settings
+      # ===========================================
+      MASTODON_CLIENT_ID: "your_mastodon_client_id"
+      MASTODON_CLIENT_SECRET: "your_mastodon_client_secret"
+      MASTODON_ACCESS_TOKEN: "your_mastodon_access_token"
+      MASTODON_API_BASE_URL: "https://mastodon.social"  # Change to your instance
+      MASTODON_MESSAGES_FILE: "messages.txt"
+      MASTODON_END_MESSAGES_FILE: "end_messages.txt"
+      MASTODON_POST_END_STREAM_MESSAGE: "True"
+      
+      # ===========================================
+      # BLUESKY CONFIGURATION (Optional)
+      # Get app password from: https://bsky.app/settings/app-passwords
+      # ===========================================
+      BLUESKY_ENABLE_POSTING: "False"  # Set to "True" to enable
+      BLUESKY_HANDLE: "yourname.bsky.social"
+      BLUESKY_APP_PASSWORD: "your-app-password"
+      
+      # ===========================================
+      # TIMING SETTINGS
+      # ===========================================
+      SETTINGS_POST_INTERVAL: "1"    # Hours to wait when stream is live
+      SETTINGS_CHECK_INTERVAL: "5"   # Minutes to wait when stream is offline
+      
+      # ===========================================
+      # SECRET MANAGERS (Optional - Advanced)
+      # Leave as "none" if not using
+      # ===========================================
+      SECRET_MANAGER: "none"  # Options: "none", "aws", "vault"
+      
+      # AWS Secrets Manager (only if SECRET_MANAGER=aws)
+      # SECRETS_AWS_TWITCH_SECRET_NAME: "twitch-api-keys"
+      # SECRETS_AWS_MASTODON_SECRET_NAME: "mastodon-api-keys"
+      # SECRETS_AWS_BLUESKY_SECRET_NAME: "bluesky-api-keys"
+      
+      # HashiCorp Vault (only if SECRET_MANAGER=vault)
+      # SECRETS_VAULT_URL: "https://vault.example.com"
+      # SECRETS_VAULT_TOKEN: "your-vault-token"
+      # SECRETS_VAULT_TWITCH_SECRET_PATH: "secret/twitch"
+      # SECRETS_VAULT_MASTODON_SECRET_PATH: "secret/mastodon"
+      # SECRETS_VAULT_BLUESKY_SECRET_PATH: "secret/bluesky"
+    
+    # Optional: Mount custom message files
+    # volumes:
+    #   - ./custom_messages.txt:/app/messages.txt:ro
+    #   - ./custom_end_messages.txt:/app/end_messages.txt:ro
+    
+    # Optional: Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Optional: Resource limits
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 512M
+    #     reservations:
+    #       cpus: '0.25'
+    #       memory: 256M
+    
+    # Optional: Health check
+    # healthcheck:
+    #   test: ["CMD", "python", "-c", "print('healthy')"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 10s
+
+# Optional: Use networks for multi-container setups
+# networks:
+#   default:
+#     name: twitch-and-toot-network

@@ -1,25 +1,101 @@
 version: '3'
 
 services:
-  twitch-and-toot:
+  stream-daemon:
     build: .
+    restart: unless-stopped
     environment:
+      # ============================================
+      # STREAMING PLATFORMS (At least ONE required)
+      # ============================================
+      
+      # Twitch Configuration
+      TWITCH_ENABLE: 'True'
+      TWITCH_USERNAME: your_twitch_username
       TWITCH_CLIENT_ID: your_client_id
       TWITCH_CLIENT_SECRET: your_client_secret
-      TWITCH_USER_LOGIN: your_user_login
+      
+      # YouTube Live Configuration
+      YOUTUBE_ENABLE: 'False'
+      YOUTUBE_CHANNEL_ID: your_youtube_channel_id
+      YOUTUBE_API_KEY: your_youtube_api_key
+      
+      # Kick Configuration
+      KICK_ENABLE: 'False'
+      KICK_USERNAME: your_kick_username
+      
+      # ============================================
+      # SOCIAL PLATFORMS (At least ONE required)
+      # ============================================
+      
+      # Mastodon Configuration
+      MASTODON_ENABLE_POSTING: 'True'
+      MASTODON_APP_NAME: StreamDaemon
+      MASTODON_API_BASE_URL: https://mastodon.social
       MASTODON_CLIENT_ID: your_client_id
       MASTODON_CLIENT_SECRET: your_client_secret
       MASTODON_ACCESS_TOKEN: your_access_token
-      MASTODON_API_BASE_URL: your_api_base_url
-      MESSAGES_FILE: messages.txt
-      END_MESSAGES_FILE: end_messages.txt
-      POST_END_STREAM_MESSAGE: 'True'
-      SECRET_MANAGER: your_secret_manager
-      AWS_TWITCH_SECRET_NAME: your_aws_twitch_secret_name
-      AWS_MASTODON_SECRET_NAME: your_aws_mastodon_secret_name
-      VAULT_URL: your_vault_url
-      VAULT_TOKEN: your_vault_token
-      VAULT_TWITCH_SECRET_PATH: your_vault_twitch_secret_path
-      VAULT_MASTODON_SECRET_PATH: your_vault_mastodon_secret_path
-      POST_INTERVAL_IN_HOURS: your_post_interval_in_hours
-      CHECK_INTERVAL_IN_MINUTES: your_check_interval_in_minutes
+      
+      # Bluesky Configuration
+      BLUESKY_ENABLE_POSTING: 'False'
+      BLUESKY_HANDLE: your_handle.bsky.social
+      BLUESKY_APP_PASSWORD: your_app_password
+      
+      # Discord Configuration
+      DISCORD_ENABLE_POSTING: 'False'
+      DISCORD_WEBHOOK_URL: https://discord.com/api/webhooks/YOUR_WEBHOOK
+      # Discord Role Mentions (Optional - for platform-specific notifications)
+      DISCORD_ROLE_TWITCH: '1234567890123456789'
+      DISCORD_ROLE_YOUTUBE: '1234567890123456789'
+      DISCORD_ROLE_KICK: '1234567890123456789'
+      
+      # Matrix Configuration (Coming Soon)
+      MATRIX_ENABLE_POSTING: 'False'
+      MATRIX_HOMESERVER: https://matrix.org
+      MATRIX_USERNAME: '@your:matrix.org'
+      MATRIX_PASSWORD: your_password
+      MATRIX_ROOM_ID: '!roomid:matrix.org'
+      
+      # ============================================
+      # MESSAGES
+      # ============================================
+      MESSAGES_MESSAGES_FILE: messages.txt
+      MESSAGES_END_MESSAGES_FILE: end_messages.txt
+      MESSAGES_POST_END_STREAM_MESSAGE: 'True'
+      
+      # ============================================
+      # SECRET MANAGER (Optional)
+      # ============================================
+      SECRET_MANAGER: none  # Options: 'none', 'aws', 'vault', 'doppler'
+      
+      # AWS Secrets Manager (only if SECRET_MANAGER=aws)
+      SECRETS_AWS_TWITCH_SECRET_NAME: twitch-api-keys
+      SECRETS_AWS_YOUTUBE_SECRET_NAME: youtube-api-keys
+      SECRETS_AWS_MASTODON_SECRET_NAME: mastodon-api-keys
+      SECRETS_AWS_BLUESKY_SECRET_NAME: bluesky-api-keys
+      SECRETS_AWS_DISCORD_SECRET_NAME: discord-webhook
+      
+      # HashiCorp Vault (only if SECRET_MANAGER=vault)
+      SECRETS_VAULT_URL: https://vault.example.com
+      SECRETS_VAULT_TOKEN: your_vault_token
+      SECRETS_VAULT_TWITCH_SECRET_PATH: secret/twitch
+      SECRETS_VAULT_YOUTUBE_SECRET_PATH: secret/youtube
+      SECRETS_VAULT_MASTODON_SECRET_PATH: secret/mastodon
+      SECRETS_VAULT_BLUESKY_SECRET_PATH: secret/bluesky
+      SECRETS_VAULT_DISCORD_SECRET_PATH: secret/discord
+      
+      # Doppler (only if SECRET_MANAGER=doppler)
+      # Get your token from: https://dashboard.doppler.com/
+      # DOPPLER_TOKEN: dp.st.xxxxxxxxxxxx
+      # SECRETS_DOPPLER_TWITCH_SECRET_NAME: twitch
+      # SECRETS_DOPPLER_YOUTUBE_SECRET_NAME: youtube
+      # SECRETS_DOPPLER_MASTODON_SECRET_NAME: mastodon
+      # SECRETS_DOPPLER_BLUESKY_SECRET_NAME: bluesky
+      # SECRETS_DOPPLER_DISCORD_SECRET_NAME: discord
+      
+      # ============================================
+      # SETTINGS
+      # ============================================
+      SETTINGS_POST_INTERVAL: 1  # Hours to wait before checking again when live
+      SETTINGS_CHECK_INTERVAL: 5  # Minutes to wait before checking again when offline
+

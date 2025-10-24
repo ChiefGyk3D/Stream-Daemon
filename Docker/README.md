@@ -1,23 +1,115 @@
-# Twitch-and-toot
+# Stream Daemon - Docker Deployment
 
-Twitch-and-toot is an open source project that allows you to post to Mastodon when a streamer is live on Twitch. It's now built on Python and can run on a RaspberryPi, Single Board Computer, Linux VPS, AWS Lambda, or a private server.
+Run Stream Daemon in a Docker container for easy deployment, scalability, and consistency across environments.
 
-## Requirements and Prerequisites
+## 🐳 Quick Start
 
-- Python 3 installed on the device that you plan to run the script on.
-- A Twitch API key (client ID and secret) which can be obtained from the Twitch Developer Dashboard.
-- A Mastodon API key (access token) which can be obtained from your Mastodon instance.
+```bash
+cd Docker
+docker-compose up -d
+```
 
-## Installation
+That's it! Stream Daemon is now running in the background.
 
-1. Clone the Github repository to your device: `git clone https://github.com/ChiefGyk3D/twitch-and-toot.git`
-2. Install the required packages: `pip install -r requirements.txt`
-3. Create a `config.ini` file based on the `config_template.ini` file in the repository. Fill in the required information such as Twitch API key, Mastodon API key, and the channel name you want to track, messages, and any other changes needed.
-4. Run the script: `python twitch-and-toot.py`
+## 📋 Prerequisites
 
-## Configuration
+- Docker installed ([Get Docker](https://docs.docker.com/get-docker/))
+- Docker Compose installed ([Get Docker Compose](https://docs.docker.com/compose/install/))
+- Stream Daemon configured (`.env` file or secrets manager)
 
-The config.ini file is used to store the required information such as the Twitch API key, Mastodon API key, and the channel name you want to track. You can also customize the messages that will be posted to Mastodon when the streamer is live and when the stream has ended. These messages are stored in separate text files and are referenced in the config.ini.
+## 🚀 Deployment Methods
+
+### Method 1: Docker Compose (Recommended)
+
+**Benefits:**
+- ✅ Easy configuration with `docker-compose.yml`
+- ✅ Automatic restart on failure
+- ✅ Volume mounting for message files
+- ✅ Environment variable management
+
+**Steps:**
+
+1. **Navigate to Docker directory:**
+   ```bash
+   cd Docker
+   ```
+
+2. **Edit docker-compose.yml:**
+   ```yaml
+   version: '3.8'
+   services:
+     stream-daemon:
+       build: .
+       restart: unless-stopped
+       environment:
+         # Secrets Manager
+         SECRETS_SECRET_MANAGER: doppler
+         DOPPLER_TOKEN: ${DOPPLER_TOKEN}
+         
+         # Platform Configuration
+         TWITCH_ENABLE: 'True'
+         TWITCH_USERNAME: your_username
+         # ... other config
+       volumes:
+         - ./messages.txt:/app/messages.txt
+         - ./end_messages.txt:/app/end_messages.txt
+   ```
+
+3. **Create .env file** (for docker-compose env vars):
+   ```bash
+   DOPPLER_TOKEN=dp.st.your_token_here
+   ```
+
+4. **Start the container:**
+   ```bash
+   docker-compose up -d
+   ```
+
+5. **View logs:**
+   ```bash
+   docker-compose logs -f
+   ```
+
+### Method 2: Manual Docker Build
+
+**For more control or custom deployments:**
+
+1. **Build the image:**
+   ```bash
+   docker build -t stream-daemon .
+   ```
+
+2. **Run the container:**
+   ```bash
+   docker run -d \
+     --name stream-daemon \
+     --restart unless-stopped \
+     --env-file ../.env \
+     -v $(pwd)/messages.txt:/app/messages.txt \
+     -v $(pwd)/end_messages.txt:/app/end_messages.txt \
+     stream-daemon
+   ```
+
+3. **View logs:**
+   ```bash
+   docker logs -f stream-daemon
+   ```
+
+### Method 3: Docker with Doppler CLI
+
+**Automatically inject secrets without storing DOPPLER_TOKEN:**
+
+```bash
+doppler run -- docker-compose up -d
+```
+
+Doppler CLI automatically provides all secrets to the container.
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+Stream Daemon uses **pure environment variables** - no config files needed in Docker!
 
 Here's an example structure for the config.ini file:
 
