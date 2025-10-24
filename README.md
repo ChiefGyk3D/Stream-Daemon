@@ -53,6 +53,10 @@ Stream Daemon is a powerful, open-source automation tool that monitors your live
 ### 🎨 Customization
 - **Platform-specific messages** - Different messages per platform
 - **Message templates** - Use variables like stream title, viewers, URLs
+- **Multi-platform strategies** - Control how announcements are posted when streaming to multiple platforms
+  - Separate posts per platform or combined announcements
+  - Thread announcements together or keep them independent
+  - Wait for all platforms to end or post individually
 - **Flexible scheduling** - Configurable check intervals
 - **Clickable URLs** - Auto-generated stream links
 
@@ -166,7 +170,8 @@ DISCORD_ROLE_TWITCH=@everyone  # Role to mention for Twitch
 ```bash
 # Use Doppler (recommended)
 SECRETS_SECRET_MANAGER=doppler
-DOPPLER_TOKEN=your_doppler_token
+DOPPLER_TOKEN=your_doppler_token  # Get from Doppler dashboard (env-specific)
+DOPPLER_CONFIG=dev  # Doppler environment: dev, stg, or prd
 SECRETS_DOPPLER_TWITCH_SECRET_NAME=twitch
 SECRETS_DOPPLER_YOUTUBE_SECRET_NAME=youtube
 
@@ -179,6 +184,8 @@ SECRETS_SECRET_MANAGER=vault
 SECRETS_VAULT_URL=https://vault.example.com
 SECRETS_VAULT_TOKEN=your_vault_token
 ```
+
+**📌 Doppler Note:** Doppler tokens are environment-specific. A `dev` token only accesses `dev` secrets. See [DOPPLER_GUIDE.md](DOPPLER_GUIDE.md) for complete setup.
 
 ### Message Customization
 
@@ -217,6 +224,7 @@ MESSAGES_USE_PLATFORM_SPECIFIC_MESSAGES=False
 - [Platform Guide](PLATFORM_GUIDE.md) - Detailed platform setup guides
 - [Doppler Guide](DOPPLER_GUIDE.md) - Secrets management with Doppler
 - [Messages Format](MESSAGES_FORMAT.md) - Message customization guide
+- [Multi-Platform Examples](MULTI_PLATFORM_EXAMPLES.md) - **NEW!** Multi-streaming posting strategies
 - [Migration Guide](MIGRATION.md) - Upgrading from v1 to v2
 
 ### Test Suite Documentation
@@ -305,6 +313,59 @@ SETTINGS_POST_INTERVAL=5
 MESSAGES_MESSAGES_FILE=messages.txt          # Live stream messages
 MESSAGES_END_MESSAGES_FILE=end_messages.txt  # Stream ended messages
 ```
+
+### Multi-Platform Posting Strategies
+
+When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Kick), you can control how announcements are posted:
+
+#### Live Stream Announcements
+
+```bash
+# MESSAGES_LIVE_THREADING_MODE controls "going live" posts
+# Options: separate | thread | combined
+
+# SEPARATE (default): Each platform gets its own standalone post
+#   Example: "Live on Twitch!" then "Live on YouTube!" as separate posts
+MESSAGES_LIVE_THREADING_MODE=separate
+
+# THREAD: Each platform announcement is threaded to the previous one
+#   Example: "Live on Twitch!" → "Also live on YouTube!" as a reply
+MESSAGES_LIVE_THREADING_MODE=thread
+
+# COMBINED: Single post announcing all platforms at once
+#   Example: "Live on Twitch, YouTube, and Kick!"
+MESSAGES_LIVE_THREADING_MODE=combined
+```
+
+#### Stream Ended Announcements
+
+```bash
+# MESSAGES_END_THREADING_MODE controls "stream ended" posts
+# Options: disabled | separate | thread | combined | single_when_all_end
+
+# DISABLED: Don't post any stream end messages
+MESSAGES_END_THREADING_MODE=disabled
+
+# SEPARATE: Each platform end gets its own post (no threading)
+#   Example: "Twitch stream ended!" "YouTube stream ended!"
+MESSAGES_END_THREADING_MODE=separate
+
+# THREAD (default): Reply to each platform's live announcement
+#   Example: "Live on Twitch!" → "Stream ended, thanks!"
+MESSAGES_END_THREADING_MODE=thread
+
+# COMBINED: Single post when each platform ends
+#   Example: "Twitch and YouTube streams ended!"
+MESSAGES_END_THREADING_MODE=combined
+
+# SINGLE_WHEN_ALL_END: Wait until ALL platforms have ended
+#   Perfect for handling platform failures gracefully
+#   Example: If streaming to 3 platforms, waits until all 3 
+#   are offline before posting one final "All streams ended!"
+MESSAGES_END_THREADING_MODE=single_when_all_end
+```
+
+**Use Case Example:** You're streaming to Twitch, YouTube, and Kick. Twitch crashes mid-stream but YouTube and Kick continue. With `single_when_all_end`, the daemon won't post "stream ended" until YouTube and Kick also finish, giving you one clean end message instead of confusing partial announcements.
 
 ### Discord Role Mentions
 
@@ -401,6 +462,16 @@ Want to see a feature? [Open an issue](https://github.com/ChiefGyk3D/twitch-and-
 
 ---
 
+## ⚠️ Known Limitations
+
+### Link Preview Cards
+- **Kick.com** - Due to CloudFlare security policies, Kick blocks automated requests for metadata scraping. 
+  - Kick URLs will still be **clickable links** in posts
+  - Rich preview cards (with thumbnails) are **not available** for Kick streams on Bluesky
+  - Mastodon may or may not show Kick preview cards (depends on whether Kick blocks Mastodon's servers)
+  - **Twitch and YouTube** work perfectly with full preview cards and thumbnails
+
+---
 
 ## 📄 License
 

@@ -104,9 +104,21 @@ Now when Stream Daemon looks for `TWITCH_CLIENT_ID`:
 3. Click **"Create Project"** → Name it **"stream-daemon"**
 4. You'll be in the `dev` environment automatically
 
+**📌 Important: Doppler Environments**
+
+Doppler organizes secrets into **environments** within each project:
+- **`dev`** - Development (default, created automatically)
+- **`stg`** - Staging (optional, create if needed)
+- **`prd`** - Production (optional, create if needed)
+
+Each environment has its own set of secrets. For most users, the **`dev` environment is sufficient**. If you want to separate testing credentials from production credentials, you can create additional environments and generate separate tokens for each.
+
+**For this guide, we'll use the `dev` environment.**
+
 ### Step 2: Add Secrets to Doppler (5 minutes)
 
-Click **"Add Secret"** for each credential below. 
+Click **"Add Secret"** for each credential below. Make sure you're in the **`dev` environment** (check the dropdown at the top of the Doppler dashboard).
+ 
 
 **Note:** Secret names can be uppercase (`TWITCH_CLIENT_ID`) or lowercase (`twitch_client_id`) - Stream Daemon matches case-insensitively. **UPPERCASE is recommended** as it's more visible and follows standard environment variable naming.
 
@@ -147,7 +159,12 @@ Secret Name: KICK_CLIENT_SECRET
 Value: your_kick_secret
 ```
 
-**Where to get:** Kick Developer Portal (when available)
+**Where to get:** Kick Developer Portal
+1. Login to kick.com (ensure 2FA is enabled)
+2. Go to Settings → Developer
+3. Create a new application
+4. **Scopes:** Select "Read Access" (required for stream status checks)
+5. Copy Client ID and Client Secret
 - If unavailable, Stream Daemon uses public API (works but limited)
 
 #### 🐘 Mastodon (Required if MASTODON_ENABLE_POSTING=True)
@@ -166,8 +183,11 @@ Value: your_access_token
 **Where to get:** Your Mastodon Instance
 1. Go to Settings → Development
 2. Click "New Application"
-3. Give write permissions
-4. Copy Client Key, Client Secret, and Your Access Token
+3. **Scopes:** Check `read:accounts` (required) and `write:statuses` (required), optionally `write:media` (for images/videos)
+4. Copy the three credentials shown on the Mastodon page:
+   - "Client key" → Add to Doppler as `MASTODON_CLIENT_ID`
+   - "Client secret" → Add to Doppler as `MASTODON_CLIENT_SECRET`
+   - "Your access token" → Add to Doppler as `MASTODON_ACCESS_TOKEN`
 
 #### 🦋 Bluesky (Required if BLUESKY_ENABLE_POSTING=True)
 
@@ -201,17 +221,28 @@ Value: https://discord.com/api/webhooks/123456789/abcdefg...
 
 ### Step 3: Get Your Doppler Token (1 minute)
 
-You need a token to authenticate Stream Daemon with Doppler.
+You need a token to authenticate Stream Daemon with Doppler. The token is **environment-specific** - it only has access to secrets in the environment you select.
+
+**🔑 Important: Choose Your Environment**
+
+When generating a token, you must select which Doppler environment it accesses:
+- **`dev`** - For development/testing (recommended for most users)
+- **`prd`** - For production deployments
+- **`stg`** - For staging environments
+
+**For this guide, use the `dev` environment.**
 
 #### Option A: Service Token (Recommended for Production)
 
-1. In Doppler dashboard, select your project
+1. In Doppler dashboard, select your project ("stream-daemon")
 2. Click **Access** → **Service Tokens**
 3. Click **Generate Service Token**
-4. Name: "stream-daemon-production"
-5. Environment: "prd" (or whichever you want)
+4. Name: "stream-daemon-dev" (or "stream-daemon-production" for prod)
+5. **Environment:** Select **"dev"** (or whichever environment you're using)
 6. **Copy the token** - it starts with `dp.st.`
 7. Store it safely - you can't see it again!
+
+**⚠️ The token is locked to the environment you select.** If you need access to multiple environments, generate separate tokens for each.
 
 #### Option B: CLI + Personal Token (Best for Development)
 
@@ -232,7 +263,7 @@ doppler login
 # Setup in project directory
 cd /path/to/stream-daemon
 doppler setup
-# Select: stream-daemon → dev (or your environment)
+# Select: stream-daemon → dev (this sets your environment)
 
 # Now you can run without setting DOPPLER_TOKEN
 doppler run -- python3 stream-daemon.py

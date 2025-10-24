@@ -52,18 +52,33 @@ def check_environment():
     checks.append(("Doppler Token", has_token))
     print(f"Doppler Token: {'SET ✓' if has_token else 'NOT SET ✗'}")
     
-    # Check platform configurations
-    platforms = {
+    # Check streaming platform configurations
+    streaming_platforms = {
         'Twitch': os.getenv('SECRETS_DOPPLER_TWITCH_SECRET_NAME'),
         'YouTube': os.getenv('SECRETS_DOPPLER_YOUTUBE_SECRET_NAME'),
         'Kick': os.getenv('KICK_ENABLE')
     }
     
+    # Check social platform configurations
+    social_platforms = {
+        'Mastodon': os.getenv('SECRETS_DOPPLER_MASTODON_SECRET_NAME'),
+        'Bluesky': os.getenv('SECRETS_DOPPLER_BLUESKY_SECRET_NAME'),
+        'Discord': os.getenv('SECRETS_DOPPLER_DISCORD_SECRET_NAME'),
+    }
+    
     print()
-    for platform, config in platforms.items():
+    print("Streaming Platforms:")
+    for platform, config in streaming_platforms.items():
         is_configured = bool(config)
         checks.append((f"{platform} Config", is_configured))
-        print(f"{platform}: {'CONFIGURED ✓' if is_configured else 'NOT CONFIGURED ⚠'}")
+        print(f"  {platform}: {'CONFIGURED ✓' if is_configured else 'NOT CONFIGURED ⚠'}")
+    
+    print()
+    print("Social Platforms:")
+    for platform, config in social_platforms.items():
+        is_configured = bool(config)
+        checks.append((f"{platform} Config", is_configured))
+        print(f"  {platform}: {'CONFIGURED ✓' if is_configured else 'NOT CONFIGURED ⚠'}")
     
     print()
     all_passed = all(result for _, result in checks)
@@ -97,7 +112,7 @@ def main():
     # Run individual platform tests
     test_results = {}
     
-    print("🧪 Running platform tests...\n")
+    print("🧪 Running streaming platform tests...\n")
     
     # Twitch
     print("\n" + "─" * 60)
@@ -111,14 +126,41 @@ def main():
     print("\n" + "─" * 60)
     test_results['Kick'] = run_test_file('test_doppler_kick.py')
     
+    print("\n")
+    print("🧪 Running social platform tests...\n")
+    
+    # Mastodon
+    print("\n" + "─" * 60)
+    test_results['Mastodon'] = run_test_file('test_doppler_mastodon.py')
+    
+    # Bluesky
+    print("\n" + "─" * 60)
+    test_results['Bluesky'] = run_test_file('test_doppler_bluesky.py')
+    
+    # Discord
+    print("\n" + "─" * 60)
+    test_results['Discord'] = run_test_file('test_doppler_discord.py')
+    
+    # Matrix (placeholder)
+    print("\n" + "─" * 60)
+    test_results['Matrix'] = run_test_file('test_doppler_matrix.py')
+    
     # Final summary
     print("\n" + "=" * 60)
     print("🎯 FINAL RESULTS")
     print("=" * 60)
     
-    for platform, result in test_results.items():
-        status = "✓ PASS" if result else "✗ FAIL"
-        print(f"{status}: {platform}")
+    print("\nStreaming Platforms:")
+    for platform in ['Twitch', 'YouTube', 'Kick']:
+        if platform in test_results:
+            status = "✓ PASS" if test_results[platform] else "✗ FAIL"
+            print(f"  {status}: {platform}")
+    
+    print("\nSocial Platforms:")
+    for platform in ['Mastodon', 'Bluesky', 'Discord', 'Matrix']:
+        if platform in test_results:
+            status = "✓ PASS" if test_results[platform] else "✗ FAIL"
+            print(f"  {status}: {platform}")
     
     passed = sum(1 for result in test_results.values() if result)
     total = len(test_results)

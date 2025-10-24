@@ -50,7 +50,28 @@ case $PLATFORM in
     all)
         echo "Running comprehensive test suite..."
         echo ""
+        run_test "Threading Configuration" "test_threading_config.py"
         run_test "All Platforms" "test_doppler_all.py"
+        ;;
+    config)
+        echo "Running configuration tests..."
+        echo ""
+        run_test "Threading Configuration" "test_threading_config.py"
+        ;;
+    streaming)
+        echo "Running streaming platform tests..."
+        echo ""
+        run_test "Twitch" "test_doppler_twitch.py"
+        run_test "YouTube" "test_doppler_youtube.py"
+        run_test "Kick" "test_doppler_kick.py"
+        ;;
+    social)
+        echo "Running social platform tests..."
+        echo ""
+        run_test "Mastodon" "test_doppler_mastodon.py"
+        run_test "Bluesky" "test_doppler_bluesky.py"
+        run_test "Discord" "test_doppler_discord.py"
+        run_test "Matrix" "test_doppler_matrix.py"
         ;;
     twitch)
         run_test "Twitch" "test_doppler_twitch.py"
@@ -61,16 +82,39 @@ case $PLATFORM in
     kick)
         run_test "Kick" "test_doppler_kick.py"
         ;;
+    mastodon)
+        run_test "Mastodon" "test_doppler_mastodon.py"
+        ;;
+    bluesky)
+        run_test "Bluesky" "test_doppler_bluesky.py"
+        ;;
+    discord)
+        run_test "Discord" "test_doppler_discord.py"
+        ;;
+    matrix)
+        run_test "Matrix" "test_doppler_matrix.py"
+        ;;
     *)
         echo -e "${RED}Unknown platform: $PLATFORM${NC}"
         echo ""
         echo "Usage: ./run_tests.sh [platform]"
         echo ""
-        echo "Platforms:"
-        echo "  all      - Run all platform tests (default)"
-        echo "  twitch   - Test Twitch only"
-        echo "  youtube  - Test YouTube only"
-        echo "  kick     - Test Kick only"
+        echo "Options:"
+        echo "  all        - Run all platform tests (default)"
+        echo "  config     - Run configuration validation tests"
+        echo "  streaming  - Run all streaming platform tests"
+        echo "  social     - Run all social platform tests"
+        echo ""
+        echo "Streaming Platforms:"
+        echo "  twitch     - Test Twitch only"
+        echo "  youtube    - Test YouTube only"
+        echo "  kick       - Test Kick only"
+        echo ""
+        echo "Social Platforms:"
+        echo "  mastodon   - Test Mastodon only"
+        echo "  bluesky    - Test Bluesky only"
+        echo "  discord    - Test Discord only"
+        echo "  matrix     - Test Matrix only (placeholder)"
         exit 1
         ;;
 esac

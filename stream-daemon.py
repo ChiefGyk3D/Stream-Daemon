@@ -110,7 +110,12 @@ class StreamStatus:
     last_check_live: bool = False
     consecutive_live_checks: int = 0
     consecutive_offline_checks: int = 0
-    last_post_id: Optional[str] = None  # For threading replies
+    last_post_ids: Dict[str, str] = None  # social_platform_name -> post_id for threading
+    
+    def __post_init__(self):
+        """Initialize mutable default values."""
+        if self.last_post_ids is None:
+            self.last_post_ids = {}
     
     def update(self, is_live: bool, title: Optional[str] = None) -> bool:
         """
@@ -127,7 +132,7 @@ class StreamStatus:
                 self.state = StreamState.LIVE
                 self.title = title
                 self.went_live_at = datetime.now()
-                self.last_post_id = None  # Reset threading for new stream
+                self.last_post_ids = {}  # Reset threading for new stream
                 logger.info(f"🔴 {self.platform_name}/{self.username} went LIVE: {title}")
                 return True  # State changed!
             elif self.state == StreamState.LIVE:
@@ -469,13 +474,35 @@ class YouTubePlatform(StreamingPlatform):
             return None
     
     def is_live(self, username=None):
-        if not self.enabled or not self.client or not self.channel_id:
+        """Check if a YouTube channel is live.
+        
+        Args:
+            username: Optional username/handle to check. If not provided, uses self.username.
+                     Can be in format '@handle' or 'channelname'
+        """
+        if not self.enabled or not self.client:
+            return False, None
+        
+        # Determine which channel to check
+        channel_id_to_check = None
+        
+        if username and username != self.username:
+            # Different username provided - need to resolve it
+            channel_id_to_check = self._resolve_channel_id(username)
+            if not channel_id_to_check:
+                logger.warning(f"Could not resolve YouTube channel ID for: {username}")
+                return False, None
+        else:
+            # Use the authenticated channel
+            channel_id_to_check = self.channel_id
+        
+        if not channel_id_to_check:
             return False, None
             
         try:
             request = self.client.search().list(
                 part="snippet",
-                channelId=self.channel_id,
+                channelId=channel_id_to_check,
                 eventType="live",
                 type="video",
                 maxResults=1
@@ -489,6 +516,32 @@ class YouTubePlatform(StreamingPlatform):
         except Exception as e:
             logger.error(f"Error checking YouTube: {e}")
             return False, None
+    
+    def _resolve_channel_id(self, username):
+        """Resolve a channel ID from a username/handle (for any user, not just authenticated one)."""
+        try:
+            # Try modern handle format first (@username)
+            if username.startswith('@'):
+                request = self.client.channels().list(
+                    part="id",
+                    forHandle=username
+                )
+            else:
+                # Try legacy username format
+                request = self.client.channels().list(
+                    part="id",
+                    forUsername=username
+                )
+            
+            response = request.execute()
+            if response.get('items'):
+                channel_id = response['items'][0]['id']
+                logger.debug(f"✓ Resolved YouTube channel ID for {username}: {channel_id}")
+                return channel_id
+            return None
+        except Exception as e:
+            logger.warning(f"Error resolving YouTube channel ID for {username}: {e}")
+            return None
 
 
 class KickPlatform(StreamingPlatform):
@@ -750,10 +803,161 @@ class BlueskyPlatform(SocialPlatform):
             return None
             
         try:
-            # Bluesky threading requires parent/root references
-            # For now, simple posts - full threading implementation would need to track parent/root
-            response = self.client.send_post(text=message)
-            return response.uri if hasattr(response, 'uri') else None
+            # Import models and TextBuilder for rich text with auto-detected facets
+            from atproto import models, client_utils
+            import re
+            
+            # Use TextBuilder to create rich text with explicit links
+            text_builder = client_utils.TextBuilder()
+            
+            # Parse message to find URLs and convert them to clickable links
+            # Pattern matches http:// and https:// URLs
+            url_pattern = r'https?://[^\s]+'
+            last_pos = 0
+            first_url = None  # Track first URL for embed card
+            
+            for match in re.finditer(url_pattern, message):
+                # Add text before URL
+                if match.start() > last_pos:
+                    text_builder.text(message[last_pos:match.start()])
+                
+                # Add URL as clickable link
+                url = match.group()
+                text_builder.link(url, url)
+                
+                # Capture first URL for embed card
+                if first_url is None:
+                    first_url = url
+                
+                last_pos = match.end()
+            
+            # Add any remaining text after last URL
+            if last_pos < len(message):
+                text_builder.text(message[last_pos:])
+            
+            # Create embed card for the first URL if found
+            embed = None
+            if first_url:
+                try:
+                    # Special handling for Kick - skip embed due to CloudFlare security blocking
+                    if 'kick.com/' in first_url:
+                        # Kick.com blocks automated requests with CloudFlare security policies
+                        # Links will still be clickable, just without embed cards
+                        logger.info(f"ℹ Kick.com blocks automated requests, posting with clickable link only")
+                        embed = None
+                    else:
+                        # For non-Kick URLs, scrape Open Graph metadata
+                        import requests
+                        from bs4 import BeautifulSoup
+                        
+                        # Fetch the page with a realistic browser User-Agent
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.5',
+                        }
+                        
+                        response = requests.get(first_url, headers=headers, timeout=10)
+                        response.raise_for_status()  # Raise exception for 4xx/5xx status codes
+                        
+                        soup = BeautifulSoup(response.text, 'html.parser')
+                        
+                        # Try Open Graph metadata first
+                        og_title = soup.find('meta', property='og:title')
+                        og_description = soup.find('meta', property='og:description')
+                        og_image = soup.find('meta', property='og:image')
+                        
+                        # Fallback to Twitter Card metadata if OG tags not found
+                        if not og_title:
+                            og_title = soup.find('meta', attrs={'name': 'twitter:title'})
+                        if not og_description:
+                            og_description = soup.find('meta', attrs={'name': 'twitter:description'})
+                        if not og_image:
+                            og_image = soup.find('meta', attrs={'name': 'twitter:image'})
+                        
+                        title = og_title['content'] if og_title and og_title.get('content') else first_url
+                        description = og_description['content'] if og_description and og_description.get('content') else ''
+                        image_url = og_image['content'] if og_image and og_image.get('content') else None
+                        
+                        # Upload image to Bluesky if available
+                        thumb_blob = None
+                        if image_url:
+                            try:
+                                # Handle relative URLs
+                                if image_url.startswith('//'):
+                                    image_url = 'https:' + image_url
+                                elif image_url.startswith('/'):
+                                    from urllib.parse import urlparse
+                                    parsed = urlparse(first_url)
+                                    image_url = f"{parsed.scheme}://{parsed.netloc}{image_url}"
+                                
+                                img_response = requests.get(image_url, headers=headers, timeout=10)
+                                if img_response.status_code == 200:
+                                    # Upload image as blob and extract the blob reference
+                                    from atproto import models
+                                    upload_response = self.client.upload_blob(img_response.content)
+                                    # The upload_blob returns a Response object with a blob attribute
+                                    thumb_blob = upload_response.blob if hasattr(upload_response, 'blob') else None
+                            except Exception as img_error:
+                                logger.warning(f"⚠ Could not upload thumbnail: {img_error}")
+                        
+                        # Create external embed with metadata
+                        from atproto import models
+                        embed = models.AppBskyEmbedExternal.Main(
+                            external=models.AppBskyEmbedExternal.External(
+                                uri=first_url,
+                                title=title[:300] if title else first_url,  # Limit title length
+                                description=description[:1000] if description else '',  # Limit description length
+                                thumb=thumb_blob if thumb_blob else None
+                            )
+                        )
+                except Exception as embed_error:
+                    logger.warning(f"⚠ Could not create embed card: {embed_error}")
+                    embed = None
+            
+            if reply_to_id:
+                # Threading on Bluesky requires parent and root references
+                try:
+                    # Get the parent post details
+                    parent_response = self.client.app.bsky.feed.get_posts({'uris': [reply_to_id]})
+                    
+                    if not parent_response or not hasattr(parent_response, 'posts') or not parent_response.posts:
+                        logger.warning(f"⚠ Could not fetch parent post, posting without thread")
+                        response = self.client.send_post(text_builder, embed=embed)
+                        return response.uri if hasattr(response, 'uri') else None
+                    
+                    parent_post = parent_response.posts[0]
+                    
+                    # Determine root: if parent has a reply, use its root, otherwise parent is root
+                    if hasattr(parent_post.record, 'reply') and parent_post.record.reply:
+                        root_ref = parent_post.record.reply.root
+                    else:
+                        # Parent is the root - create strong ref
+                        root_ref = models.create_strong_ref(parent_post)
+                    
+                    # Create parent reference
+                    parent_ref = models.create_strong_ref(parent_post)
+                    
+                    # Create reply reference
+                    reply_ref = models.AppBskyFeedPost.ReplyRef(
+                        parent=parent_ref,
+                        root=root_ref
+                    )
+                    
+                    # Send threaded post with rich text and embed
+                    response = self.client.send_post(text_builder, reply_to=reply_ref, embed=embed)
+                    return response.uri if hasattr(response, 'uri') else None
+                    
+                except Exception as thread_error:
+                    logger.warning(f"⚠ Bluesky threading failed, posting without thread: {thread_error}")
+                    # Fall back to non-threaded post
+                    response = self.client.send_post(text_builder, embed=embed)
+                    return response.uri if hasattr(response, 'uri') else None
+            else:
+                # Simple post without threading, with rich text and embed card
+                response = self.client.send_post(text_builder, embed=embed)
+                return response.uri if hasattr(response, 'uri') else None
+                
         except Exception as e:
             logger.error(f"✗ Bluesky post failed: {e}")
             return None
@@ -861,7 +1065,31 @@ def main():
     # Load messages from consolidated files with platform sections
     messages_file = get_config('Messages', 'messages_file', default='messages.txt')
     end_messages_file = get_config('Messages', 'end_messages_file', default='end_messages.txt')
+    
+    # Load new threading mode configurations
+    live_threading_mode = get_config('Messages', 'live_threading_mode', default='separate').lower()
+    end_threading_mode = get_config('Messages', 'end_threading_mode', default='thread').lower()
+    
+    # Backwards compatibility with old config
     post_end_stream_message = get_bool_config('Messages', 'post_end_stream_message', default=True)
+    if not post_end_stream_message:
+        end_threading_mode = 'disabled'
+    
+    # Validate threading modes
+    valid_live_modes = ['separate', 'thread', 'combined']
+    valid_end_modes = ['disabled', 'separate', 'thread', 'combined', 'single_when_all_end']
+    
+    if live_threading_mode not in valid_live_modes:
+        logger.warning(f"⚠ Invalid LIVE_THREADING_MODE '{live_threading_mode}', using 'separate'")
+        live_threading_mode = 'separate'
+    
+    if end_threading_mode not in valid_end_modes:
+        logger.warning(f"⚠ Invalid END_THREADING_MODE '{end_threading_mode}', using 'thread'")
+        end_threading_mode = 'thread'
+    
+    logger.info(f"📋 Live posting mode: {live_threading_mode}")
+    logger.info(f"📋 End posting mode: {end_threading_mode}")
+    
     use_platform_specific = get_bool_config('Messages', 'use_platform_specific_messages', default=True)
     
     # Parse message files
@@ -928,6 +1156,10 @@ def main():
     post_interval = get_int_config('Settings', 'post_interval', default=1)
     check_interval = get_int_config('Settings', 'check_interval', default=5)
     
+    # Track platforms that went live in this session (for single_when_all_end mode)
+    platforms_that_went_live = set()
+    last_live_post_ids = {}  # For combined/thread modes: social_platform -> last_post_id
+    
     logger.info("="*60)
     logger.info(f"📺 Monitoring: {', '.join([f'{s.platform_name}/{s.username}' for s in stream_statuses.values()])}")
     logger.info(f"📱 Posting to: {', '.join([p.name for p in enabled_social])}")
@@ -938,6 +1170,10 @@ def main():
     while True:
         try:
             logger.info("🔍 Checking streams...")
+            
+            # Collect platforms that just went live or offline in this check cycle
+            platforms_went_live = []
+            platforms_went_offline = []
             
             # Check all streaming platforms
             for platform in enabled_streaming:
@@ -953,8 +1189,57 @@ def main():
                 
                 if state_changed:
                     if status.state == StreamState.LIVE:
-                        # Stream just went live - post to all social platforms
-                        # Use platform-specific messages
+                        platforms_went_live.append(status)
+                        platforms_that_went_live.add(status.platform_name)
+                    elif status.state == StreamState.OFFLINE:
+                        platforms_went_offline.append(status)
+                else:
+                    # No state change - just log current status
+                    if status.state == StreamState.LIVE:
+                        logger.debug(f"  {status.platform_name}/{status.username}: Still live ({status.consecutive_live_checks} checks)")
+                    else:
+                        logger.debug(f"  {status.platform_name}/{status.username}: Still offline ({status.consecutive_offline_checks} checks)")
+            
+            # ================================================================
+            # HANDLE PLATFORMS THAT WENT LIVE
+            # ================================================================
+            if platforms_went_live:
+                if live_threading_mode == 'combined':
+                    # COMBINED MODE: Single post listing all platforms
+                    platform_names = ', '.join([s.platform_name for s in platforms_went_live])
+                    titles = ' | '.join([f"{s.platform_name}: {s.title}" for s in platforms_went_live])
+                    
+                    # Use first platform's messages as template (or DEFAULT)
+                    first_platform = platforms_went_live[0]
+                    platform_messages = messages.get(first_platform.platform_name, [])
+                    
+                    message = random.choice(platform_messages).format(
+                        stream_title=titles,
+                        username=first_platform.username,
+                        platform=platform_names
+                    )
+                    
+                    logger.info(f"📢 Posting combined 'LIVE' announcement for {platform_names}")
+                    
+                    posted_count = 0
+                    for social in enabled_social:
+                        post_id = social.post(message, reply_to_id=None, platform_name=platform_names)
+                        if post_id:
+                            posted_count += 1
+                            last_live_post_ids[social.name] = post_id
+                            # Save post ID to each platform status for potential end threading
+                            for status in platforms_went_live:
+                                status.last_post_ids[social.name] = post_id
+                            logger.debug(f"  ✓ Posted to {social.name} (ID: {post_id})")
+                    
+                    if posted_count > 0:
+                        logger.info(f"✓ Posted to {posted_count}/{len(enabled_social)} platform(s)")
+                    else:
+                        logger.warning(f"⚠ Failed to post to any platforms")
+                
+                else:
+                    # SEPARATE or THREAD MODE: Post for each platform
+                    for idx, status in enumerate(platforms_went_live):
                         platform_messages = messages.get(status.platform_name, [])
                         if not platform_messages:
                             logger.error(f"✗ No messages configured for {status.platform_name}")
@@ -968,57 +1253,138 @@ def main():
                         
                         logger.info(f"📢 Posting 'LIVE' announcement for {status.platform_name}/{status.username}")
                         
-                        # Post to each social platform and track post IDs for threading
                         posted_count = 0
                         for social in enabled_social:
+                            # Determine if this should be threaded
+                            reply_to_id = None
+                            if live_threading_mode == 'thread' and idx > 0:
+                                # Thread to previous post
+                                reply_to_id = last_live_post_ids.get(social.name)
+                            
                             post_id = social.post(
                                 message, 
-                                reply_to_id=None,  # First post is never a reply
+                                reply_to_id=reply_to_id,
                                 platform_name=status.platform_name
                             )
                             if post_id:
                                 posted_count += 1
-                                # Save first post ID for potential threading
-                                if not status.last_post_id:
-                                    status.last_post_id = post_id
+                                last_live_post_ids[social.name] = post_id
+                                status.last_post_ids[social.name] = post_id
                                 logger.debug(f"  ✓ Posted to {social.name} (ID: {post_id})")
                         
                         if posted_count > 0:
                             logger.info(f"✓ Posted to {posted_count}/{len(enabled_social)} platform(s)")
                         else:
                             logger.warning(f"⚠ Failed to post to any platforms")
+            
+            # ================================================================
+            # HANDLE PLATFORMS THAT WENT OFFLINE
+            # ================================================================
+            if platforms_went_offline and end_threading_mode != 'disabled':
+                
+                if end_threading_mode == 'single_when_all_end':
+                    # Check if ALL platforms that went live are now offline
+                    all_ended = all(
+                        stream_statuses[pname].state == StreamState.OFFLINE 
+                        for pname in platforms_that_went_live
+                    )
                     
-                    elif status.state == StreamState.OFFLINE:
-                        # Stream just ended - post end message if configured
-                        platform_end_messages = end_messages.get(status.platform_name, [])
-                        if post_end_stream_message and platform_end_messages:
+                    if all_ended and platforms_that_went_live:
+                        # Post single "all streams ended" message
+                        platform_names = ', '.join(sorted(platforms_that_went_live))
+                        
+                        # Use first platform's end messages as template
+                        first_platform_name = next(iter(platforms_that_went_live))
+                        platform_end_messages = end_messages.get(first_platform_name, [])
+                        
+                        if platform_end_messages:
                             message = random.choice(platform_end_messages).format(
-                                username=status.username,
-                                platform=status.platform_name
+                                username=stream_statuses[first_platform_name].username,
+                                platform=platform_names
                             )
                             
-                            logger.info(f"📢 Posting 'OFFLINE' announcement for {status.platform_name}/{status.username}")
+                            logger.info(f"📢 Posting final 'ALL STREAMS ENDED' announcement for {platform_names}")
                             
                             posted_count = 0
                             for social in enabled_social:
-                                # Thread the end message as a reply to the live announcement
-                                post_id = social.post(
-                                    message,
-                                    reply_to_id=status.last_post_id,  # Thread it!
-                                    platform_name=status.platform_name
-                                )
+                                # Thread to the last live post if available
+                                reply_to_id = last_live_post_ids.get(social.name)
+                                post_id = social.post(message, reply_to_id=reply_to_id, platform_name=platform_names)
                                 if post_id:
                                     posted_count += 1
                                     logger.debug(f"  ✓ Posted end message to {social.name}")
                             
                             if posted_count > 0:
                                 logger.info(f"✓ Posted end message to {posted_count}/{len(enabled_social)} platform(s)")
-                else:
-                    # No state change - just log current status
-                    if status.state == StreamState.LIVE:
-                        logger.debug(f"  {status.platform_name}/{status.username}: Still live ({status.consecutive_live_checks} checks)")
+                            
+                            # Clear tracking since all streams ended
+                            platforms_that_went_live.clear()
+                            last_live_post_ids.clear()
                     else:
-                        logger.debug(f"  {status.platform_name}/{status.username}: Still offline ({status.consecutive_offline_checks} checks)")
+                        logger.debug(f"  Waiting for all streams to end (mode: single_when_all_end)")
+                
+                elif end_threading_mode == 'combined':
+                    # COMBINED MODE: Single post for all platforms that ended
+                    platform_names = ', '.join([s.platform_name for s in platforms_went_offline])
+                    
+                    # Use first platform's end messages
+                    first_status = platforms_went_offline[0]
+                    platform_end_messages = end_messages.get(first_status.platform_name, [])
+                    
+                    if platform_end_messages:
+                        message = random.choice(platform_end_messages).format(
+                            username=first_status.username,
+                            platform=platform_names
+                        )
+                        
+                        logger.info(f"📢 Posting combined 'OFFLINE' announcement for {platform_names}")
+                        
+                        posted_count = 0
+                        for social in enabled_social:
+                            # Thread to last live post if available
+                            reply_to_id = last_live_post_ids.get(social.name)
+                            post_id = social.post(message, reply_to_id=reply_to_id, platform_name=platform_names)
+                            if post_id:
+                                posted_count += 1
+                                logger.debug(f"  ✓ Posted end message to {social.name}")
+                        
+                        if posted_count > 0:
+                            logger.info(f"✓ Posted end message to {posted_count}/{len(enabled_social)} platform(s)")
+                
+                else:
+                    # SEPARATE or THREAD MODE: Post for each platform
+                    for status in platforms_went_offline:
+                        platform_end_messages = end_messages.get(status.platform_name, [])
+                        if not platform_end_messages:
+                            logger.debug(f"  No end messages for {status.platform_name}")
+                            continue
+                        
+                        message = random.choice(platform_end_messages).format(
+                            username=status.username,
+                            platform=status.platform_name
+                        )
+                        
+                        logger.info(f"📢 Posting 'OFFLINE' announcement for {status.platform_name}/{status.username}")
+                        
+                        posted_count = 0
+                        for social in enabled_social:
+                            # Determine reply_to_id based on mode
+                            reply_to_id = None
+                            if end_threading_mode == 'thread':
+                                # Thread to this platform's live announcement
+                                reply_to_id = status.last_post_ids.get(social.name)
+                            
+                            post_id = social.post(
+                                message,
+                                reply_to_id=reply_to_id,
+                                platform_name=status.platform_name
+                            )
+                            if post_id:
+                                posted_count += 1
+                                logger.debug(f"  ✓ Posted end message to {social.name}")
+                        
+                        if posted_count > 0:
+                            logger.info(f"✓ Posted end message to {posted_count}/{len(enabled_social)} platform(s)")
             
             # Determine sleep time based on any active streams
             any_live = any(s.state == StreamState.LIVE for s in stream_statuses.values())

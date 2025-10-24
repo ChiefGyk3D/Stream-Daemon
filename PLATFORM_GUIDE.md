@@ -30,16 +30,17 @@ This guide covers platform-specific configuration, credential setup, and feature
 
 1. **Create Twitch Application:**
    - Go to [Twitch Developer Console](https://dev.twitch.tv/console/apps)
-   - Click "Register Your Application"
-   - Name: "Stream Daemon" (or your choice)
-   - OAuth Redirect URL: `http://localhost` (required but not used by Stream Daemon)
-   - Category: Choose relevant category
-   - Click "Create"
+   - Click **"Register Your Application"**
+   - **Name:** "Stream Daemon" (or your choice)
+   - **OAuth Redirect URL:** `http://localhost` (required but not used by Stream Daemon)
+   - **Category:** Choose relevant category (e.g., "Application Integration")
+   - Click **"Create"**
 
 2. **Get Credentials:**
+   - After creation, you'll see your application listed
    - Copy your **Client ID**
-   - Click "New Secret" to generate **Client Secret**
-   - Copy the secret immediately (you can't see it again)
+   - Click **"New Secret"** to generate a **Client Secret**
+   - **Important:** Copy the secret immediately - you can't view it again!
 
 3. **Configure Stream Daemon:**
 
@@ -79,19 +80,23 @@ TWITCH_CLIENT_SECRET=your_client_secret_here
 
 1. **Create Google Cloud Project:**
    - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create New Project → Name it "Stream Daemon"
-   - Select the project
+   - Click **"Create New Project"**
+   - **Name:** "Stream Daemon" (or your choice)
+   - Click **"Create"** and select the project
 
 2. **Enable YouTube Data API v3:**
-   - Go to APIs & Services → Library
-   - Search for "YouTube Data API v3"
-   - Click "Enable"
+   - Go to **"APIs & Services"** → **"Library"**
+   - Search for **"YouTube Data API v3"**
+   - Click on it and click **"Enable"**
 
 3. **Create API Key:**
-   - Go to APIs & Services → Credentials
-   - Click "Create Credentials" → "API Key"
-   - Copy the API key
-   - (Optional) Click "Restrict Key" → Select "YouTube Data API v3" for security
+   - Go to **"APIs & Services"** → **"Credentials"**
+   - Click **"Create Credentials"** → **"API Key"**
+   - Copy the generated API key
+   - **(Optional but recommended)** Click **"Restrict Key"**:
+     - Under "API restrictions", select "Restrict key"
+     - Check **"YouTube Data API v3"**
+     - This improves security by limiting what the key can access
 
 4. **Configure Stream Daemon:**
 
@@ -129,6 +134,7 @@ YOUTUBE_API_KEY=AIzaSyABC123XYZ789...
 ### Kick
 
 **Requirements:**
+- Kick account
 - (Optional) Kick Developer Application for OAuth
 
 **Setup:**
@@ -150,9 +156,12 @@ KICK_USERNAME=your_kick_username
 **Option B: OAuth Authentication (Recommended):**
 
 1. **Get Kick API Credentials:**
-   - Visit Kick Developer Portal (when available)
-   - Create an application
-   - Copy Client ID and Client Secret
+   - Login to [https://kick.com](https://kick.com)
+   - Make sure 2FA is enabled: **Settings** → **Security**
+   - Go to **Settings** → **Developer**
+   - Create a new application
+   - **Scopes/Permissions:** Select **"Read Access"** (required for stream status checks)
+   - Copy your **Client ID** and **Client Secret**
 
 2. **Configure Stream Daemon:**
 
@@ -191,19 +200,23 @@ KICK_CLIENT_SECRET=your_kick_client_secret
 **Setup:**
 
 1. **Create Mastodon Application:**
-   - Go to your instance (e.g., mastodon.social)
-   - Settings → Development → "New Application"
+   - Login to your Mastodon instance (e.g., mastodon.social, fosstodon.org, etc.)
+   - Go to **Settings** → **Development**
+   - Click **"New Application"**
    - Application name: "Stream Daemon"
-   - Scopes: Check `write:statuses` (to post)
+   - **Scopes/Permissions:** 
+     - Check `read:accounts` (required - allows verifying your credentials)
+     - Check `write:statuses` (required - allows posting status updates)
+     - Check `write:media` (optional - if you plan to attach images/videos)
    - Redirect URI: Leave default or use `urn:ietf:wg:oauth:2.0:oob`
-   - Click "Submit"
+   - Click **"Submit"**
 
 2. **Get Credentials:**
-   - After creating, you'll see:
-     - **Client key** (client_id)
-     - **Client secret** (client_secret)
-     - **Your access token** (access_token)
-   - Copy all three
+   - After creating, you'll see three important values on the Mastodon page:
+     - **"Client key"** → Copy this as `MASTODON_CLIENT_ID`
+     - **"Client secret"** → Copy this as `MASTODON_CLIENT_SECRET`
+     - **"Your access token"** → Copy this as `MASTODON_ACCESS_TOKEN`
+   - Copy all three - you need ALL of them!
 
 3. **Configure Stream Daemon:**
 
@@ -233,6 +246,8 @@ MASTODON_ACCESS_TOKEN=your_access_token
 - ✅ Respects character limits automatically
 - ✅ Posts with public visibility
 - ✅ Supports custom messages per platform
+
+**Important:** You need **all three credentials** (client_id, client_secret, and access_token) for Mastodon to work.
 
 ---
 
@@ -273,28 +288,32 @@ BLUESKY_APP_PASSWORD=your-app-password-here
 
 **Security Note:** App passwords can be revoked anytime from Bluesky settings without changing your main password.
 
+**Developer Note:** Bluesky's app password approach is functional but less than ideal. We eagerly await proper OAuth 2.0 support for the masses. Currently, OAuth is only available to those who self-host their own Personal Data Servers (PDS), which is overkill for most users. Once Bluesky releases OAuth for everyone, Stream Daemon will be updated to use it!
+
 ---
 
 ### Discord
 
 **Requirements:**
-- Discord Server (admin access)
+- Discord Server (admin or "Manage Webhooks" permission)
 - Webhook URL
 
 **Setup:**
 
 1. **Create Discord Webhook:**
    - Go to your Discord server
-   - Right-click the channel where you want announcements
-   - Edit Channel → Integrations → Webhooks
-   - Click "Create Webhook"
-   - Customize name/avatar (optional)
-   - Click "Copy Webhook URL"
+   - Right-click the channel where you want stream announcements
+   - Click **"Edit Channel"** → **"Integrations"** → **"Webhooks"**
+   - Click **"Create Webhook"** (or **"New Webhook"**)
+   - Customize webhook name and avatar (optional)
+   - Click **"Copy Webhook URL"**
+   - **Important:** Keep this URL secret - anyone with it can post to your channel!
 
 2. **Get Role IDs (Optional, for mentions):**
-   - Enable Developer Mode: User Settings → Advanced → Developer Mode
-   - Right-click a role → "Copy Role ID"
-   - Do this for each role you want to mention
+   - Enable Developer Mode: **User Settings** → **Advanced** → **Developer Mode** (toggle ON)
+   - Right-click any role in your server's role list → **"Copy Role ID"**
+   - Paste the role ID into your `.env` for the corresponding platform
+   - Do this for each streaming platform you want to mention a specific role
 
 3. **Configure Stream Daemon:**
 
@@ -308,9 +327,12 @@ DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/123456789/abcdefg...
 # Option 2: Use secrets manager (recommended)
 # Comment out webhook URL above, configure in Doppler/AWS/Vault
 
-# Optional: Role mentions (get IDs with Developer Mode)
+# Optional: Role mentions (requires Developer Mode to get IDs)
+# When Twitch goes live, mention this role:
 DISCORD_ROLE_TWITCH=1234567890123456789
+# When YouTube goes live, mention this role:
 DISCORD_ROLE_YOUTUBE=1234567890123456789
+# When Kick goes live, mention this role:
 DISCORD_ROLE_KICK=1234567890123456789
 ```
 
@@ -324,7 +346,53 @@ DISCORD_ROLE_KICK=1234567890123456789
 - When Twitch goes live → Mentions `DISCORD_ROLE_TWITCH`
 - When YouTube goes live → Mentions `DISCORD_ROLE_YOUTUBE`
 - When Kick goes live → Mentions `DISCORD_ROLE_KICK`
-- Use `@everyone` or `@here` for universal mentions
+- You can use the same role ID for all platforms, or different ones
+- Leave blank (or don't set) to skip role mentions
+
+**Tips:**
+- Use `@everyone` role ID for server-wide notifications (not recommended)
+- Create platform-specific roles like "Twitch Notifications" for better control
+- Test the webhook after creation by sending a test message
+
+---
+
+## 🚧 Coming Soon
+
+The following platforms are planned for future releases. This documentation will be updated when they're implemented:
+
+### Matrix Protocol
+
+**Status:** Planned  
+**What it is:** Decentralized, open-source messaging protocol  
+**Use case:** Post stream announcements to Matrix rooms
+
+Planned features:
+- Matrix homeserver integration
+- Room-specific announcements
+- End-to-end encryption support
+
+### Enhanced Discord Features
+
+**Status:** Planned  
+**What's coming:**
+- Discord bot integration (beyond webhooks)
+- Rich embed customization
+- Thread support
+- Reaction-based features
+
+### LLM Integration
+
+**Status:** Planned  
+**What it is:** AI-powered message generation  
+**Use case:** Automatically generate engaging, context-aware stream announcements
+
+Planned features:
+- OpenAI, Anthropic, or local LLM support
+- Dynamic message generation based on stream context
+- Platform-optimized messaging
+- Tone and style customization
+
+**Note:** These features are not yet available. Check back for updates or watch the GitHub repository for release announcements!
 
 ---
 

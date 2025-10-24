@@ -17,6 +17,8 @@ These tests ensure:
 3. **Platform Credentials** - Configure secrets in Doppler (see `DOPPLER_SECRETS.md`)
 4. **Environment Variables** - Configure `.env` file
 
+> **📌 Important:** Doppler tokens are environment-specific. A `dev` token only accesses `dev` secrets, `stg` only accesses `stg`, etc. Choose your environment (`dev`/`stg`/`prd`) in both your token generation and `DOPPLER_CONFIG` setting. See [DOPPLER_GUIDE.md](../DOPPLER_GUIDE.md) for details.
+
 ## 🔐 Doppler Secret Setup
 
 See **[DOPPLER_SECRETS.md](DOPPLER_SECRETS.md)** for detailed naming conventions.
@@ -43,9 +45,9 @@ YOUTUBE_API_KEY=your_api_key
 python tests/test_doppler_all.py
 ```
 
-This runs a comprehensive suite testing all platforms.
+This runs a comprehensive suite testing all streaming and social platforms.
 
-### Test Individual Platforms
+### Test Individual Streaming Platforms
 
 ```bash
 # Test Twitch
@@ -58,6 +60,22 @@ python tests/test_doppler_youtube.py
 python tests/test_doppler_kick.py
 ```
 
+### Test Individual Social Platforms
+
+```bash
+# Test Mastodon
+python tests/test_doppler_mastodon.py
+
+# Test Bluesky
+python tests/test_doppler_bluesky.py
+
+# Test Discord
+python tests/test_doppler_discord.py
+
+# Test Matrix (placeholder - not yet implemented)
+python tests/test_doppler_matrix.py
+```
+
 ### Make Scripts Executable (Optional)
 
 ```bash
@@ -65,24 +83,58 @@ chmod +x tests/*.py
 
 # Then run directly
 ./tests/test_doppler_all.py
+./tests/test_doppler_mastodon.py
 ```
 
 ## 📊 Test Coverage
 
-### Twitch Tests
+### Streaming Platform Tests
+
+#### Twitch Tests
 1. **Doppler Secret Fetch** - Validates `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are retrieved
 2. **Authentication** - Tests OAuth app authentication with Twitch API
 3. **Stream Check** - Verifies stream status detection works
 
-### YouTube Tests
+#### YouTube Tests
 1. **Doppler Secret Fetch** - Validates `YOUTUBE_API_KEY` is retrieved
 2. **Authentication** - Tests YouTube Data API v3 client creation
 3. **Stream Check** - Verifies live stream detection works
 
-### Kick Tests
+#### Kick Tests
 1. **API Connectivity** - Tests public API is accessible
 2. **Stream Check** - Verifies stream status detection works
 3. **Detection Method** - Validates detection logic matches main app
+
+### Social Platform Tests
+
+#### Mastodon Tests
+1. **Doppler Secret Fetch** - Validates all 3 Mastodon credentials are retrieved
+   - `MASTODON_CLIENT_ID`
+   - `MASTODON_CLIENT_SECRET`
+   - `MASTODON_ACCESS_TOKEN`
+2. **Authentication** - Tests Mastodon API authentication
+3. **Account Verification** - Retrieves and displays account information
+4. **Test Post** - Posts a test status (optional, with deletion)
+5. **Threading Test** - Tests reply/thread functionality (optional, with deletion)
+
+#### Bluesky Tests
+1. **Doppler Secret Fetch** - Validates `BLUESKY_APP_PASSWORD` is retrieved
+2. **Authentication** - Tests Bluesky (AT Protocol) login
+3. **Profile Info** - Retrieves and displays profile information
+4. **Character Limit** - Validates 300-character limit handling
+5. **Test Post** - Posts a test message (optional, with deletion)
+6. **Threading Test** - Tests reply/thread functionality (optional, with deletion)
+
+#### Discord Tests
+1. **Doppler Secret Fetch** - Validates `DISCORD_WEBHOOK_URL` is retrieved
+2. **Webhook Validation** - Tests webhook exists and is accessible
+3. **Role Mentions Config** - Checks platform-specific role mention setup
+4. **Test Post** - Posts a test message via webhook (optional)
+5. **Role Mention Post** - Tests role mention functionality (optional)
+
+#### Matrix Tests
+1. **Placeholder** - Matrix support not yet implemented
+2. **Config Check** - Verifies if Matrix config exists (for future use)
 
 ## 🔒 Security Features
 
