@@ -964,56 +964,260 @@ class BlueskyPlatform(SocialPlatform):
 
 
 class DiscordPlatform(SocialPlatform):
-    """Discord webhook platform with role mention support."""
+    """Discord webhook platform with flexible per-platform webhook and role support."""
     
     def __init__(self):
         super().__init__("Discord")
-        self.webhook_url = None
+        self.webhook_url = None  # Default webhook
+        self.webhook_urls = {}  # platform_name -> webhook_url mapping
+        self.role_id = None  # Default role
         self.role_mentions = {}  # platform_name -> role_id mapping
         
     def authenticate(self):
         if not get_bool_config('Discord', 'enable_posting', default=False):
             return False
-            
-        self.webhook_url = get_secret('Discord', 'webhook_url',
+        
+        # Get default webhook URL
+        self.webhook_url = get_secret('Discord', 'discord_webhook_url',
                                       secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                       secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                       doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
         
-        if not self.webhook_url:
+        # Get per-platform webhook URLs (optional - overrides default)
+        for platform in ['twitch', 'youtube', 'kick']:
+            platform_webhook = get_secret('Discord', f'discord_webhook_{platform}',
+                                         secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
+                                         secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
+                                         doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
+            if platform_webhook:
+                self.webhook_urls[platform] = platform_webhook
+                logger.info(f"  • Discord webhook configured for {platform.upper()}")
+        
+        # Need at least one webhook (default or per-platform)
+        if not self.webhook_url and not self.webhook_urls:
             return False
         
-        # Load role mentions for each platform (optional)
-        # Format: DISCORD_ROLE_TWITCH=1234567890
-        for platform in ['TWITCH', 'YOUTUBE', 'KICK']:
-            role_id = os.getenv(f'DISCORD_ROLE_{platform}')
-            if role_id:
-                self.role_mentions[platform.lower()] = role_id
-                logger.info(f"  • Discord role configured for {platform}: {role_id}")
-            
+        # Get default role ID (optional)
+        self.role_id = get_secret('Discord', 'discord_role',
+                                 secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
+                                 secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
+                                 doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
+        
+        # Get per-platform role IDs (optional - overrides default)
+        for platform in ['twitch', 'youtube', 'kick']:
+            platform_role = get_secret('Discord', f'discord_role_{platform}',
+                                      secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
+                                      secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
+                                      doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
+            if platform_role:
+                self.role_mentions[platform] = platform_role
+                logger.info(f"  • Discord role configured for {platform.upper()}: {platform_role}")
+        
         self.enabled = True
-        logger.info("✓ Discord webhook configured")
+        if self.webhook_url:
+            logger.info("✓ Discord webhook configured (default)")
+        if self.webhook_urls:
+            logger.info(f"✓ Discord webhooks configured ({len(self.webhook_urls)} platform-specific)")
         return True
     
     def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
-        if not self.enabled or not self.webhook_url:
+        if not self.enabled:
+            return None
+        
+        # Determine which webhook to use for this platform
+        webhook_url = None
+        if platform_name and platform_name.lower() in self.webhook_urls:
+            # Use platform-specific webhook if available
+            webhook_url = self.webhook_urls[platform_name.lower()]
+        else:
+            # Fall back to default webhook
+            webhook_url = self.webhook_url
+        
+        if not webhook_url:
+            logger.warning(f"⚠ No Discord webhook configured for {platform_name or 'default'}")
             return None
             
         try:
+            import re
+            
+            # Extract URL from message for embed
+            url_pattern = r'https?://[^\s]+'
+            url_match = re.search(url_pattern, message)
+            first_url = url_match.group() if url_match else None
+            
+            # Build Discord embed with rich card
+            embed = None
+            if first_url:
+                # Determine color and platform info from URL
+                color = 0x9146FF  # Default purple
+                platform_title = "Live Stream"
+                
+                if 'twitch.tv' in first_url:
+                    color = 0x9146FF  # Twitch purple
+                    platform_title = "🟣 Live on Twitch"
+                elif 'youtube.com' in first_url or 'youtu.be' in first_url:
+                    color = 0xFF0000  # YouTube red
+                    platform_title = "🔴 Live on YouTube"
+                elif 'kick.com' in first_url:
+                    color = 0x53FC18  # Kick green
+                    platform_title = "🟢 Live on Kick"
+                
+                # Extract stream title from message (remove URL and emoji)
+                stream_title = re.sub(url_pattern, '', message)
+                stream_title = re.sub(r'[🔴🟣🟢]', '', stream_title)
+                stream_title = stream_title.strip()
+                # Remove hashtags for cleaner title
+                stream_title = re.sub(r'\s*#\w+\s*$', '', stream_title)
+                
+                embed = {
+                    "title": platform_title,
+                    "description": stream_title if stream_title else "Stream is live!",
+                    "url": first_url,
+                    "color": color,
+                    "footer": {
+                        "text": "Click to watch the stream!"
+                    }
+                }
+            
             # Add role mention if configured for this platform
-            full_message = message
+            content = ""
+            # Check platform-specific role first, then fall back to default role
             if platform_name and platform_name.lower() in self.role_mentions:
                 role_id = self.role_mentions[platform_name.lower()]
-                full_message = f"<@&{role_id}> {message}"
+                content = f"<@&{role_id}>"
+            elif self.role_id:
+                # Use default role if no platform-specific role
+                content = f"<@&{self.role_id}>"
             
-            data = {"content": full_message}
+            # Build webhook payload
+            data = {}
+            if content:
+                data["content"] = content
+            if embed:
+                data["embeds"] = [embed]
+            else:
+                # Fallback to plain message if no URL found
+                data["content"] = content + " " + message if content else message
+            
             response = requests.post(self.webhook_url, json=data, timeout=10)
             
-            if response.status_code == 204:
+            if response.status_code == 204 or response.status_code == 200:
+                logger.info(f"✓ Discord embed posted")
                 return "discord_message"  # Discord webhooks don't return IDs easily
+            else:
+                logger.warning(f"⚠ Discord post failed with status {response.status_code}")
             return None
         except Exception as e:
             logger.error(f"✗ Discord post failed: {e}")
+            return None
+
+
+class MatrixPlatform(SocialPlatform):
+    """Matrix platform with rich message support."""
+    
+    def __init__(self):
+        super().__init__("Matrix")
+        self.homeserver = None
+        self.access_token = None
+        self.room_id = None
+        
+    def authenticate(self):
+        if not get_bool_config('Matrix', 'enable_posting', default=False):
+            return False
+        
+        # Get default homeserver
+        self.homeserver = get_secret('Matrix', 'matrix_homeserver',
+                                     secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
+                                     secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
+                                     doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+        
+        # Get default access token
+        self.access_token = get_secret('Matrix', 'matrix_access_token',
+                                       secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
+                                       secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
+                                       doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+        
+        # Get default room ID
+        self.room_id = get_secret('Matrix', 'matrix_room_id',
+                                  secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
+                                  secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
+                                  doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+        
+        if not all([self.homeserver, self.access_token, self.room_id]):
+            return False
+        
+        # Ensure homeserver has proper format
+        if not self.homeserver.startswith('http'):
+            self.homeserver = f"https://{self.homeserver}"
+        
+        self.enabled = True
+        logger.info(f"✓ Matrix authenticated ({self.room_id})")
+        return True
+    
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
+        if not self.enabled or not all([self.homeserver, self.access_token, self.room_id]):
+            return None
+            
+        try:
+            import re
+            from urllib.parse import quote
+            
+            # Extract URL from message for rich formatting
+            url_pattern = r'https?://[^\s]+'
+            url_match = re.search(url_pattern, message)
+            first_url = url_match.group() if url_match else None
+            
+            # Create rich HTML message with link preview
+            html_body = message
+            plain_body = message
+            
+            if first_url:
+                # Make URL clickable in HTML
+                html_body = re.sub(url_pattern, f'<a href="{first_url}">{first_url}</a>', message)
+                
+                # Add platform-specific styling
+                if 'twitch.tv' in first_url:
+                    html_body = f'<p><strong>🟣 Live on Twitch!</strong></p><p>{html_body}</p>'
+                elif 'youtube.com' in first_url or 'youtu.be' in first_url:
+                    html_body = f'<p><strong>🔴 Live on YouTube!</strong></p><p>{html_body}</p>'
+                elif 'kick.com' in first_url:
+                    html_body = f'<p><strong>🟢 Live on Kick!</strong></p><p>{html_body}</p>'
+            
+            # Build Matrix message event
+            event_data = {
+                "msgtype": "m.text",
+                "body": plain_body,
+                "format": "org.matrix.custom.html",
+                "formatted_body": html_body
+            }
+            
+            # Add reply reference if provided
+            if reply_to_id:
+                event_data["m.relates_to"] = {
+                    "m.in_reply_to": {
+                        "event_id": reply_to_id
+                    }
+                }
+            
+            # Send message via Matrix Client-Server API
+            url = f"{self.homeserver}/_matrix/client/r0/rooms/{quote(self.room_id)}/send/m.room.message"
+            headers = {
+                "Authorization": f"Bearer {self.access_token}",
+                "Content-Type": "application/json"
+            }
+            
+            response = requests.post(url, json=event_data, headers=headers, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                event_id = data.get('event_id')
+                logger.info(f"✓ Matrix message posted")
+                return event_id
+            else:
+                logger.warning(f"⚠ Matrix post failed with status {response.status_code}: {response.text}")
+            return None
+        except Exception as e:
+            logger.error(f"✗ Matrix post failed: {e}")
             return None
 
 
@@ -1049,7 +1253,8 @@ def main():
     social_platforms = [
         MastodonPlatform(),
         BlueskyPlatform(),
-        DiscordPlatform()
+        DiscordPlatform(),
+        MatrixPlatform()
     ]
     
     enabled_social = []
@@ -1059,7 +1264,7 @@ def main():
     
     if not enabled_social:
         logger.error("✗ No social platforms configured!")
-        logger.error("   Enable at least one: Mastodon, Bluesky, or Discord")
+        logger.error("   Enable at least one: Mastodon, Bluesky, Discord, or Matrix")
         sys.exit(1)
     
     # Load messages from consolidated files with platform sections
