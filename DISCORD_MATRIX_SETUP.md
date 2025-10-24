@@ -95,22 +95,22 @@ DISCORD_ROLE_YOUTUBE=555555555555555555
 DISCORD_ROLE_KICK=666666666666666666
 ```
 
-**Doppler/Secrets Manager Naming:**
+**Doppler/Secrets Manager Setup:**
 
-When using Doppler or other secrets managers, structure your `discord` secret as JSON:
+When using Doppler or other secrets managers, create each as a **separate secret** (not JSON):
 
-```json
-{
-  "discord_webhook_url": "https://discord.com/api/webhooks/default/token",
-  "discord_webhook_twitch": "https://discord.com/api/webhooks/twitch/token",
-  "discord_webhook_youtube": "https://discord.com/api/webhooks/youtube/token",
-  "discord_webhook_kick": "https://discord.com/api/webhooks/kick/token",
-  "discord_role": "default_role_id",
-  "discord_role_twitch": "twitch_role_id",
-  "discord_role_youtube": "youtube_role_id",
-  "discord_role_kick": "kick_role_id"
-}
 ```
+discord_webhook_url = "https://discord.com/api/webhooks/default/token"
+discord_webhook_twitch = "https://discord.com/api/webhooks/twitch/token"
+discord_webhook_youtube = "https://discord.com/api/webhooks/youtube/token"
+discord_webhook_kick = "https://discord.com/api/webhooks/kick/token"
+discord_role = "default_role_id"
+discord_role_twitch = "twitch_role_id"
+discord_role_youtube = "youtube_role_id"
+discord_role_kick = "kick_role_id"
+```
+
+This makes it easier to update individual values without editing JSON.
 
 **Priority/Fallback Logic:**
 - Per-platform webhook overrides default webhook
@@ -202,17 +202,17 @@ MATRIX_ACCESS_TOKEN=your_access_token_here
 MATRIX_ROOM_ID=!your_room_id:matrix.org
 ```
 
-**Doppler/Secrets Manager Naming:**
+**Doppler/Secrets Manager Setup:**
 
-When using Doppler or other secrets managers, structure your `matrix` secret as JSON:
+When using Doppler or other secrets managers, create each as a **separate secret** (not JSON):
 
-```json
-{
-  "matrix_homeserver": "https://matrix.org",
-  "matrix_access_token": "syt_abc123...",
-  "matrix_room_id": "!abc123:matrix.org"
-}
 ```
+matrix_homeserver = "https://matrix.org"
+matrix_access_token = "syt_abc123..."
+matrix_room_id = "!abc123:matrix.org"
+```
+
+This makes it easier to update individual values and rotate tokens.
 
 ### Matrix Features
 
