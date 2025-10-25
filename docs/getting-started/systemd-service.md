@@ -10,9 +10,9 @@ sudo ./install-systemd.sh
 ```
 
 The installer will:
-- ✅ Ask you to choose between Python or Docker deployment
-- ✅ For Python mode: Create a Python virtual environment (if needed) and install dependencies
-- ✅ For Docker mode: Check for Docker installation and build the Docker image if needed
+- ✅ Prompt for deployment mode selection (Python or Docker)
+- ✅ Python mode: Create a Python virtual environment (if needed) and install dependencies
+- ✅ Docker mode: Check for Docker installation and build the Docker image if needed
 - ✅ Create systemd service file
 - ✅ Optionally enable service on boot
 - ✅ Optionally start the service immediately
@@ -23,13 +23,13 @@ The installer will:
 - Uses Python virtual environment
 - Dependencies installed locally
 - Lighter weight
-- Best for development
+- Suitable for development and simple deployments
 
 **Docker Mode:**
 - Uses Docker containers
 - Isolated environment
 - Consistent deployment
-- Best for production
+- Suitable for production and complex deployments
 - Requires Docker and docker-compose to be installed
 
 ---
