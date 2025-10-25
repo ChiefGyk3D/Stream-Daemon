@@ -122,8 +122,24 @@ This makes it easier to update individual values without editing JSON.
 ✅ **Rich Embed Cards** with:
 - Platform-specific colors (Purple for Twitch, Red for YouTube, Green for Kick)
 - Stream title as description
+- Live viewer counts and category/game info
+- Live stream thumbnails (auto-refreshing)
 - Clickable URL to stream
 - Platform emoji indicators
+
+✅ **Live Embed Updates:**
+- Embeds update in-place with fresh viewer counts (no duplicate posts)
+- Thumbnails refresh automatically with cache-busting
+- "Last updated" timestamp in footer
+- Updates every CHECK_INTERVAL_SECONDS
+
+✅ **Stream Ended Messages:**
+- Embeds automatically update when stream ends
+- Customizable "thanks for watching" messages per platform
+- VOD link preserved in embed
+- Peak viewer count displayed
+- Final thumbnail retained
+- See [DISCORD_STREAM_ENDED.md](docs/DISCORD_STREAM_ENDED.md) for full details
 
 ✅ **Flexible Webhooks:**
 - Single webhook for simplicity

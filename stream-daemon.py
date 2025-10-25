@@ -244,9 +244,11 @@ def load_secrets_from_doppler(secret_name):
 def get_secret(platform, key, secret_name_env=None, secret_path_env=None, doppler_secret_env=None):
     """
     Get a secret value with priority:
-    1. Environment variable (highest priority)
-    2. Secrets manager (AWS/Vault/Doppler)
+    1. Secrets manager (AWS/Vault/Doppler) - HIGHEST PRIORITY if enabled
+    2. Environment variable (.env file) - FALLBACK
     3. None if not found
+    
+    This ensures production secrets in secrets managers override .env defaults.
     
     Args:
         platform: Platform name (e.g., 'Twitch', 'YouTube')
@@ -255,32 +257,39 @@ def get_secret(platform, key, secret_name_env=None, secret_path_env=None, dopple
         secret_path_env: HashiCorp Vault env var name
         doppler_secret_env: Doppler secret name env var
     """
-    # First check direct environment variable
-    env_key = f"{platform.upper()}_{key.upper()}"
-    env_value = os.getenv(env_key)
-    if env_value:
-        return env_value
-    
     # Check which secrets manager is enabled
     secret_manager = os.getenv('SECRETS_SECRET_MANAGER', 'none').lower()
     
+    # Priority 1: Try secrets manager first (if enabled)
     if secret_manager == 'aws' and secret_name_env:
         secret_name = os.getenv(secret_name_env)
         if secret_name:
             secrets = load_secrets_from_aws(secret_name)
-            return secrets.get(key)
+            secret_value = secrets.get(key)
+            if secret_value:
+                return secret_value
     
     elif secret_manager == 'vault' and secret_path_env:
         secret_path = os.getenv(secret_path_env)
         if secret_path:
             secrets = load_secrets_from_vault(secret_path)
-            return secrets.get(key)
+            secret_value = secrets.get(key)
+            if secret_value:
+                return secret_value
     
     elif secret_manager == 'doppler' and doppler_secret_env:
         secret_name = os.getenv(doppler_secret_env)
         if secret_name:
             secrets = load_secrets_from_doppler(secret_name)
-            return secrets.get(key)
+            secret_value = secrets.get(key)
+            if secret_value:
+                return secret_value
+    
+    # Priority 2: Fallback to environment variable (.env file)
+    env_key = f"{platform.upper()}_{key.upper()}"
+    env_value = os.getenv(env_key)
+    if env_value:
+        return env_value
     
     return None
 
@@ -396,7 +405,15 @@ class TwitchPlatform(StreamingPlatform):
                     live_streams = [s for s in streams if s.type == 'live']
                     
                     if live_streams:
-                        return True, live_streams[0].title
+                        stream = live_streams[0]
+                        # Return tuple: (is_live, title, viewer_count, thumbnail_url, game_name)
+                        stream_data = {
+                            'title': stream.title,
+                            'viewer_count': stream.viewer_count,
+                            'thumbnail_url': stream.thumbnail_url.replace('{width}', '1280').replace('{height}', '720') if stream.thumbnail_url else None,
+                            'game_name': stream.game_name
+                        }
+                        return True, stream_data
                     return False, None
                 finally:
                     if client:
@@ -450,24 +467,33 @@ class YouTubePlatform(StreamingPlatform):
     def _get_channel_id_from_username(self):
         """Convert username/handle to channel ID."""
         try:
+            # Ensure username has @ prefix for handle-based lookup
+            lookup_username = self.username if self.username.startswith('@') else f'@{self.username}'
+            
             # Try modern handle format first (@username)
-            if self.username.startswith('@'):
-                request = self.client.channels().list(
-                    part="id",
-                    forHandle=self.username
-                )
-            else:
-                # Try legacy username format
-                request = self.client.channels().list(
-                    part="id",
-                    forUsername=self.username
-                )
+            request = self.client.channels().list(
+                part="id",
+                forHandle=lookup_username
+            )
             
             response = request.execute()
             if response.get('items'):
                 channel_id = response['items'][0]['id']
                 logger.info(f"✓ Resolved YouTube channel ID: {channel_id}")
                 return channel_id
+            
+            # If handle didn't work and original didn't have @, try legacy username
+            if not self.username.startswith('@'):
+                request = self.client.channels().list(
+                    part="id",
+                    forUsername=self.username
+                )
+                response = request.execute()
+                if response.get('items'):
+                    channel_id = response['items'][0]['id']
+                    logger.info(f"✓ Resolved YouTube channel ID: {channel_id}")
+                    return channel_id
+            
             return None
         except Exception as e:
             logger.warning(f"Error resolving YouTube channel ID: {e}")
@@ -510,8 +536,45 @@ class YouTubePlatform(StreamingPlatform):
             response = request.execute()
             
             if response.get('items'):
-                title = response['items'][0]['snippet']['title']
-                return True, title
+                item = response['items'][0]
+                video_id = item['id']['videoId']
+                
+                # Get detailed video statistics
+                try:
+                    video_request = self.client.videos().list(
+                        part="liveStreamingDetails,snippet",
+                        id=video_id
+                    )
+                    video_response = video_request.execute()
+                    
+                    if video_response.get('items'):
+                        video_data = video_response['items'][0]
+                        title = video_data['snippet']['title']
+                        thumbnail_url = video_data['snippet']['thumbnails'].get('high', {}).get('url')
+                        
+                        # Get concurrent viewers if available
+                        viewer_count = video_data.get('liveStreamingDetails', {}).get('concurrentViewers')
+                        if viewer_count:
+                            viewer_count = int(viewer_count)
+                        
+                        stream_data = {
+                            'title': title,
+                            'viewer_count': viewer_count,
+                            'thumbnail_url': thumbnail_url,
+                            'game_name': None  # YouTube doesn't have game/category in API
+                        }
+                        return True, stream_data
+                except Exception as e:
+                    logger.debug(f"Could not get detailed YouTube stream info: {e}")
+                    # Fallback to basic info
+                    stream_data = {
+                        'title': item['snippet']['title'],
+                        'viewer_count': None,
+                        'thumbnail_url': item['snippet']['thumbnails'].get('high', {}).get('url'),
+                        'game_name': None
+                    }
+                    return True, stream_data
+                
             return False, None
         except Exception as e:
             logger.error(f"Error checking YouTube: {e}")
@@ -520,24 +583,33 @@ class YouTubePlatform(StreamingPlatform):
     def _resolve_channel_id(self, username):
         """Resolve a channel ID from a username/handle (for any user, not just authenticated one)."""
         try:
+            # Ensure username has @ prefix for handle-based lookup
+            lookup_username = username if username.startswith('@') else f'@{username}'
+            
             # Try modern handle format first (@username)
-            if username.startswith('@'):
-                request = self.client.channels().list(
-                    part="id",
-                    forHandle=username
-                )
-            else:
-                # Try legacy username format
-                request = self.client.channels().list(
-                    part="id",
-                    forUsername=username
-                )
+            request = self.client.channels().list(
+                part="id",
+                forHandle=lookup_username
+            )
             
             response = request.execute()
             if response.get('items'):
                 channel_id = response['items'][0]['id']
                 logger.debug(f"✓ Resolved YouTube channel ID for {username}: {channel_id}")
                 return channel_id
+            
+            # If handle didn't work and original didn't have @, try legacy username
+            if not username.startswith('@'):
+                request = self.client.channels().list(
+                    part="id",
+                    forUsername=username
+                )
+                response = request.execute()
+                if response.get('items'):
+                    channel_id = response['items'][0]['id']
+                    logger.debug(f"✓ Resolved YouTube channel ID for {username}: {channel_id}")
+                    return channel_id
+            
             return None
         except Exception as e:
             logger.warning(f"Error resolving YouTube channel ID for {username}: {e}")
@@ -617,40 +689,67 @@ class KickPlatform(StreamingPlatform):
             return False, None
     
     def _check_authenticated(self, username):
-        """Check stream status using authenticated API."""
+        """Check stream status using authenticated official Kick API."""
         try:
-            # Query channels by slug (username) - stream info is embedded in response
-            url = "https://api.kick.com/public/v1/channels"
+            # The Kick API doesn't support filtering by slug in the query params
+            # We need to fetch a larger list and search for the channel
+            url = "https://api.kick.com/public/v1/livestreams"
             headers = {
                 'Authorization': f'Bearer {self.access_token}',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
-            params = {'slug': username}
+            
+            # Fetch top streams (most likely to include the channel we're looking for)
+            params = {
+                'limit': 100,  # Get more results to increase chances of finding the channel
+                'sort': 'viewer_count'
+            }
+            
             response = requests.get(url, headers=headers, params=params, timeout=10)
             
             if response.status_code != 200:
-                logger.warning(f"Kick channel lookup failed: {response.status_code}")
+                logger.warning(f"Kick livestreams API failed: {response.status_code}")
                 return False, None
             
-            data = response.json()
-            channels = data.get('data', [])
+            result = response.json()
             
-            if not channels:
-                logger.warning(f"No channel found for username: {username}")
+            # Check if we got valid data
+            if not isinstance(result, dict):
+                logger.warning(f"Unexpected Kick API response format")
                 return False, None
             
-            channel = channels[0]
+            data = result.get('data', [])
             
-            # Check if stream is live (stream object is embedded in channel data)
-            stream = channel.get('stream', {})
-            is_live = stream.get('is_live', False)
+            # Search for the channel by slug (username)
+            livestream = None
+            username_lower = username.lower()
+            for stream in data:
+                if stream.get('slug', '').lower() == username_lower:
+                    livestream = stream
+                    break
             
-            if is_live:
-                # Title is at channel level, not stream level
-                title = channel.get('stream_title', 'Live Stream')
-                return True, title
+            # Channel not found in current live streams
+            if not livestream:
+                return False, None
             
-            return False, None
+            # Extract stream information
+            stream_title = livestream.get('stream_title', 'Live Stream')
+            viewer_count = livestream.get('viewer_count')
+            thumbnail_url = livestream.get('thumbnail')
+            
+            category = livestream.get('category', {})
+            game_name = category.get('name') if isinstance(category, dict) else None
+            
+            stream_data = {
+                'title': stream_title,
+                'viewer_count': int(viewer_count) if viewer_count is not None else None,
+                'thumbnail_url': thumbnail_url,
+                'game_name': game_name
+            }
+            
+            return True, stream_data
+
             
         except Exception as e:
             logger.warning(f"Authenticated Kick check failed: {e}, trying public API")
@@ -675,7 +774,18 @@ class KickPlatform(StreamingPlatform):
                     livestream = data['data']
                     if livestream.get('is_live'):
                         title = livestream.get('session_title', 'Live Stream')
-                        return True, title
+                        viewer_count = livestream.get('viewer_count') or livestream.get('viewers')
+                        thumbnail_url = livestream.get('thumbnail', {}).get('url') if livestream.get('thumbnail') else None
+                        category = livestream.get('category', {})
+                        game_name = category.get('name') if category else None
+                        
+                        stream_data = {
+                            'title': title,
+                            'viewer_count': int(viewer_count) if viewer_count else None,
+                            'thumbnail_url': thumbnail_url,
+                            'game_name': game_name
+                        }
+                        return True, stream_data
             
             return False, None
             
@@ -755,13 +865,70 @@ class MastodonPlatform(SocialPlatform):
             logger.warning(f"✗ Mastodon authentication failed: {e}")
             return False
     
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
         if not self.enabled or not self.client:
             return None
             
         try:
+            # Check if we should attach a thumbnail image
+            media_ids = []
+            if stream_data:
+                thumbnail_url = stream_data.get('thumbnail_url')
+                if thumbnail_url:
+                    try:
+                        import requests
+                        import tempfile
+                        import os
+                        
+                        # Download thumbnail
+                        headers = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                        }
+                        img_response = requests.get(thumbnail_url, headers=headers, timeout=10)
+                        
+                        if img_response.status_code == 200:
+                            # Determine file extension from content type or URL
+                            content_type = img_response.headers.get('content-type', '')
+                            if 'jpeg' in content_type or 'jpg' in content_type or thumbnail_url.endswith('.jpg'):
+                                ext = '.jpg'
+                            elif 'png' in content_type or thumbnail_url.endswith('.png'):
+                                ext = '.png'
+                            elif 'webp' in content_type or thumbnail_url.endswith('.webp'):
+                                ext = '.webp'
+                            else:
+                                ext = '.jpg'  # Default fallback
+                            
+                            # Save to temporary file
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp_file:
+                                tmp_file.write(img_response.content)
+                                tmp_path = tmp_file.name
+                            
+                            try:
+                                # Upload to Mastodon
+                                # Build description with stream info
+                                viewer_count = stream_data.get('viewer_count', 0)
+                                game_name = stream_data.get('game_name', '')
+                                description = f"🔴 LIVE"
+                                if viewer_count:
+                                    description += f" • {viewer_count:,} viewers"
+                                if game_name:
+                                    description += f" • {game_name}"
+                                
+                                media = self.client.media_post(tmp_path, description=description)
+                                media_ids.append(media['id'])
+                                logger.info(f"✓ Uploaded thumbnail to Mastodon (media ID: {media['id']})")
+                            finally:
+                                # Clean up temp file
+                                os.unlink(tmp_path)
+                    except Exception as img_error:
+                        logger.warning(f"⚠ Could not upload thumbnail to Mastodon: {img_error}")
+            
             # Post as a reply if reply_to_id is provided (threading)
-            status = self.client.status_post(message, in_reply_to_id=reply_to_id)
+            status = self.client.status_post(
+                message, 
+                in_reply_to_id=reply_to_id,
+                media_ids=media_ids if media_ids else None
+            )
             return str(status['id'])
         except Exception as e:
             logger.error(f"✗ Mastodon post failed: {e}")
@@ -798,7 +965,7 @@ class BlueskyPlatform(SocialPlatform):
             logger.warning(f"✗ Bluesky authentication failed: {e}")
             return False
     
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
         if not self.enabled or not self.client:
             return None
             
@@ -839,12 +1006,89 @@ class BlueskyPlatform(SocialPlatform):
             embed = None
             if first_url:
                 try:
-                    # Special handling for Kick - skip embed due to CloudFlare security blocking
-                    if 'kick.com/' in first_url:
-                        # Kick.com blocks automated requests with CloudFlare security policies
+                    # Special handling for Kick with stream_data - use provided metadata
+                    if 'kick.com/' in first_url and stream_data:
+                        logger.info(f"ℹ Using stream metadata for Kick embed (CloudFlare bypass)")
+                        
+                        title = stream_data.get('title', 'Live on Kick')
+                        thumbnail_url = stream_data.get('thumbnail_url')
+                        
+                        # Upload thumbnail to Bluesky if available
+                        thumb_blob = None
+                        if thumbnail_url:
+                            try:
+                                import requests
+                                headers = {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                                }
+                                img_response = requests.get(thumbnail_url, headers=headers, timeout=10)
+                                if img_response.status_code == 200:
+                                    upload_response = self.client.upload_blob(img_response.content)
+                                    thumb_blob = upload_response.blob if hasattr(upload_response, 'blob') else None
+                            except Exception as img_error:
+                                logger.warning(f"⚠ Could not upload Kick thumbnail: {img_error}")
+                        
+                        # Create external embed with stream metadata
+                        viewer_count = stream_data.get('viewer_count', 0)
+                        game_name = stream_data.get('game_name', '')
+                        description = f"🔴 LIVE"
+                        if viewer_count:
+                            description += f" • {viewer_count:,} viewers"
+                        if game_name:
+                            description += f" • {game_name}"
+                        
+                        embed = models.AppBskyEmbedExternal.Main(
+                            external=models.AppBskyEmbedExternal.External(
+                                uri=first_url,
+                                title=title[:300] if title else 'Live on Kick',
+                                description=description[:1000],
+                                thumb=thumb_blob if thumb_blob else None
+                            )
+                        )
+                    elif 'kick.com/' in first_url:
+                        # Kick.com without stream_data - blocks automated requests with CloudFlare security policies
                         # Links will still be clickable, just without embed cards
                         logger.info(f"ℹ Kick.com blocks automated requests, posting with clickable link only")
                         embed = None
+                    elif stream_data and ('twitch.tv/' in first_url or 'youtube.com/' in first_url or 'youtu.be/' in first_url):
+                        # Use stream_data for Twitch/YouTube if available (more reliable than scraping)
+                        logger.info(f"ℹ Using stream metadata for embed")
+                        
+                        title = stream_data.get('title', 'Live Stream')
+                        thumbnail_url = stream_data.get('thumbnail_url')
+                        
+                        # Upload thumbnail to Bluesky if available
+                        thumb_blob = None
+                        if thumbnail_url:
+                            try:
+                                import requests
+                                headers = {
+                                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+                                }
+                                img_response = requests.get(thumbnail_url, headers=headers, timeout=10)
+                                if img_response.status_code == 200:
+                                    upload_response = self.client.upload_blob(img_response.content)
+                                    thumb_blob = upload_response.blob if hasattr(upload_response, 'blob') else None
+                            except Exception as img_error:
+                                logger.warning(f"⚠ Could not upload thumbnail: {img_error}")
+                        
+                        # Create external embed with stream metadata
+                        viewer_count = stream_data.get('viewer_count', 0)
+                        game_name = stream_data.get('game_name', '')
+                        description = f"🔴 LIVE"
+                        if viewer_count:
+                            description += f" • {viewer_count:,} viewers"
+                        if game_name:
+                            description += f" • {game_name}"
+                        
+                        embed = models.AppBskyEmbedExternal.Main(
+                            external=models.AppBskyEmbedExternal.External(
+                                uri=first_url,
+                                title=title[:300] if title else 'Live Stream',
+                                description=description[:1000],
+                                thumb=thumb_blob if thumb_blob else None
+                            )
+                        )
                     else:
                         # For non-Kick URLs, scrape Open Graph metadata
                         import requests
@@ -972,20 +1216,21 @@ class DiscordPlatform(SocialPlatform):
         self.webhook_urls = {}  # platform_name -> webhook_url mapping
         self.role_id = None  # Default role
         self.role_mentions = {}  # platform_name -> role_id mapping
+        self.active_messages = {}  # platform_name -> {message_id, webhook_url, last_update} tracking
         
     def authenticate(self):
         if not get_bool_config('Discord', 'enable_posting', default=False):
             return False
         
         # Get default webhook URL
-        self.webhook_url = get_secret('Discord', 'discord_webhook_url',
+        self.webhook_url = get_secret('Discord', 'webhook_url',
                                       secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                       secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                       doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
         
         # Get per-platform webhook URLs (optional - overrides default)
         for platform in ['twitch', 'youtube', 'kick']:
-            platform_webhook = get_secret('Discord', f'discord_webhook_{platform}',
+            platform_webhook = get_secret('Discord', f'webhook_{platform}',
                                          secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                          secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                          doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
@@ -998,14 +1243,14 @@ class DiscordPlatform(SocialPlatform):
             return False
         
         # Get default role ID (optional)
-        self.role_id = get_secret('Discord', 'discord_role',
+        self.role_id = get_secret('Discord', 'role',
                                  secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                  secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                  doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
         
         # Get per-platform role IDs (optional - overrides default)
         for platform in ['twitch', 'youtube', 'kick']:
-            platform_role = get_secret('Discord', f'discord_role_{platform}',
+            platform_role = get_secret('Discord', f'role_{platform}',
                                       secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                       secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                       doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
@@ -1020,7 +1265,7 @@ class DiscordPlatform(SocialPlatform):
             logger.info(f"✓ Discord webhooks configured ({len(self.webhook_urls)} platform-specific)")
         return True
     
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
         if not self.enabled:
             return None
         
@@ -1062,22 +1307,53 @@ class DiscordPlatform(SocialPlatform):
                     color = 0x53FC18  # Kick green
                     platform_title = "🟢 Live on Kick"
                 
-                # Extract stream title from message (remove URL and emoji)
-                stream_title = re.sub(url_pattern, '', message)
-                stream_title = re.sub(r'[🔴🟣🟢]', '', stream_title)
-                stream_title = stream_title.strip()
-                # Remove hashtags for cleaner title
-                stream_title = re.sub(r'\s*#\w+\s*$', '', stream_title)
+                # Use stream_data if provided, otherwise extract from message
+                if stream_data:
+                    stream_title = stream_data.get('title', 'Live Stream')
+                    viewer_count = stream_data.get('viewer_count')
+                    thumbnail_url = stream_data.get('thumbnail_url')
+                    game_name = stream_data.get('game_name')
+                else:
+                    # Extract stream title from message (remove URL and emoji)
+                    stream_title = re.sub(url_pattern, '', message)
+                    stream_title = re.sub(r'[🔴🟣🟢]', '', stream_title)
+                    stream_title = stream_title.strip()
+                    # Remove hashtags for cleaner title
+                    stream_title = re.sub(r'\s*#\w+\s*$', '', stream_title)
+                    viewer_count = None
+                    thumbnail_url = None
+                    game_name = None
                 
                 embed = {
                     "title": platform_title,
                     "description": stream_title if stream_title else "Stream is live!",
                     "url": first_url,
                     "color": color,
-                    "footer": {
-                        "text": "Click to watch the stream!"
-                    }
                 }
+                
+                # Add fields for viewer count and game if available
+                fields = []
+                if viewer_count is not None:
+                    fields.append({
+                        "name": "👥 Viewers",
+                        "value": f"{viewer_count:,}",
+                        "inline": True
+                    })
+                if game_name:
+                    fields.append({
+                        "name": "🎮 Category",
+                        "value": game_name,
+                        "inline": True
+                    })
+                
+                if fields:
+                    embed["fields"] = fields
+                
+                # Add thumbnail if available
+                if thumbnail_url:
+                    embed["image"] = {"url": thumbnail_url}
+                
+                embed["footer"] = {"text": "Click to watch the stream!"}
             
             # Add role mention if configured for this platform
             content = ""
@@ -1099,17 +1375,252 @@ class DiscordPlatform(SocialPlatform):
                 # Fallback to plain message if no URL found
                 data["content"] = content + " " + message if content else message
             
-            response = requests.post(self.webhook_url, json=data, timeout=10)
+            # Add ?wait=true to get the message ID back
+            webhook_url_with_wait = webhook_url + "?wait=true" if "?" not in webhook_url else webhook_url + "&wait=true"
             
-            if response.status_code == 204 or response.status_code == 200:
-                logger.info(f"✓ Discord embed posted")
-                return "discord_message"  # Discord webhooks don't return IDs easily
+            response = requests.post(webhook_url_with_wait, json=data, timeout=10)
+            
+            if response.status_code == 200:
+                # Store message info for future updates
+                message_data = response.json()
+                message_id = message_data.get('id')
+                if message_id and platform_name:
+                    import time
+                    self.active_messages[platform_name.lower()] = {
+                        'message_id': message_id,
+                        'webhook_url': webhook_url,
+                        'last_update': time.time()
+                    }
+                logger.info(f"✓ Discord embed posted (ID: {message_id})")
+                return message_id
             else:
                 logger.warning(f"⚠ Discord post failed with status {response.status_code}")
             return None
         except Exception as e:
             logger.error(f"✗ Discord post failed: {e}")
             return None
+    
+    def update_stream(self, platform_name: str, stream_data: dict, stream_url: str) -> bool:
+        """Update an existing Discord embed with fresh stream data (viewer count, thumbnail)."""
+        if not self.enabled or not platform_name:
+            return False
+        
+        platform_key = platform_name.lower()
+        if platform_key not in self.active_messages:
+            logger.debug(f"No active Discord message for {platform_name} to update")
+            return False
+        
+        msg_info = self.active_messages[platform_key]
+        message_id = msg_info['message_id']
+        webhook_url = msg_info['webhook_url']
+        
+        try:
+            import re
+            import time
+            
+            # Determine color and platform info
+            color = 0x9146FF  # Default purple
+            platform_title = "Live Stream"
+            
+            if 'twitch.tv' in stream_url or platform_key == 'twitch':
+                color = 0x9146FF
+                platform_title = "🟣 Live on Twitch"
+            elif 'youtube.com' in stream_url or 'youtu.be' in stream_url or platform_key == 'youtube':
+                color = 0xFF0000
+                platform_title = "🔴 Live on YouTube"
+            elif 'kick.com' in stream_url or platform_key == 'kick':
+                color = 0x53FC18
+                platform_title = "🟢 Live on Kick"
+            
+            # Build updated embed
+            stream_title = stream_data.get('title', 'Live Stream')
+            viewer_count = stream_data.get('viewer_count')
+            thumbnail_url = stream_data.get('thumbnail_url')
+            game_name = stream_data.get('game_name')
+            
+            embed = {
+                "title": platform_title,
+                "description": stream_title,
+                "url": stream_url,
+                "color": color,
+            }
+            
+            # Add fields for viewer count and game
+            fields = []
+            if viewer_count is not None:
+                fields.append({
+                    "name": "👥 Viewers",
+                    "value": f"{viewer_count:,}",
+                    "inline": True
+                })
+            if game_name:
+                fields.append({
+                    "name": "🎮 Category",
+                    "value": game_name,
+                    "inline": True
+                })
+            
+            if fields:
+                embed["fields"] = fields
+            
+            # Add thumbnail with cache-busting timestamp to force refresh
+            if thumbnail_url:
+                # Add timestamp to URL to force Discord to fetch new thumbnail
+                separator = '&' if '?' in thumbnail_url else '?'
+                embed["image"] = {"url": f"{thumbnail_url}{separator}_t={int(time.time())}"}
+            
+            # Add last updated timestamp in footer
+            embed["footer"] = {"text": f"Last updated: {time.strftime('%H:%M:%S')} • Click to watch!"}
+            
+            # Keep role mention in content (don't re-mention, just keep it visible)
+            content = ""
+            if platform_key in self.role_mentions:
+                role_id = self.role_mentions[platform_key]
+                content = f"<@&{role_id}>"
+            elif self.role_id:
+                content = f"<@&{self.role_id}>"
+            
+            # Build update payload
+            data = {}
+            if content:
+                data["content"] = content
+            data["embeds"] = [embed]
+            
+            # PATCH the message via webhook
+            edit_url = f"{webhook_url}/messages/{message_id}"
+            response = requests.patch(edit_url, json=data, timeout=10)
+            
+            if response.status_code == 200:
+                msg_info['last_update'] = time.time()
+                logger.info(f"✓ Discord embed updated for {platform_name} (viewers: {viewer_count:,})" if viewer_count else f"✓ Discord embed updated for {platform_name}")
+                return True
+            else:
+                logger.warning(f"⚠ Discord update failed with status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"✗ Discord update failed: {e}")
+            return False
+    
+    def clear_stream(self, platform_name: str) -> None:
+        """Clear tracked message for a platform when stream ends."""
+        platform_key = platform_name.lower()
+        if platform_key in self.active_messages:
+            del self.active_messages[platform_key]
+            logger.debug(f"Cleared Discord message tracking for {platform_name}")
+    
+    def end_stream(self, platform_name: str, stream_data: dict, stream_url: str) -> bool:
+        """Update Discord embed to show stream has ended, keeping VOD link and final stats."""
+        if not self.enabled or not platform_name:
+            return False
+        
+        platform_key = platform_name.lower()
+        if platform_key not in self.active_messages:
+            logger.debug(f"No active Discord message for {platform_name} to mark as ended")
+            return False
+        
+        msg_info = self.active_messages[platform_key]
+        message_id = msg_info['message_id']
+        webhook_url = msg_info['webhook_url']
+        
+        try:
+            import re
+            import time
+            
+            # Get custom "stream ended" message from .env (configuration, NOT secrets)
+            # These are user-facing messages, not sensitive data - they stay in .env
+            ended_message = os.getenv(f'DISCORD_ENDED_MESSAGE_{platform_key.upper()}')
+            
+            if not ended_message:
+                # Fall back to default ended message
+                ended_message = os.getenv('DISCORD_ENDED_MESSAGE')
+            
+            if not ended_message:
+                # Ultimate fallback if no config provided
+                ended_message = "Thanks for joining! Tune in next time 💜"
+            
+            # Determine color and platform info (use muted colors for ended streams)
+            color = 0x808080  # Gray for ended
+            platform_title = "Stream Ended"
+            
+            if 'twitch.tv' in stream_url or platform_key == 'twitch':
+                color = 0x6441A5  # Muted purple
+                platform_title = "⏹️ Stream Ended - Twitch"
+            elif 'youtube.com' in stream_url or 'youtu.be' in stream_url or platform_key == 'youtube':
+                color = 0xCC0000  # Muted red
+                platform_title = "⏹️ Stream Ended - YouTube"
+            elif 'kick.com' in stream_url or platform_key == 'kick':
+                color = 0x42C814  # Muted green
+                platform_title = "⏹️ Stream Ended - Kick"
+            
+            # Build updated embed with ended message
+            stream_title = stream_data.get('title', 'Stream')
+            viewer_count = stream_data.get('viewer_count')
+            thumbnail_url = stream_data.get('thumbnail_url')
+            game_name = stream_data.get('game_name')
+            
+            embed = {
+                "title": platform_title,
+                "description": f"{ended_message}\n\n**{stream_title}**",
+                "url": stream_url,  # Keep VOD link
+                "color": color,
+            }
+            
+            # Add fields for peak viewer count and game
+            fields = []
+            if viewer_count is not None:
+                fields.append({
+                    "name": "👥 Peak Viewers",
+                    "value": f"{viewer_count:,}",
+                    "inline": True
+                })
+            if game_name:
+                fields.append({
+                    "name": "🎮 Category",
+                    "value": game_name,
+                    "inline": True
+                })
+            
+            if fields:
+                embed["fields"] = fields
+            
+            # Keep final thumbnail
+            if thumbnail_url:
+                embed["image"] = {"url": thumbnail_url}
+            
+            # Add ended timestamp in footer
+            embed["footer"] = {"text": f"Stream ended at {time.strftime('%H:%M:%S')} • Click for VOD"}
+            
+            # Keep role mention visible but don't ping again
+            content = ""
+            if platform_key in self.role_mentions:
+                role_id = self.role_mentions[platform_key]
+                content = f"<@&{role_id}>"
+            elif self.role_id:
+                content = f"<@&{self.role_id}>"
+            
+            # Build update payload
+            data = {}
+            if content:
+                data["content"] = content
+            data["embeds"] = [embed]
+            
+            # PATCH the message via webhook
+            edit_url = f"{webhook_url}/messages/{message_id}"
+            response = requests.patch(edit_url, json=data, timeout=10)
+            
+            if response.status_code == 200:
+                # Clear tracking after successful update
+                del self.active_messages[platform_key]
+                logger.info(f"✓ Discord embed updated to show {platform_name} stream ended")
+                return True
+            else:
+                logger.warning(f"⚠ Discord stream ended update failed with status {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"✗ Discord stream ended update failed: {e}")
+            return False
 
 
 class MatrixPlatform(SocialPlatform):
@@ -1125,20 +1636,20 @@ class MatrixPlatform(SocialPlatform):
         if not get_bool_config('Matrix', 'enable_posting', default=False):
             return False
         
-        # Get default homeserver
-        self.homeserver = get_secret('Matrix', 'matrix_homeserver',
+        # Get homeserver
+        self.homeserver = get_secret('Matrix', 'homeserver',
                                      secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                      secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                      doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
         
-        # Get default access token
-        self.access_token = get_secret('Matrix', 'matrix_access_token',
+        # Get access token
+        self.access_token = get_secret('Matrix', 'access_token',
                                        secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                        secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                        doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
         
-        # Get default room ID
-        self.room_id = get_secret('Matrix', 'matrix_room_id',
+        # Get room ID
+        self.room_id = get_secret('Matrix', 'room_id',
                                   secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                   secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                   doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')

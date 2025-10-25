@@ -42,7 +42,11 @@ Stream Daemon is a powerful, open-source automation tool that monitors your live
 ### 📱 Social Media Integration
 - **Mastodon** - Post to any Mastodon instance
 - **Bluesky** - Native Bluesky protocol support
-- **Discord** - Webhook support with role mentions
+- **Discord** - Rich embed cards with live updates
+  - Real-time viewer counts and thumbnails
+  - In-place embed updates (no duplicate posts)
+  - Customizable "stream ended" messages with VOD links
+  - Per-platform webhooks and role mentions
 
 ### 🔐 Enterprise-Grade Security
 - **AWS Secrets Manager** - Store credentials in AWS

@@ -15,9 +15,37 @@ These tests ensure:
 1. **Doppler Account** - Sign up at https://doppler.com
 2. **Doppler CLI** - Install and run `doppler setup` in project directory
 3. **Platform Credentials** - Configure secrets in Doppler (see `DOPPLER_SECRETS.md`)
-4. **Environment Variables** - Configure `.env` file
+4. **Environment Variables** - Configure `.env` file with test usernames
 
 > **📌 Important:** Doppler tokens are environment-specific. A `dev` token only accesses `dev` secrets, `stg` only accesses `stg`, etc. Choose your environment (`dev`/`stg`/`prd`) in both your token generation and `DOPPLER_CONFIG` setting. See [DOPPLER_GUIDE.md](../DOPPLER_GUIDE.md) for details.
+
+## ⚙️ Test Configuration
+
+Tests are configured via **environment variables** in your `.env` file, **not hardcoded values**. This makes tests portable and easy to customize for different environments.
+
+### Required Username Configuration
+
+Add these to your `.env` file to control which channels are tested:
+
+```bash
+# Usernames for test scripts (used by all test files)
+KICK_USERNAME=asmongold        # Kick channel to check for live streams
+TWITCH_USERNAME=lilypita       # Twitch channel to check for live streams
+YOUTUBE_USERNAME=grndpagaming  # YouTube channel (@ optional - auto-added if missing)
+```
+
+**Why environment variables?**
+- ✅ Easy to change test targets without editing code
+- ✅ Different configurations for dev/staging/production
+- ✅ Keeps test files clean and maintainable
+- ✅ Follows same pattern as main application
+
+**All test scripts automatically pull usernames from `.env`:**
+- `test_discord_doppler.py` - Tests Discord with all three platforms
+- `test_discord_updates.py` - Tests Discord live updating
+- `test_discord_stream_ended.py` - Tests stream ended messages
+- `test_bluesky_kick_embed.py` - Tests Bluesky Kick preview cards
+- `test_mastodon_kick_image.py` - Tests Mastodon Kick image attachments
 
 ## 🔐 Doppler Secret Setup
 
@@ -217,9 +245,22 @@ doppler run -- python tests/test_doppler_all.py
 - For Twitch: Ensure app is registered at https://dev.twitch.tv/console/apps
 
 ### "User not found"
-- Set correct username: `TWITCH_USERNAME=your_username`
+- Verify username is set correctly in `.env` file:
+  - `TWITCH_USERNAME=your_twitch_username`
+  - `YOUTUBE_USERNAME=your_youtube_handle` (@ optional)
+  - `KICK_USERNAME=your_kick_username`
 - Ensure username exists on the platform
-- Check for typos
+- Check for typos in `.env` file
+- For YouTube: Works with or without @ prefix (e.g., both `grndpagaming` and `@grndpagaming` work)
+
+### "Stream not found" / "Currently offline"
+- This is **normal** if the configured channel is not live during testing
+- Tests verify the **detection mechanism works**, not whether a stream is actually live
+- To test with a live stream:
+  1. Find a channel that's currently live on the platform
+  2. Update the username in `.env` (e.g., `KICK_USERNAME=asmongold`)
+  3. Re-run the test
+- Tests will show "✓ Stream check works (currently offline)" or "✓ LIVE" depending on stream status
 
 ## 📚 Configuration Files
 
