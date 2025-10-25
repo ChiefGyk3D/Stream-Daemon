@@ -1624,46 +1624,119 @@ class DiscordPlatform(SocialPlatform):
 
 
 class MatrixPlatform(SocialPlatform):
-    """Matrix platform with rich message support."""
+    """
+    Matrix platform with rich message support.
+    
+    NOTE: Matrix does NOT support editing messages like Discord.
+    Messages are posted once and cannot be updated with live viewer counts.
+    """
     
     def __init__(self):
         super().__init__("Matrix")
         self.homeserver = None
         self.access_token = None
         self.room_id = None
+        self.username = None
+        self.password = None
         
     def authenticate(self):
         if not get_bool_config('Matrix', 'enable_posting', default=False):
             return False
         
-        # Get homeserver
+        # Get homeserver (required)
         self.homeserver = get_secret('Matrix', 'homeserver',
                                      secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                      secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                      doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
         
-        # Get access token
-        self.access_token = get_secret('Matrix', 'access_token',
-                                       secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
-                                       secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
-                                       doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
-        
-        # Get room ID
+        # Get room ID (required)
         self.room_id = get_secret('Matrix', 'room_id',
                                   secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                   secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                   doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
         
-        if not all([self.homeserver, self.access_token, self.room_id]):
+        if not self.homeserver or not self.room_id:
             return False
         
         # Ensure homeserver has proper format
         if not self.homeserver.startswith('http'):
             self.homeserver = f"https://{self.homeserver}"
         
+        # Check for username/password first (preferred for bot accounts with auto-rotation)
+        self.username = get_secret('Matrix', 'username',
+                                   secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
+                                   secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
+                                   doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+        
+        self.password = get_secret('Matrix', 'password',
+                                   secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
+                                   secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
+                                   doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+        
+        # Priority: Username/Password > Access Token
+        # If both are set, username/password takes precedence for automatic token rotation
+        if self.username and self.password:
+            # Login to get fresh access token
+            logger.info("Using username/password authentication (auto-rotation enabled)")
+            self.access_token = self._login_and_get_token()
+            if not self.access_token:
+                logger.error("✗ Matrix login failed - check username/password")
+                return False
+            logger.info(f"✓ Matrix logged in and obtained access token")
+        else:
+            # Fall back to static access token
+            logger.info("Using static access token authentication")
+            self.access_token = get_secret('Matrix', 'access_token',
+                                           secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
+                                           secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
+                                           doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+            
+            if not self.access_token:
+                logger.error("✗ Matrix authentication failed - need either access_token OR username+password")
+                return False
+        
         self.enabled = True
         logger.info(f"✓ Matrix authenticated ({self.room_id})")
         return True
+    
+    def _login_and_get_token(self):
+        """Login with username/password to get access token."""
+        try:
+            # Extract just the username part from full MXID (@username:domain)
+            # Matrix login expects just "username", not "@username:domain"
+            username_local = self.username
+            if username_local.startswith('@'):
+                # Remove @ prefix and :domain suffix
+                username_local = username_local[1:].split(':')[0]
+            
+            login_url = f"{self.homeserver}/_matrix/client/r0/login"
+            login_data = {
+                "type": "m.login.password",
+                "identifier": {
+                    "type": "m.id.user",
+                    "user": username_local
+                },
+                "password": self.password
+            }
+            
+            response = requests.post(login_url, json=login_data, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                access_token = data.get('access_token')
+                if access_token:
+                    logger.info(f"✓ Obtained Matrix access token (expires: {data.get('expires_in_ms', 'never')})")
+                    logger.debug(f"Token starts with: {access_token[:20]}...")
+                    return access_token
+                else:
+                    logger.error(f"✗ Matrix login succeeded but no access_token in response: {data}")
+            else:
+                logger.error(f"✗ Matrix login failed: {response.status_code} - {response.text}")
+            
+            return None
+        except Exception as e:
+            logger.error(f"✗ Matrix login error: {e}")
+            return None
     
     def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
         if not self.enabled or not all([self.homeserver, self.access_token, self.room_id]):

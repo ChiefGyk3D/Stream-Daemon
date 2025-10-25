@@ -30,7 +30,9 @@ When a secrets manager is enabled (`SECRETS_SECRET_MANAGER=doppler/aws/vault`), 
 - `MASTODON_CLIENT_ID`
 - `MASTODON_CLIENT_SECRET`
 - `BLUESKY_APP_PASSWORD`
-- `MATRIX_ACCESS_TOKEN`
+- `MATRIX_ACCESS_TOKEN` (only used if `MATRIX_USERNAME`/`MATRIX_PASSWORD` not set)
+- `MATRIX_USERNAME` (takes priority over access token)
+- `MATRIX_PASSWORD` (takes priority over access token)
 
 ### OAuth Credentials
 - `TWITCH_CLIENT_ID`
@@ -77,6 +79,45 @@ These values are **configuration**, not secrets, and are **always read from `.en
 - `SECRETS_DOPPLER_*_SECRET_NAME`
 - `SECRETS_AWS_*_SECRET_NAME`
 - `SECRETS_VAULT_*_PATH`
+
+## Special Case: Matrix Authentication Priority
+
+Matrix supports two authentication methods, and they have their own priority order:
+
+### Matrix Auth Priority (within each source)
+
+```
+1. Username/Password (if BOTH are set) ← HIGHEST
+2. Access Token (fallback)             ← LOWEST
+```
+
+**Important**: If you configure BOTH username/password AND access_token, the daemon will:
+- ✅ Use username/password to login and get a fresh token
+- ✅ Ignore the access_token value completely
+- ✅ Log "Using username/password authentication (auto-rotation enabled)"
+
+This prevents issues with stale or placeholder access tokens.
+
+**Example - Both Configured:**
+```bash
+# Doppler secrets
+MATRIX_USERNAME=@streambot:matrix.chiefgyk3d.com
+MATRIX_PASSWORD=secret_pass_123
+MATRIX_ACCESS_TOKEN=syt_old_token_here  # This will be IGNORED
+```
+
+**Result**: Daemon uses username/password, ignores access token.
+
+**Example - Access Token Only:**
+```bash
+# Doppler secrets
+MATRIX_ACCESS_TOKEN=syt_valid_token_here
+# No username or password set
+```
+
+**Result**: Daemon uses access token.
+
+---
 
 ## Usage Examples
 
