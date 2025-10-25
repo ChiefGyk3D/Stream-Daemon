@@ -154,6 +154,23 @@ docker-compose up -d
 docker-compose logs -f stream-daemon
 ```
 
+### systemd Service (Linux)
+
+Run Stream Daemon as a system service with automatic startup and logging:
+
+```bash
+# One-command installation
+sudo ./install-systemd.sh
+
+# Service management
+sudo systemctl start stream-daemon    # Start
+sudo systemctl stop stream-daemon     # Stop
+sudo systemctl status stream-daemon   # Check status
+sudo journalctl -u stream-daemon -f   # View logs
+```
+
+See [systemd Service Guide](docs/getting-started/systemd-service.md) for full details.
+
 ### Full Configuration
 
 For production deployments, comprehensive guides, and advanced features:
