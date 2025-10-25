@@ -1,8 +1,10 @@
-version: '3'
+version: '3.8'
 
 services:
   stream-daemon:
-    build: .
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile
     restart: unless-stopped
     environment:
       # ============================================
@@ -23,6 +25,9 @@ services:
       # Kick Configuration
       KICK_ENABLE: 'False'
       KICK_USERNAME: your_kick_username
+      # Optional: Kick authentication for private streams
+      # KICK_EMAIL: your_email@example.com
+      # KICK_PASSWORD: your_password
       
       # ============================================
       # SOCIAL PLATFORMS (At least ONE required)
@@ -49,12 +54,32 @@ services:
       DISCORD_ROLE_YOUTUBE: '1234567890123456789'
       DISCORD_ROLE_KICK: '1234567890123456789'
       
-      # Matrix Configuration (Coming Soon)
+      # Matrix Configuration
       MATRIX_ENABLE_POSTING: 'False'
       MATRIX_HOMESERVER: https://matrix.org
-      MATRIX_USERNAME: '@your:matrix.org'
-      MATRIX_PASSWORD: your_password
+      # Matrix Bot Account (Recommended)
+      MATRIX_USERNAME: '@bot:matrix.org'
+      MATRIX_PASSWORD: your_bot_password
+      # OR Matrix Personal Account
+      # MATRIX_ACCESS_TOKEN: your_access_token
+      # MATRIX_USER_ID: '@you:matrix.org'
+      # MATRIX_DEVICE_ID: your_device_id
       MATRIX_ROOM_ID: '!roomid:matrix.org'
+      
+      # ============================================
+      # AI / LLM CONFIGURATION (Optional)
+      # ============================================
+      
+      # Enable AI-generated messages
+      LLM_ENABLE: 'False'
+      
+      # Google Gemini (Free API available)
+      LLM_PROVIDER: gemini
+      LLM_GEMINI_API_KEY: your_gemini_api_key
+      LLM_GEMINI_MODEL: gemini-2.0-flash-exp
+      
+      # Custom personality/style instructions for AI
+      # LLM_SYSTEM_PROMPT: "You are a friendly and enthusiastic streamer announcer..."
       
       # ============================================
       # MESSAGES
@@ -63,26 +88,36 @@ services:
       MESSAGES_END_MESSAGES_FILE: end_messages.txt
       MESSAGES_POST_END_STREAM_MESSAGE: 'True'
       
+      # Threading Configuration
+      MESSAGES_LIVE_THREADING_MODE: none  # Options: none, thread, reply
+      MESSAGES_END_THREADING_MODE: none   # Options: none, thread, reply
+      
       # ============================================
       # SECRET MANAGER (Optional)
       # ============================================
       SECRET_MANAGER: none  # Options: 'none', 'aws', 'vault', 'doppler'
       
       # AWS Secrets Manager (only if SECRET_MANAGER=aws)
-      SECRETS_AWS_TWITCH_SECRET_NAME: twitch-api-keys
-      SECRETS_AWS_YOUTUBE_SECRET_NAME: youtube-api-keys
-      SECRETS_AWS_MASTODON_SECRET_NAME: mastodon-api-keys
-      SECRETS_AWS_BLUESKY_SECRET_NAME: bluesky-api-keys
-      SECRETS_AWS_DISCORD_SECRET_NAME: discord-webhook
+      # SECRETS_AWS_TWITCH_SECRET_NAME: twitch-api-keys
+      # SECRETS_AWS_YOUTUBE_SECRET_NAME: youtube-api-keys
+      # SECRETS_AWS_MASTODON_SECRET_NAME: mastodon-api-keys
+      # SECRETS_AWS_BLUESKY_SECRET_NAME: bluesky-api-keys
+      # SECRETS_AWS_DISCORD_SECRET_NAME: discord-webhook
+      # SECRETS_AWS_MATRIX_SECRET_NAME: matrix-credentials
+      # SECRETS_AWS_KICK_SECRET_NAME: kick-credentials
+      # SECRETS_AWS_LLM_SECRET_NAME: llm-api-keys
       
       # HashiCorp Vault (only if SECRET_MANAGER=vault)
-      SECRETS_VAULT_URL: https://vault.example.com
-      SECRETS_VAULT_TOKEN: your_vault_token
-      SECRETS_VAULT_TWITCH_SECRET_PATH: secret/twitch
-      SECRETS_VAULT_YOUTUBE_SECRET_PATH: secret/youtube
-      SECRETS_VAULT_MASTODON_SECRET_PATH: secret/mastodon
-      SECRETS_VAULT_BLUESKY_SECRET_PATH: secret/bluesky
-      SECRETS_VAULT_DISCORD_SECRET_PATH: secret/discord
+      # SECRETS_VAULT_URL: https://vault.example.com
+      # SECRETS_VAULT_TOKEN: your_vault_token
+      # SECRETS_VAULT_TWITCH_SECRET_PATH: secret/twitch
+      # SECRETS_VAULT_YOUTUBE_SECRET_PATH: secret/youtube
+      # SECRETS_VAULT_MASTODON_SECRET_PATH: secret/mastodon
+      # SECRETS_VAULT_BLUESKY_SECRET_PATH: secret/bluesky
+      # SECRETS_VAULT_DISCORD_SECRET_PATH: secret/discord
+      # SECRETS_VAULT_MATRIX_SECRET_PATH: secret/matrix
+      # SECRETS_VAULT_KICK_SECRET_PATH: secret/kick
+      # SECRETS_VAULT_LLM_SECRET_PATH: secret/llm
       
       # Doppler (only if SECRET_MANAGER=doppler)
       # Get your token from: https://dashboard.doppler.com/
@@ -92,10 +127,13 @@ services:
       # SECRETS_DOPPLER_MASTODON_SECRET_NAME: mastodon
       # SECRETS_DOPPLER_BLUESKY_SECRET_NAME: bluesky
       # SECRETS_DOPPLER_DISCORD_SECRET_NAME: discord
+      # SECRETS_DOPPLER_MATRIX_SECRET_NAME: matrix
+      # SECRETS_DOPPLER_KICK_SECRET_NAME: kick
+      # SECRETS_DOPPLER_LLM_SECRET_NAME: llm
       
       # ============================================
       # SETTINGS
       # ============================================
-      SETTINGS_POST_INTERVAL: 1  # Hours to wait before checking again when live
-      SETTINGS_CHECK_INTERVAL: 5  # Minutes to wait before checking again when offline
+      SETTINGS_POST_INTERVAL: 5     # Minutes to wait before checking again when live
+      SETTINGS_CHECK_INTERVAL: 5      # Minutes to wait before checking again when offline
 

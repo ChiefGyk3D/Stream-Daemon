@@ -8,7 +8,7 @@ Stream Daemon v2.x has moved from `config.ini` to `.env` files for configuration
 
 **Major Changes:**
 - ❌ `config.ini` → ✅ `.env` environment variables
-- ❌ `twitch-and-toot.py` → ✅ `stream-daemon.py`
+- ❌ Old script name → ✅ `stream-daemon.py`
 - ✅ Added YouTube Live support
 - ✅ Added Kick support
 - ✅ Added Discord webhook support

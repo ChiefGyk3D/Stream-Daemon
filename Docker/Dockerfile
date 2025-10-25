@@ -1,21 +1,16 @@
 # Use an official Python runtime as a parent image
 # Python 3.13 is the latest STABLE version with full package support
-# Python 3.14 is too new - many packages don't support it yet
-FROM python:3.13-alpine
+FROM python:3.13-slim
 
 # Set the working directory in the container to /app
 WORKDIR /app
 
 # Install system dependencies needed for Python packages
-# Alpine uses apk, not apt-get
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
-    musl-dev \
     libffi-dev \
-    openssl-dev \
-    python3-dev \
-    cargo \
-    build-base
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
 ENV VIRTUAL_ENV=/opt/venv
@@ -23,16 +18,17 @@ RUN python -m venv $VIRTUAL_ENV
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
 # Copy requirements first for better caching
-COPY requirements.txt /app/
+COPY Docker/requirements.txt /app/
 
 # Install any needed packages specified in requirements.txt
-# Now installs into the virtual environment
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Add the current directory contents into the container at /app
-COPY . /app
+# Copy the entire project structure from parent directory
+COPY stream-daemon.py /app/
+COPY stream_daemon/ /app/stream_daemon/
+COPY messages.txt /app/
+COPY end_messages.txt /app/
 
 # Run stream-daemon.py when the container launches
-# Virtual environment is already in PATH, so python will use venv
-CMD ["python", "stream-daemon-docker.py"]
+CMD ["python", "stream-daemon.py"]

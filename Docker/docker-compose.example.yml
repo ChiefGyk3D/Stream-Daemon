@@ -1,47 +1,84 @@
 version: '3.8'
 
 services:
-  twitch-and-toot:
-    build: .
-    container_name: twitch-and-toot
+  stream-daemon:
+    build:
+      context: ..
+      dockerfile: Docker/Dockerfile
+    container_name: stream-daemon
     restart: unless-stopped
     
     # Uncomment to use a pre-built image instead of building
-    # image: ghcr.io/chiefgyk3d/twitch-and-toot:latest
+    # image: ghcr.io/chiefgyk3d/stream-daemon:latest
     
     environment:
       # ===========================================
-      # TWITCH CONFIGURATION (Required)
-      # Get from: https://dev.twitch.tv/console
+      # STREAMING PLATFORMS (Enable at least ONE)
       # ===========================================
+      
+      # TWITCH - Get credentials from: https://dev.twitch.tv/console
+      TWITCH_ENABLE: "True"
+      TWITCH_USERNAME: "your_twitch_username"
       TWITCH_CLIENT_ID: "your_twitch_client_id_here"
       TWITCH_CLIENT_SECRET: "your_twitch_client_secret_here"
-      TWITCH_USER_LOGIN: "your_twitch_username"
+      
+      # YOUTUBE - Get API key from: https://console.cloud.google.com/
+      YOUTUBE_ENABLE: "False"
+      YOUTUBE_CHANNEL_ID: "your_youtube_channel_id"
+      YOUTUBE_API_KEY: "your_youtube_api_key"
+      
+      # KICK - No API required for public streams
+      KICK_ENABLE: "False"
+      KICK_USERNAME: "your_kick_username"
       
       # ===========================================
-      # MASTODON CONFIGURATION (Required)
-      # Get from: Your Mastodon instance settings
+      # SOCIAL PLATFORMS (Enable at least ONE)
       # ===========================================
+      
+      # MASTODON - Get from your instance settings
+      MASTODON_ENABLE_POSTING: "True"
+      MASTODON_APP_NAME: "StreamDaemon"
+      MASTODON_API_BASE_URL: "https://mastodon.social"  # Change to your instance
       MASTODON_CLIENT_ID: "your_mastodon_client_id"
       MASTODON_CLIENT_SECRET: "your_mastodon_client_secret"
       MASTODON_ACCESS_TOKEN: "your_mastodon_access_token"
-      MASTODON_API_BASE_URL: "https://mastodon.social"  # Change to your instance
-      MASTODON_MESSAGES_FILE: "messages.txt"
-      MASTODON_END_MESSAGES_FILE: "end_messages.txt"
-      MASTODON_POST_END_STREAM_MESSAGE: "True"
       
-      # ===========================================
-      # BLUESKY CONFIGURATION (Optional)
-      # Get app password from: https://bsky.app/settings/app-passwords
-      # ===========================================
-      BLUESKY_ENABLE_POSTING: "False"  # Set to "True" to enable
+      # BLUESKY - Get app password from: https://bsky.app/settings/app-passwords
+      BLUESKY_ENABLE_POSTING: "False"
       BLUESKY_HANDLE: "yourname.bsky.social"
       BLUESKY_APP_PASSWORD: "your-app-password"
+      
+      # DISCORD - Create webhook in server settings
+      DISCORD_ENABLE_POSTING: "False"
+      DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/YOUR_WEBHOOK"
+      
+      # MATRIX - Use bot account or personal account
+      MATRIX_ENABLE_POSTING: "False"
+      MATRIX_HOMESERVER: "https://matrix.org"
+      MATRIX_USERNAME: "@bot:matrix.org"
+      MATRIX_PASSWORD: "your_bot_password"
+      MATRIX_ROOM_ID: "!roomid:matrix.org"
+      
+      # ===========================================
+      # AI / LLM (Optional - Free Gemini API)
+      # Get API key from: https://aistudio.google.com/apikey
+      # ===========================================
+      LLM_ENABLE: "False"
+      LLM_PROVIDER: "gemini"
+      LLM_GEMINI_API_KEY: "your_gemini_api_key"
+      LLM_GEMINI_MODEL: "gemini-2.0-flash-exp"
+      
+      # ===========================================
+      # MESSAGES & BEHAVIOR
+      # ===========================================
+      MESSAGES_MESSAGES_FILE: "messages.txt"
+      MESSAGES_END_MESSAGES_FILE: "end_messages.txt"
+      MESSAGES_POST_END_STREAM_MESSAGE: "True"
       
       # ===========================================
       # TIMING SETTINGS
       # ===========================================
-      SETTINGS_POST_INTERVAL: "1"    # Hours to wait when stream is live
+      SETTINGS_POST_INTERVAL: "5"   # Minutes to wait when stream is live
       SETTINGS_CHECK_INTERVAL: "5"   # Minutes to wait when stream is offline
       
       # ===========================================
