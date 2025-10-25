@@ -204,6 +204,71 @@ Stream Daemon checks your channel every `SETTINGS_CHECK_INTERVAL` minutes:
 
 ---
 
+## API Optimization & Limitations
+
+### Quota-Efficient Detection Method
+
+Stream Daemon uses an **optimized** approach to detect YouTube live streams that uses only **3 quota units** per check instead of the standard 101 units:
+
+**Standard Method (101 units):**
+- Search for live streams: 100 units
+- Get stream details: 1 unit
+- **Total:** 101 units per check
+
+**Optimized Method (3 units):**
+- Get channel's uploads playlist: 1 unit
+- Get most recent upload: 1 unit  
+- Check if that video is live: 1 unit
+- **Total:** 3 units per check
+
+This gives you **33x more checks** with the same daily quota!
+
+### Known Limitation
+
+⚠️ **The optimized method only works if your live stream is the most recent video on your channel.**
+
+**When this might be an issue:**
+- You uploaded a VOD, Short, or premiere **after** starting your stream
+- You have multiple concurrent live streams (rare)
+- You're streaming for a very long time and uploaded other content during the stream
+
+**Who this affects:**
+- Channels that frequently upload content while streaming
+- 24/7 live stream channels with regular uploads
+- Multi-stream setups
+
+**Who this doesn't affect (most streamers):**
+- Typical streamers who go live without uploading other content
+- Channels that only upload VODs after streams end
+- Most gaming and talk show channels
+
+### Alternative: Full Detection Mode
+
+If you need 100% reliable detection regardless of upload activity, you can modify the code to use the standard search API:
+
+```python
+# In stream-daemon.py, YouTubePlatform.is_live() method
+# Replace the optimized approach with:
+search_request = self.client.search().list(
+    part="snippet",
+    channelId=channel_id_to_check,
+    eventType="live",
+    type="video",
+    maxResults=1
+)
+```
+
+**Trade-off:** Uses 101 units per check instead of 3 units, reducing your daily check capacity from ~3,300 to ~99 checks.
+
+### Best Practices
+
+1. **For most streamers:** Use the default optimized method (3 units)
+2. **For high-upload channels:** Consider the full detection mode or increase quota
+3. **Monitor quota usage:** Check Google Cloud Console regularly
+4. **Adjust check intervals:** Reduce frequency if hitting quota limits
+
+---
+
 ## Platform-Specific Messages
 
 Create custom messages just for YouTube using platform-specific message files.
@@ -425,27 +490,57 @@ doppler run -- python3 tests/test_doppler_youtube.py
 
 ### YouTube API Endpoints Used
 
-Stream Daemon uses these YouTube Data API v3 endpoints:
+Stream Daemon uses these YouTube Data API v3 endpoints with an **optimized quota-efficient approach**:
 
-1. **Search (Channel Resolution):**
+#### Current Implementation (Optimized - 3 units per check)
+
+1. **Channels (Get Uploads Playlist):**
+   - `GET https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id={channel_id}`
+   - Gets the channel's uploads playlist ID
+   - **Cost:** 1 quota unit per call
+   - **Called:** Every check interval
+
+2. **PlaylistItems (Get Recent Upload):**
+   - `GET https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId={uploads_playlist_id}&maxResults=1`
+   - Gets the most recent video from the uploads playlist
+   - **Cost:** 1 quota unit per call
+   - **Called:** Every check interval
+
+3. **Videos (Check if Live):**
+   - `GET https://www.googleapis.com/youtube/v3/videos?part=liveStreamingDetails,snippet&id={video_id}`
+   - Checks if the most recent video is currently live and gets stream details
+   - **Cost:** 1 quota unit per call
+   - **Called:** Every check interval
+
+**Total per check:** 3 quota units  
+**Daily capacity:** ~3,300 checks with standard 10,000 unit quota  
+**Check every 5 min:** Uses ~288 checks/day (~864 units) - plenty of headroom!
+
+#### Alternative Implementation (Standard - 101 units per check)
+
+If you need 100% reliable detection regardless of upload patterns:
+
+1. **Search (Channel Resolution - once per session):**
    - `GET https://www.googleapis.com/youtube/v3/search`
    - Resolves username/handle to channel ID
    - **Cost:** 100 quota units per call
-   - **Called:** Once per session (cached after)
+   - **Called:** Once on startup (cached)
 
-2. **Search (Live Streams):**
+2. **Search (Live Streams - every check):**
    - `GET https://www.googleapis.com/youtube/v3/search?channelId={id}&eventType=live`
-   - Checks if channel has active live stream
+   - Searches for active live streams on channel
    - **Cost:** 100 quota units per call
    - **Called:** Every check interval
 
 3. **Videos (Stream Details):**
    - `GET https://www.googleapis.com/youtube/v3/videos?id={video_id}`
-   - Gets stream title, viewer count
+   - Gets stream title, viewer count, thumbnails
    - **Cost:** 1 quota unit per call
    - **Called:** When stream is detected as live
 
-**Total per check:** ~100-101 units (100 for search, 0-1 for details)
+**Total per check:** 101 quota units  
+**Daily capacity:** ~99 checks with standard 10,000 unit quota  
+**Check every 5 min:** Would require ~288 checks/day (~29,088 units) - **exceeds quota!**
 
 ### Rate Limits
 

@@ -361,6 +361,14 @@ class YouTubePlatform(StreamingPlatform):
             # Old: search().list(eventType=live) = 100 units + videos().list() = 1 unit = 101 total
             # New: channels().list() = 1 + playlistItems().list() = 1 + videos().list() = 1 = 3 total
             # This gives us ~33x more checks per day with the same quota!
+            #
+            # LIMITATION: Only detects streams if they are the MOST RECENT upload on the channel.
+            # If the channel uploads other content (VODs, Shorts, premieres) after going live,
+            # the stream won't be detected. This is fine for most streamers who don't upload
+            # during their streams, but may affect 24/7 channels or high-activity uploaders.
+            #
+            # For 100% reliable detection (at cost of 101 units/check), use search().list(eventType=live)
+            # See docs/platforms/streaming/youtube.md for details and alternative implementation.
             
             # Step 1: Get channel's uploads playlist (1 unit)
             # This checks the channel's current live broadcast
