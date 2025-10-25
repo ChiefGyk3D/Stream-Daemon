@@ -1168,7 +1168,7 @@ If you find Stream Daemon useful, consider supporting development:
 
 **Cryptocurrency**:
 - Bitcoin: `bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla`
-- Monero: `85YxVz8Xd7sW1xSiyzUC5PNqSjYLYk4W8FMERVkvznR38jGTBEViWQSLCnzRYZjmxgUkUKGhxTt2JSFNpJuAqghQLhHgPS5`
+- Monero: `84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ`
 - Ethereum: `0x554f18cfB684889c3A60219BDBE7b050C39335ED`
 
 ---
