@@ -10,11 +10,27 @@ sudo ./install-systemd.sh
 ```
 
 The installer will:
-- ✅ Create a Python virtual environment (if needed)
-- ✅ Install all dependencies
+- ✅ Ask you to choose between Python or Docker deployment
+- ✅ For Python mode: Create a Python virtual environment (if needed) and install dependencies
+- ✅ For Docker mode: Check for Docker installation and build the Docker image if needed
 - ✅ Create systemd service file
 - ✅ Optionally enable service on boot
 - ✅ Optionally start the service immediately
+
+### Deployment Modes
+
+**Python Mode:**
+- Uses Python virtual environment
+- Dependencies installed locally
+- Lighter weight
+- Best for development
+
+**Docker Mode:**
+- Uses Docker containers
+- Isolated environment
+- Consistent deployment
+- Best for production
+- Requires Docker and docker-compose to be installed
 
 ---
 
@@ -22,7 +38,9 @@ The installer will:
 
 If you prefer to install manually:
 
-### 1. Create Virtual Environment
+### Python Deployment
+
+#### 1. Create Virtual Environment
 
 ```bash
 python3 -m venv venv
@@ -30,7 +48,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Create Service File
+#### 2. Create Service File
 
 Create `/etc/systemd/system/stream-daemon.service`:
 
@@ -68,7 +86,69 @@ WantedBy=multi-user.target
 - `YOUR_USERNAME` with your Linux username
 - `/path/to/stream-daemon` with the full path to your project directory
 
-### 3. Enable and Start
+#### 3. Enable and Start
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable stream-daemon
+sudo systemctl start stream-daemon
+```
+
+---
+
+### Docker Deployment
+
+#### 1. Build Docker Image
+
+```bash
+cd /path/to/stream-daemon
+docker build -t stream-daemon -f Docker/Dockerfile .
+```
+
+#### 2. Create Service File
+
+Create `/etc/systemd/system/stream-daemon.service`:
+
+```ini
+[Unit]
+Description=Stream Daemon - Multi-platform Live Stream Monitor (Docker)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=YOUR_USERNAME
+Group=YOUR_USERNAME
+WorkingDirectory=/path/to/stream-daemon
+
+# Start the Docker container
+ExecStart=/usr/bin/docker run -d \
+    --name stream-daemon \
+    --restart unless-stopped \
+    --env-file /path/to/stream-daemon/.env \
+    -v /path/to/stream-daemon/messages.txt:/app/messages.txt:ro \
+    -v /path/to/stream-daemon/end_messages.txt:/app/end_messages.txt:ro \
+    stream-daemon
+
+# Stop and remove the container
+ExecStop=/usr/bin/docker stop stream-daemon
+ExecStopPost=/usr/bin/docker rm -f stream-daemon
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=stream-daemon
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Replace:**
+- `YOUR_USERNAME` with your Linux username
+- `/path/to/stream-daemon` with the full path to your project directory
+
+#### 3. Enable and Start
 
 ```bash
 sudo systemctl daemon-reload
