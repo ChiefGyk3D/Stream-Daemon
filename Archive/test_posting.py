@@ -65,9 +65,9 @@ def test_live_stream_posting():
     
     # Test streamers
     test_streamers = [
-        {'platform': 'Kick', 'username': 'asmongold', 'platform_obj': KickPlatform()},
-        {'platform': 'Twitch', 'username': 'SweeetTails', 'platform_obj': TwitchPlatform()},
-        {'platform': 'YouTube', 'username': '@grndpagaming', 'platform_obj': YouTubePlatform()}
+        {'platform': 'Kick', 'username': 'daletanhardt', 'platform_obj': KickPlatform()},
+        {'platform': 'Twitch', 'username': 'lilypita', 'platform_obj': TwitchPlatform()},
+        {'platform': 'YouTube', 'username': '@hyphonix', 'platform_obj': YouTubePlatform()}
     ]
     
     print("🎯 Test Configuration:")

@@ -55,6 +55,11 @@ Stream Daemon is a powerful, open-source automation tool that monitors your live
 - Environment variable fallback for all platforms
 
 ### 🎨 Customization
+- **🤖 AI-Powered Messages** (NEW!) - Use Google Gemini LLM to generate unique, engaging announcements
+  - Platform-aware character limits (Bluesky: 300, Mastodon: 500)
+  - Automatic hashtag generation from stream titles
+  - Dynamic, personalized messages for every stream
+  - Graceful fallback to static messages
 - **Platform-specific messages** - Different messages per platform
 - **Message templates** - Use variables like stream title, viewers, URLs
 - **Multi-platform strategies** - Control how announcements are posted when streaming to multiple platforms
@@ -229,7 +234,14 @@ MESSAGES_USE_PLATFORM_SPECIFIC_MESSAGES=False
 - [Doppler Guide](DOPPLER_GUIDE.md) - Secrets management with Doppler
 - [Messages Format](MESSAGES_FORMAT.md) - Message customization guide
 - [Multi-Platform Examples](MULTI_PLATFORM_EXAMPLES.md) - **NEW!** Multi-streaming posting strategies
+- [🤖 AI Messages Setup](docs/LLM_SETUP.md) - **NEW!** Google Gemini LLM integration for dynamic announcements
 - [Migration Guide](MIGRATION.md) - Upgrading from v1 to v2
+
+### Platform-Specific Documentation
+- [Matrix Bot Setup](docs/MATRIX_BOT_SETUP.md) - Complete Matrix bot configuration guide
+- [Matrix Quick Start](docs/MATRIX_BOT_QUICK_START.md) - Fast Matrix setup
+- [Matrix Auth Priority](docs/MATRIX_AUTH_PRIORITY.md) - Understanding Matrix authentication
+- [Secrets Priority](docs/SECRETS_PRIORITY.md) - How secrets managers override .env
 
 ### Test Suite Documentation
 - [Test Suite Overview](tests/README.md) - Running the test suite

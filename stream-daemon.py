@@ -8,6 +8,8 @@ from twitchAPI.twitch import Twitch
 from mastodon import Mastodon
 from atproto import Client
 from googleapiclient.discovery import build
+import google.genai
+from google.genai import types
 import time
 import random
 import hvac
@@ -24,6 +26,7 @@ from enum import Enum
 from dataclasses import dataclass
 from typing import Optional, Dict, List
 import asyncio
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Setup logging
 logging.basicConfig(
@@ -106,6 +109,7 @@ class StreamStatus:
     username: str
     state: StreamState = StreamState.OFFLINE
     title: Optional[str] = None
+    stream_data: Optional[dict] = None  # Full stream data (title, viewers, thumbnail, etc.)
     went_live_at: Optional[datetime] = None
     last_check_live: bool = False
     consecutive_live_checks: int = 0
@@ -117,15 +121,41 @@ class StreamStatus:
         if self.last_post_ids is None:
             self.last_post_ids = {}
     
-    def update(self, is_live: bool, title: Optional[str] = None) -> bool:
+    @property
+    def url(self) -> str:
+        """Generate the stream URL based on platform and username."""
+        if self.platform_name == 'Twitch':
+            return f"https://twitch.tv/{self.username}"
+        elif self.platform_name == 'YouTube':
+            # YouTube URLs need the video ID, which we don't have here
+            # Return channel URL as fallback
+            return f"https://youtube.com/@{self.username}/live"
+        elif self.platform_name == 'Kick':
+            return f"https://kick.com/{self.username}"
+        else:
+            return f"https://{self.platform_name.lower()}.com/{self.username}"
+    
+    def update(self, is_live: bool, stream_data: Optional[dict] = None) -> bool:
         """
         Update status based on current check.
         Returns True if state actually changed (offline->live or live->offline).
         Uses debouncing to avoid false positives from API hiccups.
+        
+        Args:
+            is_live: Whether stream is currently live
+            stream_data: Dict with keys: title, viewer_count, thumbnail_url, game_name
         """
         if is_live:
             self.consecutive_live_checks += 1
             self.consecutive_offline_checks = 0
+            
+            # Extract title from stream_data for logging
+            title = stream_data.get('title') if stream_data else None
+            
+            # Always update stream_data when live (even during debouncing)
+            # This ensures already-live streams get their data when daemon starts
+            if stream_data:
+                self.stream_data = stream_data
             
             # Require 2 consecutive live checks to confirm (debouncing)
             if self.state == StreamState.OFFLINE and self.consecutive_live_checks >= 2:
@@ -150,6 +180,7 @@ class StreamStatus:
                 duration = datetime.now() - self.went_live_at if self.went_live_at else None
                 logger.info(f"🔵 {self.platform_name}/{self.username} went OFFLINE (duration: {duration})")
                 self.title = None
+                self.stream_data = None
                 self.went_live_at = None
                 return True  # State changed!
         
@@ -244,7 +275,7 @@ def load_secrets_from_doppler(secret_name):
 def get_secret(platform, key, secret_name_env=None, secret_path_env=None, doppler_secret_env=None):
     """
     Get a secret value with priority:
-    1. Secrets manager (AWS/Vault/Doppler) - HIGHEST PRIORITY if enabled
+    1. Secrets manager (AWS/Vault/Doppler) - HIGHEST PRIORITY if credentials exist
     2. Environment variable (.env file) - FALLBACK
     3. None if not found
     
@@ -257,10 +288,40 @@ def get_secret(platform, key, secret_name_env=None, secret_path_env=None, dopple
         secret_path_env: HashiCorp Vault env var name
         doppler_secret_env: Doppler secret name env var
     """
-    # Check which secrets manager is enabled
+    # Priority 1: Try Doppler first if DOPPLER_TOKEN exists (auto-detect)
+    if os.getenv('DOPPLER_TOKEN') and doppler_secret_env:
+        secret_name = os.getenv(doppler_secret_env)
+        if secret_name:
+            secrets = load_secrets_from_doppler(secret_name)
+            secret_value = secrets.get(key)
+            if secret_value:
+                return secret_value
+            
+            # Special case: For keys like GEMINI_API_KEY that aren't prefixed in Doppler,
+            # try getting the direct key (GEMINI_API_KEY) from all Doppler secrets
+            try:
+                doppler_token = os.getenv('DOPPLER_TOKEN')
+                if doppler_token:
+                    doppler_project = os.getenv('DOPPLER_PROJECT', 'stream-daemon')
+                    doppler_config = os.getenv('DOPPLER_CONFIG', 'prd')
+                    
+                    sdk = DopplerSDK()
+                    sdk.set_access_token(doppler_token)
+                    secrets_response = sdk.secrets.list(project=doppler_project, config=doppler_config)
+                    
+                    if hasattr(secrets_response, 'secrets'):
+                        # Try direct key lookup (e.g., GEMINI_API_KEY)
+                        direct_key = key.upper()
+                        if direct_key in secrets_response.secrets:
+                            return secrets_response.secrets[direct_key].get('computed', 
+                                   secrets_response.secrets[direct_key].get('raw', ''))
+            except Exception as e:
+                pass  # Fall through to other methods
+    
+    # Check which secrets manager is enabled (for AWS/Vault)
     secret_manager = os.getenv('SECRETS_SECRET_MANAGER', 'none').lower()
     
-    # Priority 1: Try secrets manager first (if enabled)
+    # Try AWS Secrets Manager
     if secret_manager == 'aws' and secret_name_env:
         secret_name = os.getenv(secret_name_env)
         if secret_name:
@@ -269,18 +330,11 @@ def get_secret(platform, key, secret_name_env=None, secret_path_env=None, dopple
             if secret_value:
                 return secret_value
     
+    # Try HashiCorp Vault
     elif secret_manager == 'vault' and secret_path_env:
         secret_path = os.getenv(secret_path_env)
         if secret_path:
             secrets = load_secrets_from_vault(secret_path)
-            secret_value = secrets.get(key)
-            if secret_value:
-                return secret_value
-    
-    elif secret_manager == 'doppler' and doppler_secret_env:
-        secret_name = os.getenv(doppler_secret_env)
-        if secret_name:
-            secrets = load_secrets_from_doppler(secret_name)
             secret_value = secrets.get(key)
             if secret_value:
                 return secret_value
@@ -315,6 +369,206 @@ def get_int_config(section, key, default=0):
     if env_var is not None:
         return int(env_var)
     return default
+
+
+# ===========================================
+# AI MESSAGE GENERATOR (Google Gemini LLM)
+# ===========================================
+
+class AIMessageGenerator:
+    """
+    Generate personalized stream messages using Google Gemini LLM.
+    
+    Features:
+    - Platform-specific character limits (Bluesky: 300, Mastodon: 500)
+    - Automatic hashtag generation based on stream title
+    - Customizable tone for start vs. end messages
+    - URL preservation
+    - Fallback to standard messages if API fails
+    """
+    
+    def __init__(self):
+        self.enabled = False
+        self.api_key = None
+        self.model = None
+        self.bluesky_max_chars = 300
+        self.mastodon_max_chars = 500
+        
+    def authenticate(self):
+        """Initialize Gemini API connection."""
+        if not get_bool_config('LLM', 'enable', default=False):
+            logger.info("LLM message generation disabled")
+            return False
+        
+        # Get API key from secrets or env
+        # Special case: GEMINI_API_KEY might be directly in Doppler/env, not prefixed with LLM_
+        self.api_key = get_secret('LLM', 'gemini_api_key',
+                                   secret_name_env='SECRETS_DOPPLER_LLM_SECRET_NAME',
+                                   secret_path_env='SECRETS_VAULT_LLM_SECRET_PATH',
+                                   doppler_secret_env='SECRETS_DOPPLER_LLM_SECRET_NAME')
+        
+        # Fallback: Check for GEMINI_API_KEY directly (common in Doppler)
+        if not self.api_key:
+            self.api_key = os.getenv('GEMINI_API_KEY')
+        
+        if not self.api_key:
+            logger.error("✗ LLM enabled but no GEMINI_API_KEY found")
+            return False
+        
+        try:
+            # Configure Gemini with new google-genai package
+            client = google.genai.Client(api_key=self.api_key)
+            
+            # Use gemini-2.0-flash-lite for high RPM (30/min), perfect for short social posts
+            model_name = get_config('LLM', 'model', default='gemini-2.0-flash-lite')
+            self.model = model_name
+            self.client = client
+            
+            self.enabled = True
+            logger.info(f"✓ Google Gemini LLM initialized (model: {model_name})")
+            return True
+            
+        except Exception as e:
+            logger.error(f"✗ Failed to initialize Gemini: {e}")
+            return False
+    
+    def generate_stream_start_message(self, 
+                                      platform_name: str,
+                                      username: str, 
+                                      title: str, 
+                                      url: str,
+                                      social_platform: str = "generic") -> Optional[str]:
+        """
+        Generate an engaging stream start message.
+        
+        Args:
+            platform_name: Streaming platform (Twitch, YouTube, Kick)
+            username: Streamer username
+            title: Stream title
+            url: Stream URL
+            social_platform: Target social media (bluesky, mastodon, discord, matrix)
+        
+        Returns:
+            Generated message or None if generation fails
+        """
+        if not self.enabled:
+            return None
+        
+        # Determine character limit
+        if social_platform.lower() == 'bluesky':
+            max_chars = self.bluesky_max_chars
+        elif social_platform.lower() == 'mastodon':
+            max_chars = self.mastodon_max_chars
+        else:
+            max_chars = 500  # Default for Discord/Matrix
+        
+        # Reserve space for URL and spacing (more conservative to avoid truncation)
+        # URL can be 30-50 chars + 2 newlines + safety margin
+        url_space = len(url) + 20  # URL + newlines + safety buffer
+        content_max = max_chars - url_space
+        
+        prompt = f"""Generate an exciting, engaging social media post announcing a livestream has just started.
+
+Stream Details:
+- Platform: {platform_name}
+- Streamer: {username}
+- Title: {title}
+- URL: {url}
+
+Requirements:
+- Maximum {content_max} characters (excluding the URL which will be appended)
+- Include 2-4 relevant hashtags based on the stream title
+- Enthusiastic and inviting tone
+- Make people want to join the stream NOW
+- DO NOT include the URL in your response (it will be added automatically)
+- Keep it concise and punchy
+
+Generate ONLY the message text with hashtags, nothing else."""
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt
+            )
+            message = response.text.strip()
+            
+            # Verify content length (without URL yet)
+            if len(message) > content_max:
+                # Truncate if AI generated too much
+                message = message[:content_max-3] + "..."
+            
+            # Add URL to the message
+            full_message = f"{message}\n\n{url}"
+            
+            logger.info(f"✨ Generated stream start message ({len(message)} chars content + URL = {len(full_message)}/{max_chars} total)")
+            return full_message
+            
+        except Exception as e:
+            logger.error(f"✗ Failed to generate start message: {e}")
+            return None
+    
+    def generate_stream_end_message(self,
+                                    platform_name: str,
+                                    username: str,
+                                    title: str,
+                                    social_platform: str = "generic") -> Optional[str]:
+        """
+        Generate a thankful stream end message.
+        
+        Args:
+            platform_name: Streaming platform (Twitch, YouTube, Kick)
+            username: Streamer username  
+            title: Stream title (from when it started)
+            social_platform: Target social media (bluesky, mastodon, discord, matrix)
+        
+        Returns:
+            Generated message or None if generation fails
+        """
+        if not self.enabled:
+            return None
+        
+        # Determine character limit
+        if social_platform.lower() == 'bluesky':
+            max_chars = self.bluesky_max_chars
+        elif social_platform.lower() == 'mastodon':
+            max_chars = self.mastodon_max_chars
+        else:
+            max_chars = 500  # Default for Discord/Matrix
+        
+        prompt = f"""Generate a warm, thankful social media post announcing a livestream has ended.
+
+Stream Details:
+- Platform: {platform_name}
+- Streamer: {username}
+- Title: {title}
+
+Requirements:
+- Maximum {max_chars} characters
+- Thank viewers for joining
+- Include 1-3 relevant hashtags based on the stream title
+- Grateful and friendly tone
+- Encourage them to catch the next stream
+- Keep it concise and heartfelt
+
+Generate ONLY the message text with hashtags, nothing else."""
+
+        try:
+            response = self.client.models.generate_content(
+                model=self.model,
+                contents=prompt
+            )
+            message = response.text.strip()
+            
+            # Verify length
+            if len(message) > max_chars:
+                message = message[:max_chars-3] + "..."
+            
+            logger.info(f"✨ Generated stream end message ({len(message)}/{max_chars} chars)")
+            return message
+            
+        except Exception as e:
+            logger.error(f"✗ Failed to generate end message: {e}")
+            return None
 
 
 # ===========================================
@@ -433,6 +687,8 @@ class YouTubePlatform(StreamingPlatform):
         self.client = None
         self.channel_id = None
         self.username = None
+        self.quota_exceeded = False
+        self.quota_exceeded_time = None
         
     def authenticate(self):
         api_key = get_secret('YouTube', 'api_key',
@@ -509,6 +765,21 @@ class YouTubePlatform(StreamingPlatform):
         if not self.enabled or not self.client:
             return False, None
         
+        # Check if quota was exceeded recently (skip checks for 1 hour to avoid spam)
+        if self.quota_exceeded:
+            from datetime import datetime, timedelta
+            if self.quota_exceeded_time:
+                time_since_quota_error = datetime.now() - self.quota_exceeded_time
+                if time_since_quota_error < timedelta(hours=1):
+                    # Still in cooldown period
+                    logger.debug(f"YouTube API quota exceeded, skipping check (cooldown: {60 - time_since_quota_error.seconds // 60} min remaining)")
+                    return False, None
+                else:
+                    # Cooldown expired, try again
+                    logger.info("YouTube API quota cooldown expired, resuming checks")
+                    self.quota_exceeded = False
+                    self.quota_exceeded_time = None
+        
         # Determine which channel to check
         channel_id_to_check = None
         
@@ -526,58 +797,89 @@ class YouTubePlatform(StreamingPlatform):
             return False, None
             
         try:
-            request = self.client.search().list(
-                part="snippet",
-                channelId=channel_id_to_check,
-                eventType="live",
-                type="video",
-                maxResults=1
+            # OPTIMIZED API USAGE (3 units total vs 101 units before!)
+            # Old: search().list(eventType=live) = 100 units + videos().list() = 1 unit = 101 total
+            # New: channels().list() = 1 + playlistItems().list() = 1 + videos().list() = 1 = 3 total
+            # This gives us ~33x more checks per day with the same quota!
+            
+            # Step 1: Get channel's uploads playlist (1 unit)
+            # This checks the channel's current live broadcast
+            request = self.client.channels().list(
+                part="contentDetails",
+                id=channel_id_to_check
             )
             response = request.execute()
             
-            if response.get('items'):
-                item = response['items'][0]
-                video_id = item['id']['videoId']
+            if not response.get('items'):
+                return False, None
+            
+            # Step 2: Get the most recent video from uploads playlist (1 unit)
+            # If they're live, their livestream will be the most recent upload
+            uploads_playlist_id = response['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+            
+            # Get the most recent upload (1 unit)
+            playlist_request = self.client.playlistItems().list(
+                part="snippet",
+                playlistId=uploads_playlist_id,
+                maxResults=1
+            )
+            playlist_response = playlist_request.execute()
+            
+            if not playlist_response.get('items'):
+                return False, None
+            
+            video_id = playlist_response['items'][0]['snippet']['resourceId']['videoId']
+            
+            # Step 3: Check if this video is currently live (1 unit)
+            video_request = self.client.videos().list(
+                part="liveStreamingDetails,snippet",
+                id=video_id
+            )
+            video_response = video_request.execute()
+            
+            if video_response.get('items'):
+                video_data = video_response['items'][0]
                 
-                # Get detailed video statistics
-                try:
-                    video_request = self.client.videos().list(
-                        part="liveStreamingDetails,snippet",
-                        id=video_id
-                    )
-                    video_response = video_request.execute()
-                    
-                    if video_response.get('items'):
-                        video_data = video_response['items'][0]
-                        title = video_data['snippet']['title']
-                        thumbnail_url = video_data['snippet']['thumbnails'].get('high', {}).get('url')
-                        
-                        # Get concurrent viewers if available
-                        viewer_count = video_data.get('liveStreamingDetails', {}).get('concurrentViewers')
-                        if viewer_count:
-                            viewer_count = int(viewer_count)
-                        
-                        stream_data = {
-                            'title': title,
-                            'viewer_count': viewer_count,
-                            'thumbnail_url': thumbnail_url,
-                            'game_name': None  # YouTube doesn't have game/category in API
-                        }
-                        return True, stream_data
-                except Exception as e:
-                    logger.debug(f"Could not get detailed YouTube stream info: {e}")
-                    # Fallback to basic info
-                    stream_data = {
-                        'title': item['snippet']['title'],
-                        'viewer_count': None,
-                        'thumbnail_url': item['snippet']['thumbnails'].get('high', {}).get('url'),
-                        'game_name': None
-                    }
-                    return True, stream_data
+                # Check if actually live (has liveStreamingDetails and no actualEndTime)
+                live_details = video_data.get('liveStreamingDetails')
+                if not live_details or live_details.get('actualEndTime'):
+                    return False, None
+                
+                title = video_data['snippet']['title']
+                thumbnail_url = video_data['snippet']['thumbnails'].get('high', {}).get('url')
+                
+                # Get concurrent viewers if available
+                viewer_count = live_details.get('concurrentViewers')
+                if viewer_count:
+                    viewer_count = int(viewer_count)
+                
+                stream_data = {
+                    'title': title,
+                    'viewer_count': viewer_count,
+                    'thumbnail_url': thumbnail_url,
+                    'game_name': None  # YouTube doesn't have game/category in API
+                }
+                return True, stream_data
                 
             return False, None
         except Exception as e:
-            logger.error(f"Error checking YouTube: {e}")
+            # Check if it's a quota exceeded error
+            error_str = str(e)
+            if 'quotaExceeded' in error_str or 'quota' in error_str.lower():
+                if not self.quota_exceeded:
+                    # First time hitting quota limit
+                    from datetime import datetime
+                    self.quota_exceeded = True
+                    self.quota_exceeded_time = datetime.now()
+                    logger.error(f"❌ YouTube API quota exceeded! Pausing YouTube checks for 1 hour.")
+                    logger.error(f"   YouTube has strict daily quotas. Consider:")
+                    logger.error(f"   • Increasing check interval (SETTINGS_CHECK_INTERVAL)")
+                    logger.error(f"   • Disabling YouTube monitoring temporarily")
+                    logger.error(f"   • Requesting quota increase from Google Cloud Console")
+                else:
+                    logger.debug(f"YouTube quota still exceeded (cooldown active)")
+            else:
+                logger.error(f"Error checking YouTube: {e}")
             return False, None
     
     def _resolve_channel_id(self, username):
@@ -691,54 +993,43 @@ class KickPlatform(StreamingPlatform):
     def _check_authenticated(self, username):
         """Check stream status using authenticated official Kick API."""
         try:
-            # The Kick API doesn't support filtering by slug in the query params
-            # We need to fetch a larger list and search for the channel
-            url = "https://api.kick.com/public/v1/livestreams"
+            # Use the /channels endpoint with slug parameter (works better than searching livestreams)
+            channels_url = "https://api.kick.com/public/v1/channels"
             headers = {
                 'Authorization': f'Bearer {self.access_token}',
                 'Accept': 'application/json',
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
             
-            # Fetch top streams (most likely to include the channel we're looking for)
-            params = {
-                'limit': 100,  # Get more results to increase chances of finding the channel
-                'sort': 'viewer_count'
-            }
-            
-            response = requests.get(url, headers=headers, params=params, timeout=10)
+            params = {'slug': username}
+            response = requests.get(channels_url, headers=headers, params=params, timeout=10)
             
             if response.status_code != 200:
-                logger.warning(f"Kick livestreams API failed: {response.status_code}")
-                return False, None
+                logger.warning(f"Kick channels API failed: {response.status_code}, falling back to public API")
+                return self._check_public(username)
             
             result = response.json()
+            channels = result.get('data', [])
             
-            # Check if we got valid data
-            if not isinstance(result, dict):
-                logger.warning(f"Unexpected Kick API response format")
+            if not channels:
+                # Channel not found or offline
                 return False, None
             
-            data = result.get('data', [])
+            channel = channels[0]
             
-            # Search for the channel by slug (username)
-            livestream = None
-            username_lower = username.lower()
-            for stream in data:
-                if stream.get('slug', '').lower() == username_lower:
-                    livestream = stream
-                    break
+            # Check if livestream is active
+            stream = channel.get('stream', {})
+            is_live = stream.get('is_live', False)
             
-            # Channel not found in current live streams
-            if not livestream:
+            if not is_live:
                 return False, None
             
             # Extract stream information
-            stream_title = livestream.get('stream_title', 'Live Stream')
-            viewer_count = livestream.get('viewer_count')
-            thumbnail_url = livestream.get('thumbnail')
+            stream_title = channel.get('stream_title', 'Live Stream')
+            viewer_count = stream.get('viewer_count')
+            thumbnail_url = stream.get('thumbnail')
             
-            category = livestream.get('category', {})
+            category = channel.get('category', {})
             game_name = category.get('name') if isinstance(category, dict) else None
             
             stream_data = {
@@ -1028,12 +1319,9 @@ class BlueskyPlatform(SocialPlatform):
                             except Exception as img_error:
                                 logger.warning(f"⚠ Could not upload Kick thumbnail: {img_error}")
                         
-                        # Create external embed with stream metadata
-                        viewer_count = stream_data.get('viewer_count', 0)
+                        # Create external embed with stream metadata (no viewer count to avoid showing 0 at start)
                         game_name = stream_data.get('game_name', '')
                         description = f"🔴 LIVE"
-                        if viewer_count:
-                            description += f" • {viewer_count:,} viewers"
                         if game_name:
                             description += f" • {game_name}"
                         
@@ -1072,12 +1360,9 @@ class BlueskyPlatform(SocialPlatform):
                             except Exception as img_error:
                                 logger.warning(f"⚠ Could not upload thumbnail: {img_error}")
                         
-                        # Create external embed with stream metadata
-                        viewer_count = stream_data.get('viewer_count', 0)
+                        # Create external embed with stream metadata (no viewer count to avoid showing 0 at start)
                         game_name = stream_data.get('game_name', '')
                         description = f"🔴 LIVE"
-                        if viewer_count:
-                            description += f" • {viewer_count:,} viewers"
                         if game_name:
                             description += f" • {game_name}"
                         
@@ -1292,7 +1577,7 @@ class DiscordPlatform(SocialPlatform):
             
             # Build Discord embed with rich card
             embed = None
-            if first_url:
+            if first_url and stream_data:
                 # Determine color and platform info from URL
                 color = 0x9146FF  # Default purple
                 platform_title = "Live Stream"
@@ -1307,22 +1592,11 @@ class DiscordPlatform(SocialPlatform):
                     color = 0x53FC18  # Kick green
                     platform_title = "🟢 Live on Kick"
                 
-                # Use stream_data if provided, otherwise extract from message
-                if stream_data:
-                    stream_title = stream_data.get('title', 'Live Stream')
-                    viewer_count = stream_data.get('viewer_count')
-                    thumbnail_url = stream_data.get('thumbnail_url')
-                    game_name = stream_data.get('game_name')
-                else:
-                    # Extract stream title from message (remove URL and emoji)
-                    stream_title = re.sub(url_pattern, '', message)
-                    stream_title = re.sub(r'[🔴🟣🟢]', '', stream_title)
-                    stream_title = stream_title.strip()
-                    # Remove hashtags for cleaner title
-                    stream_title = re.sub(r'\s*#\w+\s*$', '', stream_title)
-                    viewer_count = None
-                    thumbnail_url = None
-                    game_name = None
+                # Get stream data
+                stream_title = stream_data.get('title', 'Live Stream')
+                viewer_count = stream_data.get('viewer_count')
+                thumbnail_url = stream_data.get('thumbnail_url')
+                game_name = stream_data.get('game_name')
                 
                 embed = {
                     "title": platform_title,
@@ -1355,15 +1629,16 @@ class DiscordPlatform(SocialPlatform):
                 
                 embed["footer"] = {"text": "Click to watch the stream!"}
             
+            # Build content: LLM message + role mention
+            content = message  # Start with the LLM-generated message
+            
             # Add role mention if configured for this platform
-            content = ""
-            # Check platform-specific role first, then fall back to default role
             if platform_name and platform_name.lower() in self.role_mentions:
                 role_id = self.role_mentions[platform_name.lower()]
-                content = f"<@&{role_id}>"
+                content += f" <@&{role_id}>"
             elif self.role_id:
                 # Use default role if no platform-specific role
-                content = f"<@&{self.role_id}>"
+                content += f" <@&{self.role_id}>"
             
             # Build webhook payload
             data = {}
@@ -1371,9 +1646,6 @@ class DiscordPlatform(SocialPlatform):
                 data["content"] = content
             if embed:
                 data["embeds"] = [embed]
-            else:
-                # Fallback to plain message if no URL found
-                data["content"] = content + " " + message if content else message
             
             # Add ?wait=true to get the message ID back
             webhook_url_with_wait = webhook_url + "?wait=true" if "?" not in webhook_url else webhook_url + "&wait=true"
@@ -1389,7 +1661,8 @@ class DiscordPlatform(SocialPlatform):
                     self.active_messages[platform_name.lower()] = {
                         'message_id': message_id,
                         'webhook_url': webhook_url,
-                        'last_update': time.time()
+                        'last_update': time.time(),
+                        'original_content': content  # Store LLM message + role mention
                     }
                 logger.info(f"✓ Discord embed posted (ID: {message_id})")
                 return message_id
@@ -1472,13 +1745,8 @@ class DiscordPlatform(SocialPlatform):
             # Add last updated timestamp in footer
             embed["footer"] = {"text": f"Last updated: {time.strftime('%H:%M:%S')} • Click to watch!"}
             
-            # Keep role mention in content (don't re-mention, just keep it visible)
-            content = ""
-            if platform_key in self.role_mentions:
-                role_id = self.role_mentions[platform_key]
-                content = f"<@&{role_id}>"
-            elif self.role_id:
-                content = f"<@&{self.role_id}>"
+            # Keep original content (LLM message + role mention) from initial post
+            content = msg_info.get('original_content', '')
             
             # Build update payload
             data = {}
@@ -1738,8 +2006,12 @@ class MatrixPlatform(SocialPlatform):
             logger.error(f"✗ Matrix login error: {e}")
             return None
     
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
-        if not self.enabled or not all([self.homeserver, self.access_token, self.room_id]):
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
+        if not self.enabled:
+            logger.debug(f"⚠ Matrix post skipped: disabled (enabled={self.enabled})")
+            return None
+        if not all([self.homeserver, self.access_token, self.room_id]):
+            logger.warning(f"⚠ Matrix post skipped: missing credentials (homeserver={bool(self.homeserver)}, token={bool(self.access_token)}, room={bool(self.room_id)})")
             return None
             
         try:
@@ -1806,6 +2078,152 @@ class MatrixPlatform(SocialPlatform):
 
 
 # ===========================================
+# MESSAGE GENERATION HELPERS
+# ===========================================
+
+def get_message_for_stream(ai_generator: AIMessageGenerator,
+                           is_stream_start: bool,
+                           platform_name: str,
+                           username: str,
+                           title: str,
+                           url: str,
+                           social_platform_name: str,
+                           fallback_messages: list) -> str:
+    """
+    Get message for stream announcement, using AI if enabled, otherwise fallback.
+    
+    Args:
+        ai_generator: AI message generator instance
+        is_stream_start: True for start, False for end
+        platform_name: Streaming platform (Twitch, YouTube, Kick)
+        username: Streamer username
+        title: Stream title
+        url: Stream URL (for start messages)
+        social_platform_name: Social platform name (bluesky, mastodon, discord, matrix)
+        fallback_messages: List of template messages to use if AI disabled
+    
+    Returns:
+        Formatted message ready to post
+    """
+    # Try AI generation if enabled
+    if ai_generator.enabled:
+        try:
+            if is_stream_start:
+                ai_message = ai_generator.generate_stream_start_message(
+                    platform_name=platform_name,
+                    username=username,
+                    title=title,
+                    url=url,
+                    social_platform=social_platform_name
+                )
+                if ai_message:
+                    return ai_message
+                logger.warning("⚠ AI generation returned None, using fallback message")
+            else:
+                ai_message = ai_generator.generate_stream_end_message(
+                    platform_name=platform_name,
+                    username=username,
+                    title=title,
+                    social_platform=social_platform_name
+                )
+                if ai_message:
+                    return ai_message
+                logger.warning("⚠ AI generation returned None, using fallback message")
+        except Exception as e:
+            logger.error(f"✗ AI message generation failed: {e}, using fallback")
+    
+    # Fallback to traditional messages
+    if not fallback_messages:
+        logger.error(f"✗ No fallback messages available for {platform_name}")
+        return f"🎮 {username} is {'now live' if is_stream_start else 'done streaming'} on {platform_name}! {title}"
+    
+    # Pick random fallback and format it
+    message = random.choice(fallback_messages).format(
+        stream_title=title,
+        username=username,
+        platform=platform_name
+    )
+    return message
+
+
+def post_to_social_async(enabled_social: list,
+                         ai_generator: AIMessageGenerator,
+                         is_stream_start: bool,
+                         platform_name: str,
+                         username: str,
+                         title: str,
+                         url: str,
+                         fallback_messages: list,
+                         stream_data: Optional[dict] = None,
+                         reply_to_ids: Optional[Dict[str, str]] = None) -> Dict[str, Optional[str]]:
+    """
+    Post to all social platforms asynchronously using ThreadPoolExecutor.
+    
+    Args:
+        enabled_social: List of enabled social platform instances
+        ai_generator: AI message generator
+        is_stream_start: True for stream start, False for end
+        platform_name: Streaming platform name
+        username: Streamer username
+        title: Stream title
+        url: Stream URL
+        fallback_messages: Fallback messages if AI fails
+        stream_data: Optional stream metadata for embeds
+        reply_to_ids: Optional dict of {social_name: post_id} for threading
+        
+    Returns:
+        Dict mapping social platform names to post IDs (or None if failed)
+    """
+    def post_to_single_platform(social):
+        """Helper function to post to a single platform."""
+        try:
+            # Generate message with AI or fallback
+            message = get_message_for_stream(
+                ai_generator=ai_generator,
+                is_stream_start=is_stream_start,
+                platform_name=platform_name,
+                username=username,
+                title=title,
+                url=url,
+                social_platform_name=social.name.lower(),
+                fallback_messages=fallback_messages
+            )
+            
+            # Get reply_to_id if threading
+            reply_to_id = None
+            if reply_to_ids:
+                reply_to_id = reply_to_ids.get(social.name)
+            
+            # Post to platform
+            post_id = social.post(
+                message,
+                reply_to_id=reply_to_id,
+                platform_name=platform_name,
+                stream_data=stream_data
+            )
+            
+            if post_id:
+                logger.debug(f"  ✓ Posted to {social.name} (ID: {post_id})")
+            else:
+                logger.debug(f"  ✗ Failed to post to {social.name}")
+                
+            return (social.name, post_id)
+        except Exception as e:
+            logger.error(f"✗ Error posting to {social.name}: {e}")
+            return (social.name, None)
+    
+    # Post to all platforms in parallel
+    results = {}
+    with ThreadPoolExecutor(max_workers=len(enabled_social)) as executor:
+        futures = [executor.submit(post_to_single_platform, social) for social in enabled_social]
+        for future in as_completed(futures):
+            social_name, post_id = future.result()
+            results[social_name] = post_id
+    
+    return results
+
+
+# ===========================================
 # MAIN APPLICATION
 # ===========================================
 
@@ -1850,6 +2268,10 @@ def main():
         logger.error("✗ No social platforms configured!")
         logger.error("   Enable at least one: Mastodon, Bluesky, Discord, or Matrix")
         sys.exit(1)
+    
+    # Initialize AI message generator (optional)
+    ai_generator = AIMessageGenerator()
+    ai_generator.authenticate()  # Will log if enabled/disabled
     
     # Load messages from consolidated files with platform sections
     messages_file = get_config('Messages', 'messages_file', default='messages.txt')
@@ -1970,11 +2392,11 @@ def main():
                 if not status:
                     continue
                 
-                # Check if stream is live
-                is_live, stream_title = platform.is_live(status.username)
+                # Check if stream is live (returns is_live bool and stream_data dict)
+                is_live, stream_data = platform.is_live(status.username)
                 
                 # Update status and check if state changed
-                state_changed = status.update(is_live, stream_title)
+                state_changed = status.update(is_live, stream_data)
                 
                 if state_changed:
                     if status.state == StreamState.LIVE:
@@ -1986,6 +2408,12 @@ def main():
                     # No state change - just log current status
                     if status.state == StreamState.LIVE:
                         logger.debug(f"  {status.platform_name}/{status.username}: Still live ({status.consecutive_live_checks} checks)")
+                        
+                        # Update Discord embeds with fresh stream data (viewer count, thumbnail)
+                        for social in enabled_social:
+                            if isinstance(social, DiscordPlatform) and status.stream_data:
+                                if social.update_stream(status.platform_name, status.stream_data, status.url):
+                                    logger.info(f"  ✓ Updated Discord embed for {status.platform_name} (viewers: {status.stream_data.get('viewer_count', 'N/A')})")
                     else:
                         logger.debug(f"  {status.platform_name}/{status.username}: Still offline ({status.consecutive_offline_checks} checks)")
             
@@ -1998,28 +2426,35 @@ def main():
                     platform_names = ', '.join([s.platform_name for s in platforms_went_live])
                     titles = ' | '.join([f"{s.platform_name}: {s.title}" for s in platforms_went_live])
                     
-                    # Use first platform's messages as template (or DEFAULT)
+                    # Use first platform's info for URL generation
                     first_platform = platforms_went_live[0]
                     platform_messages = messages.get(first_platform.platform_name, [])
                     
-                    message = random.choice(platform_messages).format(
-                        stream_title=titles,
-                        username=first_platform.username,
-                        platform=platform_names
-                    )
-                    
                     logger.info(f"📢 Posting combined 'LIVE' announcement for {platform_names}")
                     
+                    # Post to all platforms asynchronously
+                    post_results = post_to_social_async(
+                        enabled_social=enabled_social,
+                        ai_generator=ai_generator,
+                        is_stream_start=True,
+                        platform_name=platform_names,
+                        username=first_platform.username,
+                        title=titles,
+                        url=first_platform.url or '',
+                        fallback_messages=platform_messages,
+                        stream_data=first_platform.stream_data,
+                        reply_to_ids=None
+                    )
+                    
+                    # Process results
                     posted_count = 0
-                    for social in enabled_social:
-                        post_id = social.post(message, reply_to_id=None, platform_name=platform_names)
+                    for social_name, post_id in post_results.items():
                         if post_id:
                             posted_count += 1
-                            last_live_post_ids[social.name] = post_id
+                            last_live_post_ids[social_name] = post_id
                             # Save post ID to each platform status for potential end threading
                             for status in platforms_went_live:
-                                status.last_post_ids[social.name] = post_id
-                            logger.debug(f"  ✓ Posted to {social.name} (ID: {post_id})")
+                                status.last_post_ids[social_name] = post_id
                     
                     if posted_count > 0:
                         logger.info(f"✓ Posted to {posted_count}/{len(enabled_social)} platform(s)")
@@ -2034,32 +2469,35 @@ def main():
                             logger.error(f"✗ No messages configured for {status.platform_name}")
                             continue
                         
-                        message = random.choice(platform_messages).format(
-                            stream_title=status.title,
-                            username=status.username,
-                            platform=status.platform_name
-                        )
-                        
                         logger.info(f"📢 Posting 'LIVE' announcement for {status.platform_name}/{status.username}")
                         
+                        # Determine reply_to_ids for threading
+                        reply_to_ids = None
+                        if live_threading_mode == 'thread' and idx > 0:
+                            # Thread to previous posts
+                            reply_to_ids = last_live_post_ids.copy()
+                        
+                        # Post to all platforms asynchronously
+                        post_results = post_to_social_async(
+                            enabled_social=enabled_social,
+                            ai_generator=ai_generator,
+                            is_stream_start=True,
+                            platform_name=status.platform_name,
+                            username=status.username,
+                            title=status.title,
+                            url=status.url or '',
+                            fallback_messages=platform_messages,
+                            stream_data=status.stream_data,
+                            reply_to_ids=reply_to_ids
+                        )
+                        
+                        # Process results
                         posted_count = 0
-                        for social in enabled_social:
-                            # Determine if this should be threaded
-                            reply_to_id = None
-                            if live_threading_mode == 'thread' and idx > 0:
-                                # Thread to previous post
-                                reply_to_id = last_live_post_ids.get(social.name)
-                            
-                            post_id = social.post(
-                                message, 
-                                reply_to_id=reply_to_id,
-                                platform_name=status.platform_name
-                            )
+                        for social_name, post_id in post_results.items():
                             if post_id:
                                 posted_count += 1
-                                last_live_post_ids[social.name] = post_id
-                                status.last_post_ids[social.name] = post_id
-                                logger.debug(f"  ✓ Posted to {social.name} (ID: {post_id})")
+                                last_live_post_ids[social_name] = post_id
+                                status.last_post_ids[social_name] = post_id
                         
                         if posted_count > 0:
                             logger.info(f"✓ Posted to {posted_count}/{len(enabled_social)} platform(s)")
@@ -2084,24 +2522,41 @@ def main():
                         
                         # Use first platform's end messages as template
                         first_platform_name = next(iter(platforms_that_went_live))
+                        first_status = stream_statuses[first_platform_name]
                         platform_end_messages = end_messages.get(first_platform_name, [])
                         
                         if platform_end_messages:
-                            message = random.choice(platform_end_messages).format(
-                                username=stream_statuses[first_platform_name].username,
-                                platform=platform_names
-                            )
-                            
                             logger.info(f"📢 Posting final 'ALL STREAMS ENDED' announcement for {platform_names}")
                             
-                            posted_count = 0
+                            # Handle Discord separately (update embeds)
+                            discord_count = 0
                             for social in enabled_social:
-                                # Thread to the last live post if available
-                                reply_to_id = last_live_post_ids.get(social.name)
-                                post_id = social.post(message, reply_to_id=reply_to_id, platform_name=platform_names)
-                                if post_id:
-                                    posted_count += 1
-                                    logger.debug(f"  ✓ Posted end message to {social.name}")
+                                if isinstance(social, DiscordPlatform):
+                                    for pname in platforms_that_went_live:
+                                        status = stream_statuses[pname]
+                                        if social.end_stream(status.platform_name, status.stream_data or {}, status.url):
+                                            discord_count += 1
+                                            logger.debug(f"  ✓ Updated Discord embed for {status.platform_name}")
+                            
+                            # Post to non-Discord platforms asynchronously
+                            non_discord_social = [s for s in enabled_social if not isinstance(s, DiscordPlatform)]
+                            if non_discord_social:
+                                post_results = post_to_social_async(
+                                    enabled_social=non_discord_social,
+                                    ai_generator=ai_generator,
+                                    is_stream_start=False,
+                                    platform_name=platform_names,
+                                    username=first_status.username,
+                                    title=first_status.title,
+                                    url='',
+                                    fallback_messages=platform_end_messages,
+                                    stream_data=None,
+                                    reply_to_ids=last_live_post_ids.copy()
+                                )
+                                
+                                posted_count = discord_count + sum(1 for pid in post_results.values() if pid)
+                            else:
+                                posted_count = discord_count
                             
                             if posted_count > 0:
                                 logger.info(f"✓ Posted end message to {posted_count}/{len(enabled_social)} platform(s)")
@@ -2121,21 +2576,36 @@ def main():
                     platform_end_messages = end_messages.get(first_status.platform_name, [])
                     
                     if platform_end_messages:
-                        message = random.choice(platform_end_messages).format(
-                            username=first_status.username,
-                            platform=platform_names
-                        )
-                        
                         logger.info(f"📢 Posting combined 'OFFLINE' announcement for {platform_names}")
                         
-                        posted_count = 0
+                        # Handle Discord separately (update embeds)
+                        discord_count = 0
                         for social in enabled_social:
-                            # Thread to last live post if available
-                            reply_to_id = last_live_post_ids.get(social.name)
-                            post_id = social.post(message, reply_to_id=reply_to_id, platform_name=platform_names)
-                            if post_id:
-                                posted_count += 1
-                                logger.debug(f"  ✓ Posted end message to {social.name}")
+                            if isinstance(social, DiscordPlatform):
+                                for status in platforms_went_offline:
+                                    if social.end_stream(status.platform_name, status.stream_data or {}, status.url):
+                                        discord_count += 1
+                                        logger.debug(f"  ✓ Updated Discord embed for {status.platform_name}")
+                        
+                        # Post to non-Discord platforms asynchronously
+                        non_discord_social = [s for s in enabled_social if not isinstance(s, DiscordPlatform)]
+                        if non_discord_social:
+                            post_results = post_to_social_async(
+                                enabled_social=non_discord_social,
+                                ai_generator=ai_generator,
+                                is_stream_start=False,
+                                platform_name=platform_names,
+                                username=first_status.username,
+                                title=first_status.title,
+                                url='',
+                                fallback_messages=platform_end_messages,
+                                stream_data=None,
+                                reply_to_ids=last_live_post_ids.copy()
+                            )
+                            
+                            posted_count = discord_count + sum(1 for pid in post_results.values() if pid)
+                        else:
+                            posted_count = discord_count
                         
                         if posted_count > 0:
                             logger.info(f"✓ Posted end message to {posted_count}/{len(enabled_social)} platform(s)")
@@ -2148,29 +2618,41 @@ def main():
                             logger.debug(f"  No end messages for {status.platform_name}")
                             continue
                         
-                        message = random.choice(platform_end_messages).format(
-                            username=status.username,
-                            platform=status.platform_name
-                        )
-                        
                         logger.info(f"📢 Posting 'OFFLINE' announcement for {status.platform_name}/{status.username}")
                         
-                        posted_count = 0
+                        # Handle Discord separately (update embed)
+                        discord_count = 0
                         for social in enabled_social:
-                            # Determine reply_to_id based on mode
-                            reply_to_id = None
-                            if end_threading_mode == 'thread':
-                                # Thread to this platform's live announcement
-                                reply_to_id = status.last_post_ids.get(social.name)
-                            
-                            post_id = social.post(
-                                message,
-                                reply_to_id=reply_to_id,
-                                platform_name=status.platform_name
+                            if isinstance(social, DiscordPlatform):
+                                if social.end_stream(status.platform_name, status.stream_data or {}, status.url):
+                                    discord_count += 1
+                                    logger.debug(f"  ✓ Updated Discord embed to show stream ended")
+                        
+                        # Determine reply_to_ids for threading
+                        reply_to_ids = None
+                        if end_threading_mode == 'thread':
+                            # Thread to this platform's live announcement
+                            reply_to_ids = status.last_post_ids.copy()
+                        
+                        # Post to non-Discord platforms asynchronously
+                        non_discord_social = [s for s in enabled_social if not isinstance(s, DiscordPlatform)]
+                        if non_discord_social:
+                            post_results = post_to_social_async(
+                                enabled_social=non_discord_social,
+                                ai_generator=ai_generator,
+                                is_stream_start=False,
+                                platform_name=status.platform_name,
+                                username=status.username,
+                                title=status.title,
+                                url='',
+                                fallback_messages=platform_end_messages,
+                                stream_data=None,
+                                reply_to_ids=reply_to_ids
                             )
-                            if post_id:
-                                posted_count += 1
-                                logger.debug(f"  ✓ Posted end message to {social.name}")
+                            
+                            posted_count = discord_count + sum(1 for pid in post_results.values() if pid)
+                        else:
+                            posted_count = discord_count
                         
                         if posted_count > 0:
                             logger.info(f"✓ Posted end message to {posted_count}/{len(enabled_social)} platform(s)")
