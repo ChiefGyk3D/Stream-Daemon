@@ -28,11 +28,32 @@ if [ ! -f "$SERVICE_FILE" ]; then
     exit 0
 fi
 
+# Detect if this is a Docker or Python service
+IS_DOCKER=false
+if grep -q "Docker" "$SERVICE_FILE" || grep -q "docker run" "$SERVICE_FILE"; then
+    IS_DOCKER=true
+    echo "Detected Docker-based deployment"
+else
+    echo "Detected Python-based deployment"
+fi
+
 # Stop the service if running
 if systemctl is-active --quiet stream-daemon.service; then
     echo "Stopping Stream Daemon service..."
     systemctl stop stream-daemon.service
     echo -e "${GREEN}✓${NC} Service stopped"
+fi
+
+# If Docker deployment, also clean up Docker container
+if [ "$IS_DOCKER" = true ]; then
+    if command -v docker &> /dev/null; then
+        # Check if container exists
+        if docker ps -a --format '{{.Names}}' | grep -q '^stream-daemon$'; then
+            echo "Removing Docker container..."
+            docker rm -f stream-daemon 2>/dev/null || true
+            echo -e "${GREEN}✓${NC} Docker container removed"
+        fi
+    fi
 fi
 
 # Disable the service
@@ -58,7 +79,12 @@ echo -e "${GREEN}Uninstallation complete!${NC}"
 echo ""
 echo -e "${YELLOW}Note: This script does NOT remove:${NC}"
 echo "  - The project directory and files"
-echo "  - Python virtual environment (venv/)"
+if [ "$IS_DOCKER" = true ]; then
+    echo "  - Docker image (stream-daemon)"
+    echo "    Run 'docker rmi stream-daemon' to remove the image"
+else
+    echo "  - Python virtual environment (venv/)"
+fi
 echo "  - Your .env configuration"
 echo ""
 echo "To completely remove Stream Daemon, manually delete the project directory."
