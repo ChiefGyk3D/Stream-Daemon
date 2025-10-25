@@ -659,10 +659,10 @@ graph LR
 
 2. **Test Gemini API:**
    ```bash
-   python3 -c "import google.generativeai as genai; \
-     genai.configure(api_key='$GEMINI_API_KEY'); \
-     model = genai.GenerativeModel('gemini-2.0-flash-lite'); \
-     print(model.generate_content('Test').text)"
+   python3 -c "import google.genai; \
+     client = google.genai.Client(api_key='$GEMINI_API_KEY'); \
+     response = client.models.generate_content(model='gemini-2.0-flash-lite', contents='Test'); \
+     print(response.text)"
    ```
 
 3. **Check fallback behavior:**
