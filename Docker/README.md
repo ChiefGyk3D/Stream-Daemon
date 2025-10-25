@@ -186,7 +186,7 @@ MATRIX_ROOM_ID: '!roomid:matrix.org'
 LLM_ENABLE: 'True'
 LLM_PROVIDER: 'gemini'
 LLM_GEMINI_API_KEY: 'your_api_key'
-LLM_GEMINI_MODEL: 'gemini-2.0-flash-exp'
+LLM_GEMINI_MODEL: 'gemini-2.0-flash-lite'
 ```
 
 #### Settings
