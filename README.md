@@ -661,7 +661,7 @@ graph LR
    ```bash
    python3 -c "import google.genai; \
      client = google.genai.Client(api_key='$GEMINI_API_KEY'); \
-     response = client.models.generate_content(model='gemini-2.0-flash-lite', contents='Test'); \
+     response = client.models.generate_content(model='gemini-2.0-flash-lite', contents='Say hello'); \
      print(response.text)"
    ```
 
