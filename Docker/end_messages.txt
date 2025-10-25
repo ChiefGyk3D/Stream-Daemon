@@ -1,5 +1,0 @@
-Just wrapped up my Twitch stream! Thanks to everyone who tuned in. Catch the next one here: https://twitch.tv/{twitch_user_login}
-Thank you all for joining my live stream on Twitch! Follow me to be notified of the next one: https://twitch.tv/{twitch_user_login}
-The stream has ended, but the fun isn't over! Follow my Twitch channel for more: https://twitch.tv/{twitch_user_login}
-Another great stream on Twitch. Thanks for the support! Stay tuned for more here: https://twitch.tv/{twitch_user_login}
-That's it for today's Twitch stream! See you in the next one. Follow me at https://twitch.tv/{twitch_user_login}

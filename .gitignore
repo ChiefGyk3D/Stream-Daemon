@@ -1,2 +1,31 @@
+# Node
 node_modules
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment files
 .env
+!.env.example
+config.ini
+
+# Test outputs
+tests/__pycache__/
+tests/*.pyc
+tests/test_results/
+
+# Logs
+*.log
+
+# IDEs/.editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+

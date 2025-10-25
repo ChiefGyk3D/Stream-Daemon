@@ -1,3 +1,0 @@
-I'm now live on Twitch! Playing: {stream_title}. Watch here: https://twitch.tv/{twitch_user_login}
-Join me on Twitch as I play {stream_title}! https://twitch.tv/{twitch_user_login}
-I'm streaming {stream_title} on Twitch right now! Check it out: https://twitch.tv/{twitch_user_login}

@@ -1,0 +1,68 @@
+# Git and version control
+.git/
+.gitignore
+.github/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.virtualenv/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing and development
+tests/
+Archive/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# Documentation (not needed in container)
+docs/
+*.md
+!Docker/README.md
+!Docker/*.md
+
+# Environment files (secrets)
+.env
+.env.*
+config.ini
+
+# Docker itself
+Docker/.dockerignore
+Dockerfile
+docker-compose*.yml
+
+# Media and large files
+media/
+
+# Temporary and backup files
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
