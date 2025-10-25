@@ -62,16 +62,6 @@ class StreamingPlatform:
         raise NotImplementedError
 
 
-    
-    def is_live(self, username):
-        """Check if user is live. Returns (is_live, stream_title) tuple."""
-        raise NotImplementedError
-    
-    def authenticate(self):
-        """Authenticate with the platform."""
-        raise NotImplementedError
-
-
 class TwitchPlatform(StreamingPlatform):
     """Twitch streaming platform with enhanced error handling and retry logic."""
     
