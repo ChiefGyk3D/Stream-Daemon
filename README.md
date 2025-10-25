@@ -118,8 +118,8 @@ When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Ki
 
 1. **Clone and install**
    ```bash
-   git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
-   cd twitch-and-toot
+   git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+   cd Stream-Daemon
    pip install -r requirements.txt
    ```
 
@@ -396,7 +396,7 @@ For platform-specific setup guides, advanced features, and troubleshooting:
 - **[Multi-Platform Streaming](docs/features/multi-platform.md)** - Threading modes, combined posts, strategies
 
 ### 🔄 Migration & Upgrades
-- **[v1 to v2 Migration](docs/migration/v1-to-v2.md)** - Upgrading from twitch-and-toot v1.x
+- **[v1 to v2 Migration](docs/migration/v1-to-v2.md)** - Upgrading from Stream-Daemon v1.x
 
 ### 📖 Complete Documentation Index
 - **[Documentation Index](docs/README.md)** - Browse all guides and references
@@ -680,8 +680,8 @@ graph LR
 ### Getting Help
 
 - **📖 Documentation** - [Complete guide index](#-documentation)
-- **🐛 Bug Reports** - [GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- **💬 Questions** - [GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- **🐛 Bug Reports** - [GitHub Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- **💬 Questions** - [GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
 - **🔍 Search Issues** - Someone may have solved your problem!
 
 ### Reporting Bugs
@@ -887,8 +887,8 @@ Or use IAM roles with ECS/EKS for credential-free authentication!
 
 Contributions make Stream Daemon better! We welcome:
 
-- 🐛 **Bug Reports** - Found an issue? [Open an issue](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- 💡 **Feature Requests** - Have an idea? [Start a discussion](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- 🐛 **Bug Reports** - Found an issue? [Open an issue](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- 💡 **Feature Requests** - Have an idea? [Start a discussion](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
 - 🔧 **Pull Requests** - Want to contribute code? PRs are welcome!
 - 📖 **Documentation** - Help improve guides and examples
 - 🧪 **Testing** - Try Stream Daemon on different platforms and report findings
@@ -897,8 +897,8 @@ Contributions make Stream Daemon better! We welcome:
 
 ```bash
 # Clone repository
-git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
-cd twitch-and-toot
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon
 
 # Create virtual environment
 python3 -m venv venv
@@ -941,8 +941,8 @@ black stream-daemon.py stream_daemon/
 ### Need Help?
 
 - 📖 Read the [Documentation](#-documentation)
-- 💬 Join [GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
-- 🐛 Search existing [Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
+- 💬 Join [GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
+- 🐛 Search existing [Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
 
 ---
 
@@ -987,7 +987,7 @@ black stream-daemon.py stream_daemon/
 
 ### 💡 Community Requests
 
-Have a feature idea? [Open a discussion](https://github.com/ChiefGyk3D/twitch-and-toot/discussions) or vote on existing proposals!
+Have a feature idea? [Open a discussion](https://github.com/ChiefGyk3D/Stream-Daemon/discussions) or vote on existing proposals!
 
 ---
 
@@ -1165,9 +1165,9 @@ Stream Daemon is built on the shoulders of giants:
 
 ### Community Channels
 
-- **[GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)** - Ask questions, share setups
-- **[GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)** - Bug reports and feature requests
-- **[Pull Requests](https://github.com/ChiefGyk3D/twitch-and-toot/pulls)** - Contribute code and improvements
+- **[GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)** - Ask questions, share setups
+- **[GitHub Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)** - Bug reports and feature requests
+- **[Pull Requests](https://github.com/ChiefGyk3D/Stream-Daemon/pulls)** - Contribute code and improvements
 
 ### Stay Updated
 
@@ -1200,7 +1200,7 @@ Made with ❤️ by [ChiefGyk3D](https://github.com/ChiefGyk3D)
 
 ## 🌟 Success Stories
 
-*Using Stream Daemon for your streams? [Share your story](https://github.com/ChiefGyk3D/twitch-and-toot/discussions) and get featured here!*
+*Using Stream Daemon for your streams? [Share your story](https://github.com/ChiefGyk3D/Stream-Daemon/discussions) and get featured here!*
 
 ---
 

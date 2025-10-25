@@ -354,8 +354,8 @@ MIT License - See [LICENSE.md](../LICENSE.md)
 ## 🤝 Support
 
 - 📖 Documentation: See main [README.md](../README.md)
-- 🐛 Issues: [GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
 
 ## ⚙️ Configuration
 
@@ -423,7 +423,7 @@ The script also supports optional integration with HashiCorp Vault for secure st
 
 ## Donations and Tips
 
-If you would like to support the development of Twitch-and-toot, you can donate through the following links: [Donate](https://links.chiefgyk3d.com)
+If you would like to support the development of Stream-Daemon, you can donate through the following links: [Donate](https://links.chiefgyk3d.com)
 
 You can also tip the author with the following cryptocurrency addresses:
 
@@ -434,6 +434,6 @@ You can also tip the author with the following cryptocurrency addresses:
 
 ## Authors
 
-- ChiefGyk3D is the author of Twitch-and-toot
+- ChiefGyk3D is the author of Stream-Daemon
 - [ChiefGyk3D's Mastodon Account](https://social.chiefgyk3d.com/@chiefgyk3d)
-- ChatGPT, an AI developed by OpenAI, helped build about 80% of the Python version of Twitch-and-toot.
+- ChatGPT, an AI developed by OpenAI, helped build about 80% of the Python version of Stream-Daemon.

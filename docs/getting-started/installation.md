@@ -78,13 +78,13 @@ pip3 --version
 
 ```bash
 # Clone from GitHub
-git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
-cd twitch-and-toot
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon
 
 # Or download ZIP
-curl -LO https://github.com/ChiefGyk3D/twitch-and-toot/archive/refs/heads/main.zip
+curl -LO https://github.com/ChiefGyk3D/Stream-Daemon/archive/refs/heads/main.zip
 unzip main.zip
-cd twitch-and-toot-main
+cd Stream-Daemon-main
 ```
 
 ### Step 3: Install Dependencies
@@ -195,8 +195,8 @@ docker-compose --version
 
 **Step 1: Clone repository**
 ```bash
-git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
-cd twitch-and-toot/Docker
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon/Docker
 ```
 
 **Step 2: Configure**
@@ -371,7 +371,7 @@ sudo nano /etc/systemd/system/stream-daemon.service
 ```ini
 [Unit]
 Description=Stream Daemon - Multi-platform stream announcement bot
-Documentation=https://github.com/ChiefGyk3D/twitch-and-toot
+Documentation=https://github.com/ChiefGyk3D/Stream-Daemon
 After=network-online.target
 Wants=network-online.target
 
@@ -379,15 +379,15 @@ Wants=network-online.target
 Type=simple
 User=your_username
 Group=your_username
-WorkingDirectory=/home/your_username/twitch-and-toot
+WorkingDirectory=/home/your_username/Stream-Daemon
 
 # Use virtual environment if created
-ExecStart=/home/your_username/twitch-and-toot/venv/bin/python stream-daemon.py
+ExecStart=/home/your_username/Stream-Daemon/venv/bin/python stream-daemon.py
 # Or system Python
-# ExecStart=/usr/bin/python3 /home/your_username/twitch-and-toot/stream-daemon.py
+# ExecStart=/usr/bin/python3 /home/your_username/Stream-Daemon/stream-daemon.py
 
 # Environment file
-EnvironmentFile=/home/your_username/twitch-and-toot/.env
+EnvironmentFile=/home/your_username/Stream-Daemon/.env
 
 # Restart on failure
 Restart=always
@@ -402,7 +402,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=read-only
-ReadWritePaths=/home/your_username/twitch-and-toot
+ReadWritePaths=/home/your_username/Stream-Daemon
 
 # Logging
 StandardOutput=journal
@@ -423,7 +423,7 @@ After=docker.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/your_username/twitch-and-toot/Docker
+WorkingDirectory=/home/your_username/Stream-Daemon/Docker
 
 ExecStart=/usr/bin/docker-compose up -d
 ExecStop=/usr/bin/docker-compose down
@@ -490,8 +490,8 @@ sudo apt update && sudo apt upgrade -y
 sudo apt install python3 python3-pip python3-venv git -y
 
 # Clone and install (follow Python Installation above)
-git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
-cd twitch-and-toot
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -586,11 +586,11 @@ For contributors and developers:
 # Fork repository on GitHub first
 
 # Clone your fork
-git clone https://github.com/YOUR_USERNAME/twitch-and-toot.git
-cd twitch-and-toot
+git clone https://github.com/YOUR_USERNAME/Stream-Daemon.git
+cd Stream-Daemon
 
 # Add upstream remote
-git remote add upstream https://github.com/ChiefGyk3D/twitch-and-toot.git
+git remote add upstream https://github.com/ChiefGyk3D/Stream-Daemon.git
 
 # Create virtual environment
 python3 -m venv venv
@@ -760,7 +760,7 @@ sudo journalctl -u stream-daemon -n 50
 sudo journalctl -u stream-daemon -n 100
 
 # Test running manually
-cd /path/to/twitch-and-toot
+cd /path/to/Stream-Daemon
 python3 stream-daemon.py
 
 # Check permissions
@@ -801,5 +801,5 @@ Now that Stream Daemon is installed:
 ## 💬 Need Help?
 
 - 📖 **Documentation:** [docs/README.md](../README.md)
-- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- 💬 **Questions:** [GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- 💬 **Questions:** [GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
