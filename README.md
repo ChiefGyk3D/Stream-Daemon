@@ -1186,8 +1186,7 @@ If you find Stream Daemon useful, consider supporting development:
 [StreamElements](https://streamelements.com/chiefgyk3d/tip)
 
 
-<details>
-<summary><b>Cryptocurrency Tips</b> (click to expand)</summary>
+### Cryptocurrency Tips
 
 <table>
    <tr>
@@ -1208,8 +1207,6 @@ If you find Stream Daemon useful, consider supporting development:
       </td>
    </tr>
 </table>
-
-</details>
 
 ---
 

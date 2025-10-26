@@ -426,8 +426,7 @@ If you would like to support the development of Stream-Daemon, you can donate th
 [StreamElements](https://streamelements.com/chiefgyk3d/tip)
 
 
-<details>
-<summary><b>Cryptocurrency Tips</b> (click to expand)</summary>
+### Cryptocurrency Tips
 
 <table>
    <tr>
@@ -448,8 +447,6 @@ If you would like to support the development of Stream-Daemon, you can donate th
       </td>
    </tr>
 </table>
-
-</details>
 
 ## Authors
 
