@@ -10,11 +10,51 @@ sudo ./install-systemd.sh
 ```
 
 The installer will:
-- ✅ Create a Python virtual environment (if needed)
-- ✅ Install all dependencies
+- ✅ Prompt for deployment mode selection (Python or Docker)
+- ✅ Python mode: Create a Python virtual environment (if needed) and install dependencies
+- ✅ Docker mode: Check for Docker installation and build the Docker image if needed
+- ✅ **Docker mode: Detect existing images and offer to rebuild**
+- ✅ **Docker mode: Provide detailed error messages and solutions if build fails**
 - ✅ Create systemd service file
 - ✅ Optionally enable service on boot
 - ✅ Optionally start the service immediately
+
+### Installation Features
+
+**Smart Docker Image Detection:**
+- Checks if `stream-daemon` image already exists
+- Shows image details (tag, size, ID)
+- Offers option to rebuild existing images
+- Detects and reports build failures with specific solutions
+
+**Automated Error Recovery:**
+The installer analyzes build failures and provides solutions for:
+- No space left on device → Suggests cleaning Docker cache
+- Cannot connect to Docker daemon → Instructions to start Docker
+- Permission denied → Guidance on adding user to docker group
+- Missing Dockerfile → Shows expected path
+- Missing dependencies → Verification steps
+
+**Prerequisites Checking:**
+- Validates Docker and docker-compose installation
+- Checks if user is in docker group
+- Warns about missing .env file (with option to continue)
+- Verifies all required files exist before building
+
+### Deployment Modes
+
+**Python Mode:**
+- Uses Python virtual environment
+- Dependencies installed locally
+- Lighter weight
+- Suitable for development and simple deployments
+
+**Docker Mode:**
+- Uses Docker containers
+- Isolated environment
+- Consistent deployment
+- Suitable for production and complex deployments
+- Requires Docker and docker-compose to be installed
 
 ---
 
@@ -22,7 +62,9 @@ The installer will:
 
 If you prefer to install manually:
 
-### 1. Create Virtual Environment
+### Python Deployment
+
+#### 1. Create Virtual Environment
 
 ```bash
 python3 -m venv venv
@@ -30,7 +72,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Create Service File
+#### 2. Create Service File
 
 Create `/etc/systemd/system/stream-daemon.service`:
 
@@ -68,7 +110,69 @@ WantedBy=multi-user.target
 - `YOUR_USERNAME` with your Linux username
 - `/path/to/stream-daemon` with the full path to your project directory
 
-### 3. Enable and Start
+#### 3. Enable and Start
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable stream-daemon
+sudo systemctl start stream-daemon
+```
+
+---
+
+### Docker Deployment
+
+#### 1. Build Docker Image
+
+```bash
+cd /path/to/stream-daemon
+docker build -t stream-daemon -f Docker/Dockerfile .
+```
+
+#### 2. Create Service File
+
+Create `/etc/systemd/system/stream-daemon.service`:
+
+```ini
+[Unit]
+Description=Stream Daemon - Multi-platform Live Stream Monitor (Docker)
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=YOUR_USERNAME
+Group=YOUR_USERNAME
+WorkingDirectory=/path/to/stream-daemon
+
+# Start the Docker container
+ExecStart=/usr/bin/docker run -d \
+    --name stream-daemon \
+    --restart unless-stopped \
+    --env-file /path/to/stream-daemon/.env \
+    -v /path/to/stream-daemon/messages.txt:/app/messages.txt:ro \
+    -v /path/to/stream-daemon/end_messages.txt:/app/end_messages.txt:ro \
+    stream-daemon
+
+# Stop and remove the container
+ExecStop=/usr/bin/docker stop stream-daemon
+ExecStopPost=/usr/bin/docker rm -f stream-daemon
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=stream-daemon
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Replace:**
+- `YOUR_USERNAME` with your Linux username
+- `/path/to/stream-daemon` with the full path to your project directory
+
+#### 3. Enable and Start
 
 ```bash
 sudo systemctl daemon-reload
@@ -188,6 +292,78 @@ sudo journalctl -u stream-daemon --since "30 minutes ago"
 
 # Show logs from specific date
 sudo journalctl -u stream-daemon --since "2025-01-01 00:00:00"
+```
+
+### Docker-Specific Issues
+
+**Docker image not found:**
+```bash
+# Check if image exists
+docker images | grep stream-daemon
+
+# Rebuild manually
+cd /path/to/stream-daemon
+docker build -t stream-daemon -f Docker/Dockerfile .
+```
+
+**Docker daemon not running:**
+```bash
+# Start Docker service
+sudo systemctl start docker
+
+# Enable Docker to start on boot
+sudo systemctl enable docker
+
+# Check Docker status
+sudo systemctl status docker
+```
+
+**Permission denied errors:**
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Log out and back in for changes to take effect
+# Or use newgrp to apply immediately (in current shell)
+newgrp docker
+```
+
+**Container won't start:**
+```bash
+# Check Docker logs
+docker logs stream-daemon
+
+# Inspect container
+docker inspect stream-daemon
+
+# Remove and recreate
+docker rm -f stream-daemon
+sudo systemctl restart stream-daemon
+```
+
+**Image build failures:**
+```bash
+# Common issue: No space left
+docker system prune -a  # Clean up unused images/containers
+
+# Common issue: Network timeout
+# Try again or check internet connection
+
+# Common issue: Missing files
+ls -la Docker/Dockerfile requirements.txt  # Verify files exist
+
+# View detailed build output
+docker build -t stream-daemon -f Docker/Dockerfile . --progress=plain
+```
+
+**Environment file not loading:**
+```bash
+# Verify .env exists and has correct permissions
+ls -la .env
+cat .env  # Check contents (careful with secrets!)
+
+# Ensure path in service file is absolute
+grep "env-file" /etc/systemd/system/stream-daemon.service
 ```
 
 ### Restart After Crash
