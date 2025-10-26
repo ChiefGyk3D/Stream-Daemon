@@ -8,6 +8,24 @@ Run Stream Daemon in a Docker container for easy deployment, scalability, and co
 
 ## 🐳 Quick Start
 
+**Option 1: Use Pre-Built Image (Recommended)**
+
+```bash
+docker pull chiefgyk3dx/stream-daemon:latest
+docker run -d --name stream-daemon --env-file .env chiefgyk3dx/stream-daemon:latest
+```
+
+**Option 2: Docker Compose with Pre-Built Image**
+
+```bash
+cd Docker
+cp docker-compose.example.yml docker-compose.yml
+# Edit docker-compose.yml - change `build: .` to `image: chiefgyk3dx/stream-daemon:latest`
+docker-compose up -d
+```
+
+**Option 3: Build from Source**
+
 ```bash
 cd Docker
 cp docker-compose.example.yml docker-compose.yml
@@ -16,6 +34,15 @@ docker-compose up -d
 ```
 
 That's it! Stream Daemon is now running in the background.
+
+## 📦 Available Docker Images
+
+Stream Daemon is published to two container registries:
+
+- **Docker Hub**: `chiefgyk3dx/stream-daemon:latest` (Recommended)
+- **GitHub Container Registry**: `ghcr.io/chiefgyk3d/stream-daemon:latest`
+
+Both images are automatically built and published on every release with support for `linux/amd64` and `linux/arm64` platforms.
 
 > **💡 Tip:** New to Stream Daemon? Use the **secrets wizard** to generate your configuration:
 > ```bash
@@ -333,7 +360,7 @@ If you have Python installed locally:
 
 ```bash
 # Clone the repository
-cd /path/to/twitch-and-toot
+cd /path/to/Stream-Daemon
 
 # Install dependencies
 pip install -r requirements.txt
