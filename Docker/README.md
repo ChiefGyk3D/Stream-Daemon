@@ -418,22 +418,52 @@ The script also supports optional integration with HashiCorp Vault for secure st
 
 ## Future plans
     
-- Dockerize the script for easy deployment and scaling.
 - Add support for more streaming platforms.
 
 ## Donations and Tips
 
-If you would like to support the development of Stream-Daemon, you can donate through the following links: [Donate](https://links.chiefgyk3d.com)
+If you would like to support the development of Stream-Daemon, you can donate through the following links: [Patreon](https://patreon.com/chiefgyk3d?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)
+[StreamElements](https://streamelements.com/chiefgyk3d/tip)
 
 You can also tip the author with the following cryptocurrency addresses:
 
-- Bitcoin: bc1q5grpa7ramcct4kjmwexfrh74dvjuw9wczn4w2f
-- Monero: 85YxVz8Xd7sW1xSiyzUC5PNqSjYLYk4W8FMERVkvznR38jGTBEViWQSLCnzRYZjmxgUkUKGhxTt2JSFNpJuAqghQLhHgPS5
-- PIVX: DS1CuBQkiidwwPhkfVfQAGUw4RTWPnBXVM
-- Ethereum: 0x2a460d48ab404f191b14e9e0df05ee829cbf3733
+**Cryptocurrency**:
+- Bitcoin: `bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla`
+- Monero: `84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ`
+- Ethereum: `0x554f18cfB684889c3A60219BDBE7b050C39335ED`
 
 ## Authors
 
-- ChiefGyk3D is the author of Stream-Daemon
-- [ChiefGyk3D's Mastodon Account](https://social.chiefgyk3d.com/@chiefgyk3d)
-- ChatGPT, an AI developed by OpenAI, helped build about 80% of the Python version of Stream-Daemon.
+
+<div align="center">
+
+Made with ❤️ by [ChiefGyk3D](https://github.com/ChiefGyk3D)
+
+## Author & Socials
+
+<table>
+   <tr>
+      <td align="center"><a href="https://social.chiefgyk3d.com/@chiefgyk3d" title="Mastodon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastodon.svg" width="32" height="32" alt="Mastodon"/></a></td>
+      <td align="center"><a href="https://bsky.app/profile/chiefgyk3d.com" title="Bluesky"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bluesky.svg" width="32" height="32" alt="Bluesky"/></a></td>
+      <td align="center"><a href="http://twitch.tv/chiefgyk3d" title="Twitch"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitch.svg" width="32" height="32" alt="Twitch"/></a></td>
+      <td align="center"><a href="https://www.youtube.com/channel/UCvFY4KyqVBuYd7JAl3NRyiQ" title="YouTube"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" width="32" height="32" alt="YouTube"/></a></td>
+      <td align="center"><a href="https://kick.com/chiefgyk3d" title="Kick"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/kick.svg" width="32" height="32" alt="Kick"/></a></td>
+      <td align="center"><a href="https://www.tiktok.com/@chiefgyk3d" title="TikTok"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg" width="32" height="32" alt="TikTok"/></a></td>
+      <td align="center"><a href="https://discord.chiefgyk3d.com" title="Discord"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/discord.svg" width="32" height="32" alt="Discord"/></a></td>
+      <td align="center"><a href="https://matrix-invite.chiefgyk3d.com" title="Matrix"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/matrix.svg" width="32" height="32" alt="Matrix"/></a></td>
+   </tr>
+   <tr>
+      <td align="center">Mastodon</td>
+      <td align="center">Bluesky</td>
+      <td align="center">Twitch</td>
+      <td align="center">YouTube</td>
+      <td align="center">Kick</td>
+      <td align="center">TikTok</td>
+      <td align="center">Discord</td>
+      <td align="center">Matrix</td>
+   </tr>
+</table>
+
+<sub>ChiefGyk3D is the author of Stream Daemon (formerly Twitch and Toot)</sub>
+
+</div>
