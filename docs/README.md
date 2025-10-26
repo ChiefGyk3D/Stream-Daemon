@@ -286,7 +286,7 @@ Want to improve Stream Daemon or its documentation?
    - Fix bugs
 
 3. **Community support:**
-   - Answer questions in [Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+   - Answer questions in [Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
    - Share your Stream Daemon setup
    - Report bugs and suggest features
 
@@ -299,9 +299,9 @@ See [Development Setup](getting-started/installation.md#development-setup) to ge
 ### Getting Help
 
 - 📖 **Search this documentation** - Most answers are here!
-- 🔍 **[Search existing issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)** - Your question may be answered
-- 💬 **[GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)** - Ask questions, share setups
-- 🐛 **[GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)** - Report bugs, request features
+- 🔍 **[Search existing issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)** - Your question may be answered
+- 💬 **[GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)** - Ask questions, share setups
+- 🐛 **[GitHub Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)** - Report bugs, request features
 
 ### Before Asking
 
@@ -339,7 +339,7 @@ ERROR: Failed to post to Mastodon: 401 Unauthorized
 
 If Stream Daemon helps you grow your streaming presence:
 
-- ⭐ **[Star the repository](https://github.com/ChiefGyk3D/twitch-and-toot)** - Help others discover it!
+- ⭐ **[Star the repository](https://github.com/ChiefGyk3D/Stream-Daemon)** - Help others discover it!
 - 📢 **Share with streamers** - Spread the word on social media
 - 💝 **[Donate](https://links.chiefgyk3d.com)** - Support ongoing development
 - 🔧 **Contribute** - Submit pull requests and improvements

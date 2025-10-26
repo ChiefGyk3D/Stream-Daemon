@@ -132,4 +132,4 @@ services:
 # Optional: Use networks for multi-container setups
 # networks:
 #   default:
-#     name: twitch-and-toot-network
+#     name: stream-daemon-network

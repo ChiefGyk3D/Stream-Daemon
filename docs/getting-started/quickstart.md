@@ -25,8 +25,8 @@ Before starting, make sure you have:
 
 ```bash
 # Clone repository
-git clone https://github.com/ChiefGyk3D/twitch-and-toot.git
-cd twitch-and-toot
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon
 
 # Install dependencies
 pip install -r requirements.txt
@@ -412,8 +412,8 @@ pip install --upgrade -r requirements.txt
 
 **Still stuck?** 
 - 📖 See [detailed troubleshooting](../configuration/secrets.md#troubleshooting)
-- 🐛 [Open an issue](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- 💬 [Ask in discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- 🐛 [Open an issue](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- 💬 [Ask in discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
 
 ---
 
@@ -436,9 +436,9 @@ After=network.target
 [Service]
 Type=simple
 User=your_username
-WorkingDirectory=/path/to/twitch-and-toot
+WorkingDirectory=/path/to/Stream-Daemon
 Environment="PATH=/usr/bin:/usr/local/bin"
-ExecStart=/usr/bin/python3 /path/to/twitch-and-toot/stream-daemon.py
+ExecStart=/usr/bin/python3 /path/to/Stream-Daemon/stream-daemon.py
 Restart=always
 RestartSec=10
 
@@ -511,9 +511,9 @@ Now that Stream Daemon is running:
 
 ### Get Involved
 
-- ⭐ **[Star the repo](https://github.com/ChiefGyk3D/twitch-and-toot)** - Support the project!
-- 🐛 **[Report issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)** - Found a bug?
-- 💡 **[Suggest features](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)** - Have an idea?
+- ⭐ **[Star the repo](https://github.com/ChiefGyk3D/Stream-Daemon)** - Support the project!
+- 🐛 **[Report issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)** - Found a bug?
+- 💡 **[Suggest features](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)** - Have an idea?
 - 🔧 **[Contribute](../../README.md#contributing)** - Submit a pull request!
 
 ---
@@ -521,7 +521,7 @@ Now that Stream Daemon is running:
 ## 💬 Need Help?
 
 - 📖 **Documentation:** [docs/README.md](../README.md)
-- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- 💬 **Questions:** [GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- 💬 **Questions:** [GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
 
 **Happy streaming!** 🎉

@@ -12,7 +12,7 @@
 
 Monitor **Twitch, YouTube, and Kick** streams • Post to **Mastodon, Bluesky, Discord, and Matrix** • AI-powered messages with **Google Gemini**
 
-[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
+[Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing) • [Author](#-author--socials) • [Support](#-donations-and-tips)
 
 </div>
 
@@ -62,7 +62,7 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
   - Automatic hashtag generation from stream titles and game names
   - Dynamic, personalized messages that never repeat
   - Graceful fallback to static messages if LLM unavailable
-  - Cost-effective: ~$0.0001 per announcement with Gemini 1.5 Flash
+  - Cost-effective: ~$0.0001 per announcement with Gemini 2.0 Flash Lite
   - Configurable temperature and creativity controls
 
 ### 🔐 Enterprise-Grade Secrets Management
@@ -289,7 +289,7 @@ LLM_TEMPERATURE=0.9  # 0.0-2.0, higher = more creative
 LLM_TOP_P=0.95       # Nucleus sampling
 ```
 
-Cost: ~$0.0001 per message with Gemini 1.5 Flash!  
+Cost: ~$0.0001 per message with Gemini 2.0 Flash Lite!  
 📖 **[AI Messages Guide](docs/features/ai-messages.md)**
 </details>
 
@@ -659,10 +659,10 @@ graph LR
 
 2. **Test Gemini API:**
    ```bash
-   python3 -c "import google.generativeai as genai; \
-     genai.configure(api_key='$GEMINI_API_KEY'); \
-     model = genai.GenerativeModel('gemini-1.5-flash'); \
-     print(model.generate_content('Test').text)"
+   python3 -c "import google.genai; \
+     client = google.genai.Client(api_key='$GEMINI_API_KEY'); \
+     response = client.models.generate_content(model='gemini-2.0-flash-lite', contents='Say hello'); \
+     print(response.text)"
    ```
 
 3. **Check fallback behavior:**
@@ -1181,12 +1181,54 @@ Stream Daemon is built on the shoulders of giants:
 
 If you find Stream Daemon useful, consider supporting development:
 
-**Donate**: [links.chiefgyk3d.com](https://links.chiefgyk3d.com)
+**Donate**:
 
-**Cryptocurrency**:
-- Bitcoin: `bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla`
-- Monero: `84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ`
-- Ethereum: `0x554f18cfB684889c3A60219BDBE7b050C39335ED`
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><a href="https://patreon.com/chiefgyk3d?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink" title="Patreon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/patreon.svg" width="32" height="32" alt="Patreon"/></a></td>
+      <td align="center"><a href="https://streamelements.com/chiefgyk3d/tip" title="StreamElements"><img src="media/streamelements.png" width="32" height="32" alt="StreamElements"/></a></td>
+    </tr>
+    <tr>
+      <td align="center">Patreon</td>
+      <td align="center">StreamElements</td>
+    </tr>
+  </table>
+</div>
+
+### Cryptocurrency Tips
+
+<div align="center">
+  <table style="border:none;">
+    <tr>
+      <td align="center" style="padding:8px; min-width:120px;">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bitcoin.svg" width="28" height="28" alt="Bitcoin"/>
+      </td>
+      <td align="left" style="padding:8px;">
+        <b>Bitcoin</b><br/>
+        <code style="font-size:12px;">bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:8px; min-width:120px;">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/monero.svg" width="28" height="28" alt="Monero"/>
+      </td>
+      <td align="left" style="padding:8px;">
+        <b>Monero</b><br/>
+        <code style="font-size:12px;">84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ</code>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding:8px; min-width:120px;">
+        <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/ethereum.svg" width="28" height="28" alt="Ethereum"/>
+      </td>
+      <td align="left" style="padding:8px;">
+        <b>Ethereum</b><br/>
+        <code style="font-size:12px;">0x554f18cfB684889c3A60219BDBE7b050C39335ED</code>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ---
 
@@ -1194,10 +1236,36 @@ If you find Stream Daemon useful, consider supporting development:
 
 Made with ❤️ by [ChiefGyk3D](https://github.com/ChiefGyk3D)
 
+## Author & Socials
+
+<table>
+  <tr>
+    <td align="center"><a href="https://social.chiefgyk3d.com/@chiefgyk3d" title="Mastodon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastodon.svg" width="32" height="32" alt="Mastodon"/></a></td>
+    <td align="center"><a href="https://bsky.app/profile/chiefgyk3d.com" title="Bluesky"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bluesky.svg" width="32" height="32" alt="Bluesky"/></a></td>
+    <td align="center"><a href="http://twitch.tv/chiefgyk3d" title="Twitch"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitch.svg" width="32" height="32" alt="Twitch"/></a></td>
+    <td align="center"><a href="https://www.youtube.com/channel/UCvFY4KyqVBuYd7JAl3NRyiQ" title="YouTube"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" width="32" height="32" alt="YouTube"/></a></td>
+    <td align="center"><a href="https://kick.com/chiefgyk3d" title="Kick"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/kick.svg" width="32" height="32" alt="Kick"/></a></td>
+    <td align="center"><a href="https://www.tiktok.com/@chiefgyk3d" title="TikTok"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg" width="32" height="32" alt="TikTok"/></a></td>
+    <td align="center"><a href="https://discord.chiefgyk3d.com" title="Discord"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/discord.svg" width="32" height="32" alt="Discord"/></a></td>
+    <td align="center"><a href="https://matrix-invite.chiefgyk3d.com" title="Matrix"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/matrix.svg" width="32" height="32" alt="Matrix"/></a></td>
+  </tr>
+  <tr>
+    <td align="center">Mastodon</td>
+    <td align="center">Bluesky</td>
+    <td align="center">Twitch</td>
+    <td align="center">YouTube</td>
+    <td align="center">Kick</td>
+    <td align="center">TikTok</td>
+    <td align="center">Discord</td>
+    <td align="center">Matrix</td>
+  </tr>
+</table>
+
+<sub>ChiefGyk3D is the author of Stream Daemon (formerly Twitch and Toot)</sub>
+
 **If Stream Daemon helps you, consider ⭐ starring the repo!**
 
 </div>
-
 ## 🌟 Success Stories
 
 *Using Stream Daemon for your streams? [Share your story](https://github.com/ChiefGyk3D/twitch-and-toot/discussions) and get featured here!*
