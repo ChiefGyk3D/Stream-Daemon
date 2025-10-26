@@ -15,17 +15,17 @@ class TestConfigLoading:
     
     def test_get_config_returns_value(self):
         """Test that get_config returns environment variable values."""
-        # Set a test value
-        os.environ['TEST_CONFIG_VAR'] = 'test_value'
-        result = get_config('TEST_CONFIG_VAR')
+        # Set a test value (format: SECTION_KEY)
+        os.environ['TEST_CONFIG'] = 'test_value'
+        result = get_config('Test', 'config')
         assert result == 'test_value'
         
         # Cleanup
-        del os.environ['TEST_CONFIG_VAR']
+        del os.environ['TEST_CONFIG']
     
     def test_get_config_default_value(self):
         """Test that get_config returns default when var not set."""
-        result = get_config('NONEXISTENT_VAR', default='default_value')
+        result = get_config('Nonexistent', 'var', default='default_value')
         assert result == 'default_value'
     
     def test_get_bool_config_true_values(self):
@@ -34,7 +34,7 @@ class TestConfigLoading:
         
         for val in true_values:
             os.environ['TEST_BOOL'] = val
-            result = get_bool_config('TEST_BOOL', False)
+            result = get_bool_config('Test', 'bool', False)
             assert result is True, f"Failed for value: {val}"
         
         # Cleanup
@@ -46,7 +46,7 @@ class TestConfigLoading:
         
         for val in false_values:
             os.environ['TEST_BOOL'] = val
-            result = get_bool_config('TEST_BOOL', True)
+            result = get_bool_config('Test', 'bool', True)
             assert result is False, f"Failed for value: {val}"
         
         # Cleanup
@@ -55,7 +55,7 @@ class TestConfigLoading:
     def test_get_int_config(self):
         """Test that get_int_config parses integers correctly."""
         os.environ['TEST_INT'] = '42'
-        result = get_int_config('TEST_INT', 0)
+        result = get_int_config('Test', 'int', 0)
         assert result == 42
         assert isinstance(result, int)
         
@@ -65,7 +65,7 @@ class TestConfigLoading:
     def test_get_int_config_invalid_fallback(self):
         """Test that get_int_config uses default for invalid values."""
         os.environ['TEST_INT'] = 'not_a_number'
-        result = get_int_config('TEST_INT', 100)
+        result = get_int_config('Test', 'int', 100)
         assert result == 100
         
         # Cleanup
