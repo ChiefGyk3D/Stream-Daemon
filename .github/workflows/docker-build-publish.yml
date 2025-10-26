@@ -11,6 +11,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  # Convert repository name to lowercase for Docker compatibility
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -20,10 +21,15 @@ jobs:
     permissions:
       contents: read
       packages: write
+      security-events: write  # Required for uploading SARIF results
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+    
+    - name: Set lowercase image name
+      id: image-name
+      run: echo "value=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -40,7 +46,7 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        images: ${{ env.REGISTRY }}/${{ steps.image-name.outputs.value }}
         tags: |
           type=ref,event=branch
           type=ref,event=pr
@@ -65,19 +71,23 @@ jobs:
     - name: Test Docker image
       run: |
         # Test that the image runs without errors (quick startup test)
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }} python -c "import stream_daemon; print('Import successful')"
+        # Use the first tag from the list (should be the branch/PR tag)
+        IMAGE_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n1)
+        echo "Testing image: $IMAGE_TAG"
+        docker run --rm "$IMAGE_TAG" python -c "import stream_daemon; print('Import successful')"
 
     - name: Scan image with Trivy
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+        image-ref: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
         format: 'sarif'
         output: 'trivy-results.sarif'
         severity: 'CRITICAL,HIGH'
+      continue-on-error: true  # Don't fail the build if Trivy has issues
 
     - name: Upload Trivy results to GitHub Security
       uses: github/codeql-action/upload-sarif@v3
-      if: always()
+      if: always() && hashFiles('trivy-results.sarif') != ''
       with:
         sarif_file: 'trivy-results.sarif'
 

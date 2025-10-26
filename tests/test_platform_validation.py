@@ -132,7 +132,9 @@ class TestTwitchValidation:
         """Test that Twitch usernames are configured."""
         usernames = get_config('Twitch', 'usernames', '')
         
-        print(f"\nTwitch Usernames: {usernames or 'NOT_SET'}")
+        # Show count instead of actual usernames for security
+        username_count = len(usernames.split(',')) if usernames else 0
+        print(f"\nTwitch Usernames configured: {username_count if usernames else 'NOT_SET'}")
         
         assert usernames, "TWITCH_USERNAMES not configured"
     
@@ -194,7 +196,9 @@ class TestYouTubeValidation:
         """Test that YouTube usernames are configured."""
         usernames = get_config('Youtube', 'usernames', '')
         
-        print(f"\nYouTube Usernames: {usernames or 'NOT_SET'}")
+        # Show count instead of actual usernames for security
+        username_count = len(usernames.split(',')) if usernames else 0
+        print(f"\nYouTube Usernames configured: {username_count if usernames else 'NOT_SET'}")
         
         assert usernames, "YOUTUBE_USERNAMES not configured"
     
@@ -236,7 +240,9 @@ class TestKickValidation:
         """Test that Kick usernames are configured."""
         usernames = get_config('Kick', 'usernames', '')
         
-        print(f"\nKick Usernames: {usernames or 'NOT_SET'}")
+        # Show count instead of actual usernames for security
+        username_count = len(usernames.split(',')) if usernames else 0
+        print(f"\nKick Usernames configured: {username_count if usernames else 'NOT_SET'}")
         
         assert usernames, "KICK_USERNAMES not configured"
     
@@ -540,7 +546,9 @@ class TestAllPlatformsValidation:
             status = "✓ ENABLED" if enabled else "✗ DISABLED"
             print(f"  {platform_name.upper()}: {status}")
             if enabled and usernames:
-                print(f"    Usernames: {usernames}")
+                # Show count of usernames instead of actual usernames for security
+                username_count = len(usernames.split(',')) if usernames else 0
+                print(f"    Usernames configured: {username_count}")
         
         # Social Platforms
         print("\nSocial Platforms:")
