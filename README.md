@@ -123,25 +123,31 @@ When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Ki
    pip install -r requirements.txt
    ```
 
-2. **Configure environment**
+2. **Configure secrets** ⭐ NEW!
    ```bash
-   # Quick start with environment variables
-   export TWITCH_ENABLE=True
-   export TWITCH_USERNAME=your_username
-   export TWITCH_CLIENT_ID=your_client_id
-   export TWITCH_CLIENT_SECRET=your_client_secret
-   
-   export MASTODON_ENABLE=True
-   export MASTODON_INSTANCE_URL=https://mastodon.social
-   export MASTODON_ACCESS_TOKEN=your_token
+   # Interactive wizard for setting up credentials
+   ./create-secrets.sh
    ```
+   
+   Choose your secrets platform:
+   - **Doppler** (recommended) - Modern cloud secrets with environment support
+   - **AWS Secrets Manager** - Secure cloud storage with IAM integration
+   - **HashiCorp Vault** - Self-hosted enterprise secrets
+   - **.env file** - Quick local development
+   
+   The wizard will guide you through configuring all platforms interactively.
 
 3. **Run!**
    ```bash
    python3 stream-daemon.py
+   
+   # Or with Doppler
+   doppler run -- python3 stream-daemon.py
    ```
 
-That's it! Stream Daemon will now monitor Twitch and post to Mastodon when you go live.
+That's it! Stream Daemon will now monitor your streams and post announcements automatically.
+
+📖 **[Secrets Wizard Documentation](docs/configuration/secrets-wizard.md)** - Full guide to the interactive setup tool
 
 ### Docker Quick Start
 
@@ -179,6 +185,7 @@ For production deployments, comprehensive guides, and advanced features:
 
 - [Getting Started Guide](docs/getting-started/quickstart.md) - Detailed first-time setup
 - [Installation Guide](docs/getting-started/installation.md) - All deployment methods
+- [**Secrets Wizard** 🪄](docs/configuration/secrets-wizard.md) - Interactive setup tool for all platforms
 - [Secrets Management](docs/configuration/secrets.md) - Doppler, AWS, Vault setup
 
 ---
