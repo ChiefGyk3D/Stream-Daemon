@@ -151,12 +151,69 @@ That's it! Stream Daemon will now monitor your streams and post announcements au
 
 ### Docker Quick Start
 
+**Option 1: Use Pre-Built Image from GitHub Container Registry (Recommended)**
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/chiefgyk3d/stream-daemon:latest
+
+# Run with environment file
+docker run -d \
+  --name stream-daemon \
+  --restart unless-stopped \
+  --env-file .env \
+  -v $(pwd)/messages.txt:/app/messages.txt \
+  -v $(pwd)/end_messages.txt:/app/end_messages.txt \
+  ghcr.io/chiefgyk3d/stream-daemon:latest
+
+# View logs
+docker logs -f stream-daemon
+```
+
+**Option 2: Use Docker Hub**
+
+```bash
+docker pull chiefgyk3dx/stream-daemon:latest
+docker run -d \
+  --name stream-daemon \
+  --restart unless-stopped \
+  --env-file .env \
+  chiefgyk3dx/stream-daemon:latest
+```
+
+**Option 3: Build from Source**
+
+```bash
+# Clone the repository
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon
+
+# Build the Docker image
+docker build -f Docker/Dockerfile -t stream-daemon:local .
+
+# Run with environment file
+docker run -d \
+  --name stream-daemon \
+  --restart unless-stopped \
+  --env-file .env \
+  -v $(pwd)/messages.txt:/app/messages.txt \
+  -v $(pwd)/end_messages.txt:/app/end_messages.txt \
+  stream-daemon:local
+
+# View logs
+docker logs -f stream-daemon
+```
+
+**Option 4: Docker Compose (Build or Pull)**
+
 ```bash
 cd Docker
 # Copy the example configuration
 cp docker-compose.example.yml docker-compose.yml
 
 # Edit docker-compose.yml with your credentials
+# Use 'image: ghcr.io/chiefgyk3d/stream-daemon:latest' to pull pre-built
+# Or use 'build: context: .. dockerfile: Docker/Dockerfile' to build from source
 nano docker-compose.yml
 
 # Start the container
@@ -798,11 +855,13 @@ If Stream Daemon is using too many resources:
 
 ### Using Docker Compose (Recommended)
 
+**Option 1: Use Pre-Built Image (Recommended)**
+
 ```yaml
 version: '3.8'
 services:
   stream-daemon:
-    build: .
+    image: ghcr.io/chiefgyk3d/stream-daemon:latest  # or chiefgyk3dx/stream-daemon:latest
     container_name: stream-daemon
     restart: unless-stopped
     environment:
@@ -839,6 +898,21 @@ services:
       retries: 3
 ```
 
+**Option 2: Build from Source**
+
+```yaml
+version: '3.8'
+services:
+  stream-daemon:
+    build: 
+      context: .
+      dockerfile: Docker/Dockerfile
+    container_name: stream-daemon
+    restart: unless-stopped
+    environment:
+      # ... same environment variables as above
+```
+
 **Deploy:**
 ```bash
 cd Docker
@@ -864,11 +938,24 @@ docker-compose down
 
 **Container Name:** The container will be named `stream-daemon` for easy reference in all Docker commands.
 
-### Manual Docker Build
+### Available Docker Images
+
+Stream Daemon is published to two container registries:
+
+- **GitHub Container Registry**: `ghcr.io/chiefgyk3d/stream-daemon:latest` (Recommended)
+- **Docker Hub**: `chiefgyk3dx/stream-daemon:latest` (Alternative)
+
+Both images are automatically built and published on every release with support for `linux/amd64` and `linux/arm64` platforms.
+
+### Build from Source
 
 ```bash
-# Build image
-docker build -t stream-daemon .
+# Clone the repository (if not already cloned)
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon
+
+# Build image from source
+docker build -f Docker/Dockerfile -t stream-daemon:local .
 
 # Run with environment file
 docker run -d \
@@ -877,14 +964,20 @@ docker run -d \
   --env-file .env \
   -v $(pwd)/messages.txt:/app/messages.txt \
   -v $(pwd)/end_messages.txt:/app/end_messages.txt \
-  stream-daemon
+  stream-daemon:local
 
 # View logs
 docker logs -f stream-daemon
 
-# Enter container
+# Enter container for debugging
 docker exec -it stream-daemon /bin/bash
 ```
+
+**Why build from source?**
+- Testing local changes before submitting a PR
+- Custom modifications for your environment
+- Running unreleased features from development branches
+- Air-gapped or restricted network environments
 
 ### Docker with Secrets Managers
 
@@ -900,7 +993,7 @@ docker run -d \
   -e DOPPLER_CONFIG=prd \
   -e TWITCH_ENABLE=True \
   -e TWITCH_USERNAME=your_username \
-  stream-daemon
+  ghcr.io/chiefgyk3d/stream-daemon:latest
 ```
 
 All credentials (client IDs, secrets, tokens) are fetched securely from Doppler!
@@ -919,7 +1012,7 @@ docker run -d \
   -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
   -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
   -e SECRETS_AWS_TWITCH_SECRET_NAME=prod/stream-daemon/twitch \
-  stream-daemon
+  ghcr.io/chiefgyk3d/stream-daemon:latest
 ```
 
 Or use IAM roles with ECS/EKS for credential-free authentication!

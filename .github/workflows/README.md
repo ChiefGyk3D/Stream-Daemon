@@ -127,9 +127,9 @@ SNYK_TOKEN: your_snyk_token        # For enhanced vulnerability scanning
 Add these to your README.md:
 
 ```markdown
-[![CI Tests](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/ci-tests.yml)
-[![Docker Build](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/docker-build-publish.yml/badge.svg)](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/docker-build-publish.yml)
-[![CodeQL](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/codeql-analysis.yml)
+[![CI Tests](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci-tests.yml)
+[![Docker Build](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/docker-build-publish.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/docker-build-publish.yml)
+[![CodeQL](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/codeql-analysis.yml)
 ```
 
 ---
