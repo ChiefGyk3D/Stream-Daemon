@@ -8,28 +8,57 @@ Run Stream Daemon in a Docker container for easy deployment, scalability, and co
 
 ## 🐳 Quick Start
 
-**Option 1: Use Pre-Built Image (Recommended)**
+**Option 1: Use Pre-Built Image from GitHub Container Registry (Recommended)**
+
+```bash
+docker pull ghcr.io/chiefgyk3d/stream-daemon:latest
+docker run -d \
+  --name stream-daemon \
+  --restart unless-stopped \
+  --env-file .env \
+  -v $(pwd)/messages.txt:/app/messages.txt \
+  -v $(pwd)/end_messages.txt:/app/end_messages.txt \
+  ghcr.io/chiefgyk3d/stream-daemon:latest
+```
+
+**Option 2: Use Docker Hub**
 
 ```bash
 docker pull chiefgyk3dx/stream-daemon:latest
 docker run -d --name stream-daemon --env-file .env chiefgyk3dx/stream-daemon:latest
 ```
 
-**Option 2: Docker Compose with Pre-Built Image**
-
-```bash
-cd Docker
-cp docker-compose.example.yml docker-compose.yml
-# Edit docker-compose.yml - change `build: .` to `image: chiefgyk3dx/stream-daemon:latest`
-docker-compose up -d
-```
-
 **Option 3: Build from Source**
 
 ```bash
+# Clone the repository (if not already cloned)
+git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+cd Stream-Daemon
+
+# Build the Docker image
+docker build -f Docker/Dockerfile -t stream-daemon:local .
+
+# Run with environment file
+docker run -d \
+  --name stream-daemon \
+  --restart unless-stopped \
+  --env-file .env \
+  -v $(pwd)/messages.txt:/app/messages.txt \
+  -v $(pwd)/end_messages.txt:/app/end_messages.txt \
+  stream-daemon:local
+```
+
+**Option 4: Docker Compose**
+
+```bash
 cd Docker
 cp docker-compose.example.yml docker-compose.yml
-# Edit docker-compose.yml with your credentials
+
+# Edit docker-compose.yml:
+# - To use pre-built: change `build: .` to `image: ghcr.io/chiefgyk3d/stream-daemon:latest`
+# - To build from source: keep `build: .` (or change to proper build context)
+nano docker-compose.yml
+
 docker-compose up -d
 ```
 
@@ -39,10 +68,16 @@ That's it! Stream Daemon is now running in the background.
 
 Stream Daemon is published to two container registries:
 
-- **Docker Hub**: `chiefgyk3dx/stream-daemon:latest` (Recommended)
-- **GitHub Container Registry**: `ghcr.io/chiefgyk3d/stream-daemon:latest`
+- **GitHub Container Registry**: `ghcr.io/chiefgyk3d/stream-daemon:latest` (Recommended)
+- **Docker Hub**: `chiefgyk3dx/stream-daemon:latest` (Alternative)
 
 Both images are automatically built and published on every release with support for `linux/amd64` and `linux/arm64` platforms.
+
+**Why GHCR is recommended:**
+- Integrated with GitHub repository
+- Automatic builds on every release
+- Better integration with GitHub Actions
+- Free for public repositories
 
 > **💡 Tip:** New to Stream Daemon? Use the **secrets wizard** to generate your configuration:
 > ```bash
@@ -83,12 +118,13 @@ Both images are automatically built and published on every release with support 
 
 3. **Edit docker-compose.yml with your credentials:**
    
-   Minimum required configuration:
+   **Using pre-built image (recommended):**
    ```yaml
    version: '3.8'
    services:
      stream-daemon:
-       build: .
+       image: ghcr.io/chiefgyk3d/stream-daemon:latest
+       container_name: stream-daemon
        restart: unless-stopped
        environment:
          # Enable ONE streaming platform
@@ -104,6 +140,20 @@ Both images are automatically built and published on every release with support 
          MASTODON_CLIENT_SECRET: 'your_client_secret'
          MASTODON_ACCESS_TOKEN: 'your_access_token'
    ```
+   
+   **Building from source:**
+   ```yaml
+   version: '3.8'
+   services:
+     stream-daemon:
+       build:
+         context: ..
+         dockerfile: Docker/Dockerfile
+       container_name: stream-daemon
+       restart: unless-stopped
+       environment:
+         # ... same environment variables as above
+   ```
 
 4. **Start the container:**
    ```bash
@@ -117,13 +167,14 @@ Both images are automatically built and published on every release with support 
    docker-compose logs -f
    ```
 
-### Method 2: Manual Docker Build
+### Method 2: Direct Docker Run (Pre-Built Image)
 
-**For more control or custom deployments:**
+**Use pre-built images for quick deployment:**
 
-1. **Build the image:**
+1. **Pull the image:**
    ```bash
-   docker build -t stream-daemon .
+   docker pull ghcr.io/chiefgyk3d/stream-daemon:latest
+   # Or: docker pull chiefgyk3dx/stream-daemon:latest
    ```
 
 2. **Run the container:**
@@ -140,7 +191,7 @@ Both images are automatically built and published on every release with support 
      -e MASTODON_CLIENT_ID=your_client_id \
      -e MASTODON_CLIENT_SECRET=your_client_secret \
      -e MASTODON_ACCESS_TOKEN=your_access_token \
-     stream-daemon
+     ghcr.io/chiefgyk3d/stream-daemon:latest
    ```
 
 3. **View logs:**
@@ -148,7 +199,51 @@ Both images are automatically built and published on every release with support 
    docker logs -f stream-daemon
    ```
 
-### Method 3: Docker with Doppler CLI
+### Method 3: Build from Source
+
+**For development, testing, or custom modifications:**
+
+1. **Clone the repository (if not already cloned):**
+   ```bash
+   git clone https://github.com/ChiefGyk3D/Stream-Daemon.git
+   cd Stream-Daemon
+   ```
+
+2. **Build the image:**
+   ```bash
+   docker build -f Docker/Dockerfile -t stream-daemon:local .
+   ```
+
+3. **Run the container:**
+   ```bash
+   docker run -d \
+     --name stream-daemon \
+     --restart unless-stopped \
+     -e TWITCH_ENABLE=True \
+     -e TWITCH_USERNAME=your_username \
+     -e TWITCH_CLIENT_ID=your_client_id \
+     -e TWITCH_CLIENT_SECRET=your_client_secret \
+     -e MASTODON_ENABLE_POSTING=True \
+     -e MASTODON_API_BASE_URL=https://mastodon.social \
+     -e MASTODON_CLIENT_ID=your_client_id \
+     -e MASTODON_CLIENT_SECRET=your_client_secret \
+     -e MASTODON_ACCESS_TOKEN=your_access_token \
+     stream-daemon:local
+   ```
+
+4. **View logs:**
+   ```bash
+   docker logs -f stream-daemon
+   ```
+
+**Why build from source?**
+- Testing local changes before submitting a PR
+- Custom modifications for your environment
+- Running unreleased features from development branches
+- Air-gapped or restricted network environments
+- Learning how the Docker image is constructed
+
+### Method 4: Docker with Doppler CLI
 
 **Automatically inject secrets without storing sensitive data in docker-compose.yml:**
 
@@ -425,13 +520,24 @@ The container runs as the default user. Ensure mounted volumes have appropriate 
 
 ## 🚢 Production Deployment
 
-### Using Docker Hub / GHCR
+### Using Pre-Built Images
 
-1. **Pull pre-built image:**
+1. **Pull pre-built image from GHCR (recommended):**
    ```yaml
    services:
      stream-daemon:
        image: ghcr.io/chiefgyk3d/stream-daemon:latest
+       container_name: stream-daemon
+       restart: unless-stopped
+       environment:
+         # ... your config
+   ```
+
+   Or from Docker Hub:
+   ```yaml
+   services:
+     stream-daemon:
+       image: chiefgyk3dx/stream-daemon:latest
        # ... rest of config
    ```
 
@@ -440,6 +546,8 @@ The container runs as the default user. Ensure mounted volumes have appropriate 
    services:
      stream-daemon:
        image: ghcr.io/chiefgyk3d/stream-daemon:latest
+       container_name: stream-daemon
+       restart: unless-stopped
        # ... config
      
      watchtower:
