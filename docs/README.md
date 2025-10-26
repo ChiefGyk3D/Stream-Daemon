@@ -44,6 +44,11 @@ Configure where Stream Daemon posts your announcements:
 
 ### Core Configuration
 
+- **[Secrets Wizard](configuration/secrets-wizard.md)** 🪄 **NEW!** - Interactive setup tool
+  - Step-by-step credential configuration
+  - Supports Doppler, AWS, Vault, and .env files
+  - Loads existing values as defaults
+  - Platform-specific guidance with credential links
 - **[Secrets Management](configuration/secrets.md)** ⭐ **RECOMMENDED** - Secure your credentials
   - Doppler setup (free, 10-minute setup, recommended)
   - AWS Secrets Manager (for AWS-heavy infrastructure)
