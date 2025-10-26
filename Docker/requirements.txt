@@ -21,7 +21,3 @@ requests==2.32.5
 discord.py==2.6.4
 matrix-nio==0.25.2
 beautifulsoup4==4.14.2
-# Testing framework
-pytest==8.4.2
-pytest-asyncio==1.2.0
-pytest-cov==7.0.0

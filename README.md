@@ -39,7 +39,7 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
 ### 🎥 Streaming Platform Monitoring
 - **Twitch** - OAuth 2.0 with async API support, rate limiting, comprehensive error handling
 - **YouTube Live** - Auto-resolves channel from @handle or channel ID, quota-aware with retry logic
-- **Kick** - OAuth 2.0 authentication with automatic public API fallback, handles 2FA requirements
+- **Kick** - OAuth 2.0 authentication required, 2FA-enabled developer portal access
 
 ### 📱 Social Media Publishing
 - **Mastodon** - Post to any Mastodon-compatible instance (Mastodon, Hometown, Pleroma, etc.)
