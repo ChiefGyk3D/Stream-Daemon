@@ -302,6 +302,66 @@ docker-compose ps
 docker stats stream-daemon
 ```
 
+## 🧪 Testing & Validation
+
+Stream Daemon includes a comprehensive pytest-based test suite. You can run tests either inside the container or on your host system.
+
+### Run Tests in Container
+
+```bash
+# Enter the running container
+docker exec -it stream-daemon bash
+
+# Install pytest (if not in image)
+pip install pytest pytest-asyncio pytest-cov
+
+# Run tests
+pytest tests/ -v
+
+# Run tests by category
+pytest tests/ -m streaming      # Twitch, YouTube, Kick
+pytest tests/ -m social          # Mastodon, Bluesky, Discord, Matrix
+pytest tests/ -m integration     # End-to-end workflows
+
+# Run with coverage
+pytest tests/ --cov=stream_daemon --cov-report=html
+```
+
+### Run Tests on Host
+
+If you have Python installed locally:
+
+```bash
+# Clone the repository
+cd /path/to/twitch-and-toot
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set up environment (use your .env or secrets manager)
+export $(cat .env | xargs)
+
+# Run tests
+pytest tests/ -v
+```
+
+### Test Documentation
+
+See **[tests/README.md](../tests/README.md)** for:
+- Complete test suite documentation
+- Writing new tests
+- CI/CD integration examples
+- Troubleshooting test failures
+
+### What Tests Validate
+
+✅ **Configuration Loading** - Environment variables and secrets  
+✅ **API Authentication** - Valid credentials for each platform  
+✅ **Stream Detection** - Live status checking  
+✅ **Social Posting** - Message formatting and platform features  
+✅ **Security** - Secret masking and safe logging  
+✅ **Integration** - Complete stream lifecycle workflows
+
 ## 🐛 Troubleshooting
 
 ### Container Won't Start

@@ -1,3 +1,10 @@
+######################################################################
+# SECURITY NOTE:
+# All package versions are locked due to supply chain attacks (e.g. Shai-Hulud)
+# See: https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem
+# You may update versions to newer libraries as desired, but auto-picking versions
+# is NOT allowed for security and stability reasons.
+######################################################################
 twitchAPI==4.5.0
 Mastodon.py==2.1.4
 boto3==1.40.58
@@ -14,3 +21,7 @@ requests==2.32.5
 discord.py==2.6.4
 matrix-nio==0.25.2
 beautifulsoup4==4.14.2
+# Testing framework
+pytest==8.4.2
+pytest-asyncio==1.2.0
+pytest-cov==7.0.0

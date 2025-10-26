@@ -1,103 +1,108 @@
-# Stream Daemon Test Suite
+# Archive - Historical Reference Documentation
 
-Comprehensive test suite for validating Doppler secrets and platform connectivity.
+> **📚 This directory contains historical setup guides and reference documentation.**
+>
+> **Current documentation** is in: `/docs/`  
+> **Current tests** are in: `/tests/`
 
-## 🎯 Purpose
+## 📖 What's Here
 
-These tests ensure:
-- ✅ Doppler secrets are properly configured
-- ✅ Platform authentication works correctly
-- ✅ Stream detection methods function as expected
-- ✅ No credentials are leaked in output
+This directory preserves **historical setup guides** that may still be useful as reference material:
 
-## 📋 Prerequisites
+- **DOPPLER_SECRETS.md** - Doppler secret naming conventions and setup
+- **KICK_AUTH_GUIDE.md** - Kick OAuth authentication guide  
+- **DISCORD_TEST_SETUP.md** - Discord webhook setup reference
+- **QUICK_REFERENCE.md** - Quick reference for old test structure
 
-1. **Doppler Account** - Sign up at https://doppler.com
-2. **Doppler CLI** - Install and run `doppler setup` in project directory
-3. **Platform Credentials** - Configure secrets in Doppler (see `DOPPLER_SECRETS.md`)
-4. **Environment Variables** - Configure `.env` file with test usernames
+These files contain useful setup information and are kept for reference, though current best practices are documented in `/docs/`.
 
-> **📌 Important:** Doppler tokens are environment-specific. A `dev` token only accesses `dev` secrets, `stg` only accesses `stg`, etc. Choose your environment (`dev`/`stg`/`prd`) in both your token generation and `DOPPLER_CONFIG` setting. See [DOPPLER_GUIDE.md](../DOPPLER_GUIDE.md) for details.
+---
 
-## ⚙️ Test Configuration
+## � What Was Removed
 
-Tests are configured via **environment variables** in your `.env` file, **not hardcoded values**. This makes tests portable and easy to customize for different environments.
+**Test Files (Removed October 26, 2025):**
 
-### Required Username Configuration
+The legacy `test_doppler_*.py` files (2,374 lines across 9 files) have been **deleted** after being replaced by modern pytest-based tests.
 
-Add these to your `.env` file to control which channels are tested:
+**Old files (now deleted):**
+- test_doppler_all.py
+- test_doppler_twitch.py
+- test_doppler_youtube.py
+- test_doppler_kick.py
+- test_doppler_mastodon.py
+- test_doppler_bluesky.py
+- test_doppler_discord.py
+- test_doppler_matrix.py
 
-```bash
-# Usernames for test scripts (used by all test files)
-KICK_USERNAME=asmongold        # Kick channel to check for live streams
-TWITCH_USERNAME=lilypita       # Twitch channel to check for live streams
-YOUTUBE_USERNAME=grndpagaming  # YouTube channel (@ optional - auto-added if missing)
-```
+**Replaced by:**
+- ✅ `/tests/test_platform_validation.py` (600 lines, 75% reduction)
+- ✅ Proper imports from `stream_daemon` package
+- ✅ Full pytest framework with markers and fixtures
 
-**Why environment variables?**
-- ✅ Easy to change test targets without editing code
-- ✅ Different configurations for dev/staging/production
-- ✅ Keeps test files clean and maintainable
-- ✅ Follows same pattern as main application
+**Why removed:**
+- ❌ Used importlib to import from monolithic `stream-daemon.py`
+- ❌ 2,374 lines of duplicated code
+- ❌ No pytest framework support
+- ❌ Not aligned with refactored codebase
 
-**All test scripts automatically pull usernames from `.env`:**
-- `test_discord_doppler.py` - Tests Discord with all three platforms
-- `test_discord_updates.py` - Tests Discord live updating
-- `test_discord_stream_ended.py` - Tests stream ended messages
-- `test_bluesky_kick_embed.py` - Tests Bluesky Kick preview cards
-- `test_mastodon_kick_image.py` - Tests Mastodon Kick image attachments
+**See:** [/tests/TEST_CONSOLIDATION.md](../tests/TEST_CONSOLIDATION.md) for migration details
 
-## 🔐 Doppler Secret Setup
+---
 
-See **[DOPPLER_SECRETS.md](DOPPLER_SECRETS.md)** for detailed naming conventions.
+## 📖 Current Documentation
 
-### Quick Reference
+For up-to-date information, see:
 
-```bash
-# Twitch
-TWITCH_CLIENT_ID=your_client_id
-TWITCH_CLIENT_SECRET=your_client_secret
+- **Testing**: [/tests/README.md](../tests/README.md)
+- **Test Consolidation**: [/tests/TEST_CONSOLIDATION.md](../tests/TEST_CONSOLIDATION.md)
+- **Configuration**: [/docs/configuration/](../docs/configuration/)
+- **Secrets Management**: [/docs/configuration/secrets.md](../docs/configuration/secrets.md)
+- **Platform Setup**: [/docs/platforms/](../docs/platforms/)
 
-# YouTube
-YOUTUBE_API_KEY=your_api_key
+---
 
-# Kick (no secrets needed, public API)
-# Just enable it: KICK_ENABLE=True
-```
+*Last Updated: October 26, 2025*  
+*Archive cleaned - test files removed, documentation preserved*
 
-## 🚀 Running Tests
+## 📚 Documentation Preserved
 
-### Test All Platforms
+- **DOPPLER_SECRETS.md** - Historical reference for Doppler secret naming conventions
+- **KICK_AUTH_GUIDE.md** - Guide for Kick OAuth authentication  
+- **DISCORD_TEST_SETUP.md** - Discord webhook setup reference
+- **QUICK_REFERENCE.md** - Quick reference for old test structure
 
-```bash
-python tests/test_doppler_all.py
-```
+These files are kept for historical context and may contain useful setup information, but refer to the main documentation in `/docs/` for current best practices.
 
-This runs a comprehensive suite testing all streaming and social platforms.
+---
 
-### Test Individual Streaming Platforms
+## 🔄 Migration Information
 
-```bash
-# Test Twitch
-python tests/test_doppler_twitch.py
+**Old Structure** (Pre-Modularization):
+- Monolithic `stream-daemon.py` (1263 lines)
+- Tests imported via `importlib.util.spec_from_file_location()`
+- Individual test files per platform per secrets manager
 
-# Test YouTube
-python tests/test_doppler_youtube.py
+**New Structure** (Current):
+- Modular `stream_daemon/` package
+- Tests use standard imports: `from stream_daemon.platforms...`
+- Consolidated test files using pytest framework
+- See `/tests/TEST_ANALYSIS.md` for details
 
-# Test Kick
-python tests/test_doppler_kick.py
-```
+---
 
-### Test Individual Social Platforms
+## 📖 Current Documentation
 
-```bash
-# Test Mastodon
-python tests/test_doppler_mastodon.py
+For up-to-date information, see:
 
-# Test Bluesky
-python tests/test_doppler_bluesky.py
+- **Testing**: [/tests/README.md](../tests/README.md)
+- **Configuration**: [/docs/configuration/](../docs/configuration/)
+- **Secrets Management**: [/docs/configuration/secrets.md](../docs/configuration/secrets.md)
+- **Platform Setup**: [/docs/platforms/](../docs/platforms/)
 
-# Test Discord
+---
+
+*Last Updated: October 25, 2025*  
+*Archive cleaned and reorganized during test suite refactoring*
 python tests/test_doppler_discord.py
 
 # Test Matrix (placeholder - not yet implemented)

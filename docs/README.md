@@ -176,10 +176,10 @@ doppler run -- python3 stream-daemon.py
 docker-compose up -d
 
 # Test configuration
-python3 tests/test_doppler_all.py
+pytest tests/test_platform_validation.py -v
 
 # Test specific platform
-python3 tests/test_doppler_twitch.py
+pytest tests/test_platform_validation.py::TestTwitchValidation -v
 
 # View logs (systemd)
 sudo journalctl -u stream-daemon -f
