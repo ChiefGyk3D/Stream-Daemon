@@ -179,27 +179,111 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
     
     # Check if Docker image exists or needs to be built
     IMAGE_NAME="stream-daemon"
-    if docker images | grep -q "$IMAGE_NAME"; then
-        echo -e "${GREEN}✓${NC} Docker image '$IMAGE_NAME' found"
+    IMAGE_EXISTS=false
+    
+    # Check for existing image (improved detection)
+    if docker images --format "{{.Repository}}" | grep -q "^${IMAGE_NAME}$"; then
+        IMAGE_TAG=$(docker images --format "{{.Tag}}" "$IMAGE_NAME" | head -n 1)
+        IMAGE_ID=$(docker images --format "{{.ID}}" "$IMAGE_NAME" | head -n 1)
+        IMAGE_SIZE=$(docker images --format "{{.Size}}" "$IMAGE_NAME" | head -n 1)
+        echo -e "${GREEN}✓${NC} Docker image found: ${IMAGE_NAME}:${IMAGE_TAG} (${IMAGE_SIZE}, ID: ${IMAGE_ID:0:12})"
+        IMAGE_EXISTS=true
+        
+        # Ask if they want to rebuild
+        echo ""
+        read -p "Rebuild Docker image? (y/N) " -n 1 -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            IMAGE_EXISTS=false
+        fi
     else
         echo -e "${YELLOW}Docker image '$IMAGE_NAME' not found${NC}"
+    fi
+    
+    # Build or rebuild the image
+    if [ "$IMAGE_EXISTS" = false ]; then
         echo "Building Docker image..."
         echo ""
         
         # Check if Dockerfile exists
         if [ ! -f "$PROJECT_DIR/Docker/Dockerfile" ]; then
             echo -e "${RED}ERROR: Docker/Dockerfile not found!${NC}"
+            echo -e "${YELLOW}Expected location: $PROJECT_DIR/Docker/Dockerfile${NC}"
             exit 1
         fi
         
+        # Check if requirements.txt exists
+        if [ ! -f "$PROJECT_DIR/requirements.txt" ]; then
+            echo -e "${YELLOW}WARNING: requirements.txt not found${NC}"
+        fi
+        
         # Build the image
+        echo "Building from: $PROJECT_DIR/Docker/Dockerfile"
+        echo "Build context: $PROJECT_DIR"
+        echo ""
         cd "$PROJECT_DIR"
-        if sudo -u $ACTUAL_USER docker build -t $IMAGE_NAME -f Docker/Dockerfile .; then
-            echo -e "${GREEN}✓${NC} Docker image built successfully"
+        
+        BUILD_OUTPUT=$(mktemp)
+        if sudo -u $ACTUAL_USER docker build -t $IMAGE_NAME -f Docker/Dockerfile . 2>&1 | tee "$BUILD_OUTPUT"; then
+            echo ""
+            echo -e "${GREEN}✓${NC} Docker image built successfully!"
+            
+            # Show image info
+            NEW_IMAGE_SIZE=$(docker images --format "{{.Size}}" "$IMAGE_NAME" | head -n 1)
+            NEW_IMAGE_ID=$(docker images --format "{{.ID}}" "$IMAGE_NAME" | head -n 1)
+            echo -e "${GREEN}✓${NC} Image: ${IMAGE_NAME}:latest (${NEW_IMAGE_SIZE}, ID: ${NEW_IMAGE_ID:0:12})"
         else
-            echo -e "${RED}ERROR: Failed to build Docker image${NC}"
+            echo ""
+            echo -e "${RED}✗${NC} Failed to build Docker image"
+            echo ""
+            echo -e "${YELLOW}Common issues and solutions:${NC}"
+            
+            # Analyze build output for common errors
+            if grep -q "no space left on device" "$BUILD_OUTPUT"; then
+                echo -e "${RED}  • No space left on device${NC}"
+                echo "    Solution: Free up disk space or clean Docker cache"
+                echo "    Run: docker system prune -a"
+            fi
+            
+            if grep -q "Cannot connect to the Docker daemon" "$BUILD_OUTPUT"; then
+                echo -e "${RED}  • Cannot connect to Docker daemon${NC}"
+                echo "    Solution: Make sure Docker is running"
+                echo "    Run: sudo systemctl start docker"
+            fi
+            
+            if grep -q "denied" "$BUILD_OUTPUT" || grep -q "permission denied" "$BUILD_OUTPUT"; then
+                echo -e "${RED}  • Permission denied${NC}"
+                echo "    Solution: Add user to docker group"
+                echo "    Run: sudo usermod -aG docker $ACTUAL_USER"
+                echo "    Then log out and back in"
+            fi
+            
+            if grep -q "Dockerfile" "$BUILD_OUTPUT" && grep -q "not found" "$BUILD_OUTPUT"; then
+                echo -e "${RED}  • Dockerfile not found or invalid${NC}"
+                echo "    Solution: Verify Docker/Dockerfile exists and is readable"
+                echo "    Path: $PROJECT_DIR/Docker/Dockerfile"
+            fi
+            
+            if grep -q "requirements.txt" "$BUILD_OUTPUT"; then
+                echo -e "${RED}  • Missing Python dependencies${NC}"
+                echo "    Solution: Verify requirements.txt exists"
+                echo "    Path: $PROJECT_DIR/requirements.txt"
+            fi
+            
+            echo ""
+            echo -e "${YELLOW}Troubleshooting steps:${NC}"
+            echo "  1. Check Docker is running: docker ps"
+            echo "  2. Clean Docker cache: docker system prune -a"
+            echo "  3. Verify files exist: ls -la Docker/Dockerfile requirements.txt"
+            echo "  4. Check build logs above for specific errors"
+            echo "  5. Try manual build: cd $PROJECT_DIR && docker build -t stream-daemon -f Docker/Dockerfile ."
+            echo ""
+            
+            rm -f "$BUILD_OUTPUT"
             exit 1
         fi
+        
+        rm -f "$BUILD_OUTPUT"
     fi
     
     # Create systemd service file for Docker

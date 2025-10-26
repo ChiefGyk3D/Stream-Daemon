@@ -13,9 +13,33 @@ The installer will:
 - ✅ Prompt for deployment mode selection (Python or Docker)
 - ✅ Python mode: Create a Python virtual environment (if needed) and install dependencies
 - ✅ Docker mode: Check for Docker installation and build the Docker image if needed
+- ✅ **Docker mode: Detect existing images and offer to rebuild**
+- ✅ **Docker mode: Provide detailed error messages and solutions if build fails**
 - ✅ Create systemd service file
 - ✅ Optionally enable service on boot
 - ✅ Optionally start the service immediately
+
+### Installation Features
+
+**Smart Docker Image Detection:**
+- Checks if `stream-daemon` image already exists
+- Shows image details (tag, size, ID)
+- Offers option to rebuild existing images
+- Detects and reports build failures with specific solutions
+
+**Automated Error Recovery:**
+The installer analyzes build failures and provides solutions for:
+- No space left on device → Suggests cleaning Docker cache
+- Cannot connect to Docker daemon → Instructions to start Docker
+- Permission denied → Guidance on adding user to docker group
+- Missing Dockerfile → Shows expected path
+- Missing dependencies → Verification steps
+
+**Prerequisites Checking:**
+- Validates Docker and docker-compose installation
+- Checks if user is in docker group
+- Warns about missing .env file (with option to continue)
+- Verifies all required files exist before building
 
 ### Deployment Modes
 
@@ -268,6 +292,78 @@ sudo journalctl -u stream-daemon --since "30 minutes ago"
 
 # Show logs from specific date
 sudo journalctl -u stream-daemon --since "2025-01-01 00:00:00"
+```
+
+### Docker-Specific Issues
+
+**Docker image not found:**
+```bash
+# Check if image exists
+docker images | grep stream-daemon
+
+# Rebuild manually
+cd /path/to/stream-daemon
+docker build -t stream-daemon -f Docker/Dockerfile .
+```
+
+**Docker daemon not running:**
+```bash
+# Start Docker service
+sudo systemctl start docker
+
+# Enable Docker to start on boot
+sudo systemctl enable docker
+
+# Check Docker status
+sudo systemctl status docker
+```
+
+**Permission denied errors:**
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+
+# Log out and back in for changes to take effect
+# Or use newgrp to apply immediately (in current shell)
+newgrp docker
+```
+
+**Container won't start:**
+```bash
+# Check Docker logs
+docker logs stream-daemon
+
+# Inspect container
+docker inspect stream-daemon
+
+# Remove and recreate
+docker rm -f stream-daemon
+sudo systemctl restart stream-daemon
+```
+
+**Image build failures:**
+```bash
+# Common issue: No space left
+docker system prune -a  # Clean up unused images/containers
+
+# Common issue: Network timeout
+# Try again or check internet connection
+
+# Common issue: Missing files
+ls -la Docker/Dockerfile requirements.txt  # Verify files exist
+
+# View detailed build output
+docker build -t stream-daemon -f Docker/Dockerfile . --progress=plain
+```
+
+**Environment file not loading:**
+```bash
+# Verify .env exists and has correct permissions
+ls -la .env
+cat .env  # Check contents (careful with secrets!)
+
+# Ensure path in service file is absolute
+grep "env-file" /etc/systemd/system/stream-daemon.service
 ```
 
 ### Restart After Crash
