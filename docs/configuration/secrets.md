@@ -23,6 +23,27 @@ Stream Daemon supports multiple secrets management solutions to keep your creden
 
 ## 🚀 Quick Start
 
+### ⭐ Automated Setup (Recommended)
+
+**Use the interactive wizard to set up everything automatically:**
+
+```bash
+./scripts/create-secrets.sh
+```
+
+The wizard will:
+- ✅ Guide you through choosing a secrets platform (Doppler/AWS/Vault/.env)
+- ✅ Interactively collect all your credentials
+- ✅ Set up secrets in your chosen platform
+- ✅ Generate the appropriate `.env` configuration file
+- ✅ Load existing values if re-running
+
+📖 **[Complete Wizard Documentation](secrets-wizard.md)** - Full interactive setup guide
+
+---
+
+### Manual Setup
+
 **Choose your secrets manager:**
 
 | Solution | Best For | Setup Time | Cost |
@@ -137,6 +158,18 @@ TWITCH_CLIENT_SECRET=prod_client_secret_qwerty
 ---
 
 ## 🔷 Doppler (Recommended)
+
+### Quick Setup
+
+**Option 1: Use the Interactive Wizard** ⭐
+```bash
+./scripts/create-secrets.sh
+# Select "Doppler" when prompted
+```
+
+The wizard will guide you through the entire setup process automatically.
+
+**Option 2: Manual Setup** (if you prefer doing it yourself)
 
 ### Why Doppler is Recommended
 
@@ -401,6 +434,18 @@ doppler run -- docker-compose up -d
 
 ## ☁️ AWS Secrets Manager
 
+### Quick Setup
+
+**Option 1: Use the Interactive Wizard** ⭐
+```bash
+./scripts/create-secrets.sh
+# Select "AWS Secrets Manager" when prompted
+```
+
+The wizard will create all secrets in AWS Secrets Manager automatically.
+
+**Option 2: Manual Setup** (if you prefer doing it yourself)
+
 ### When to Use AWS
 
 - Already running on EC2, ECS, or Lambda
@@ -505,6 +550,18 @@ services:
 ---
 
 ## 🔐 HashiCorp Vault
+
+### Quick Setup
+
+**Option 1: Use the Interactive Wizard** ⭐
+```bash
+./scripts/create-secrets.sh
+# Select "HashiCorp Vault" when prompted
+```
+
+The wizard will store all secrets in your Vault instance automatically.
+
+**Option 2: Manual Setup** (if you prefer doing it yourself)
 
 ### When to Use Vault
 
