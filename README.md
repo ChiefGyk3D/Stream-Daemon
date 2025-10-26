@@ -423,7 +423,7 @@ For platform-specific setup guides, advanced features, and troubleshooting:
 
 ## 🧪 Testing & Validation
 
-Stream Daemon includes a comprehensive test suite to validate your configuration before going into production.
+Stream Daemon includes a comprehensive test suite using **pytest** to validate your configuration before going into production.
 
 ### Quick Test
 
@@ -435,38 +435,65 @@ python3 stream-daemon.py --test
 python3 stream-daemon.py --test --platform twitch
 ```
 
-### Test Suite
+### Pytest Test Suite
 
-Located in `tests/` directory:
+The modern test suite uses pytest for better organization and coverage. See **[tests/README.md](tests/README.md)** for complete documentation.
+
+```bash
+# Install pytest
+pip install pytest pytest-asyncio pytest-cov
+
+# Run all tests
+pytest tests/ -v
+
+# Run tests by category
+pytest tests/ -m streaming      # Twitch, YouTube, Kick
+pytest tests/ -m social          # Mastodon, Bluesky, Discord, Matrix
+pytest tests/ -m integration     # End-to-end workflows
+
+# Run specific test file
+pytest tests/test_config.py -v
+pytest tests/test_streaming_platforms.py -v
+pytest tests/test_social_platforms.py -v
+pytest tests/test_integration.py -v
+
+# Run with coverage
+pytest tests/ --cov=stream_daemon --cov-report=html
+
+# Run platform validation tests
+pytest tests/test_platform_validation.py -v
+```
+
+### Platform Validation Tests
+
+Comprehensive validation tests for all platforms (replaces legacy test_doppler_*.py files):
 
 ```bash
 # Test all platforms
-python3 tests/test_doppler_all.py
+pytest tests/test_platform_validation.py -v
 
-# Test individual streaming platforms
-python3 tests/test_doppler_twitch.py
-python3 tests/test_doppler_youtube.py
-python3 tests/test_doppler_kick.py
+# Test specific platform
+pytest tests/test_platform_validation.py::TestTwitchValidation -v
+pytest tests/test_platform_validation.py::TestMastodonValidation -v
 
-# Test social platforms
-python3 tests/test_mastodon.py
-python3 tests/test_bluesky.py
-python3 tests/test_discord.py
-python3 tests/test_matrix.py
+# Test by category
+pytest tests/test_platform_validation.py -m streaming -v  # All streaming
+pytest tests/test_platform_validation.py -m social -v     # All social
 
-# Or use the test runner
-./run_tests.sh all
-./run_tests.sh twitch youtube
+# Quick configuration check
+pytest tests/test_platform_validation.py::TestAllPlatformsValidation::test_configuration_summary -v -s
 ```
 
 ### What Tests Validate
 
-✅ **Secrets Fetching** - Doppler/AWS/Vault integration  
+✅ **Configuration Loading** - Environment variables and .env files  
+✅ **Secrets Management** - Doppler/AWS/Vault integration  
 ✅ **API Authentication** - Valid credentials for each platform  
-✅ **Stream Detection** - API calls returning expected data  
-✅ **Security** - All secrets are masked in output  
+✅ **Stream Detection** - Live status checking and data retrieval  
+✅ **Social Posting** - Message formatting and platform-specific features  
+✅ **Security** - Secret masking and safe logging  
 ✅ **Error Handling** - Graceful degradation on failures  
-✅ **Rate Limiting** - Respect API quotas  
+✅ **Integration** - Complete stream lifecycle workflows  
 
 ### Test Output Example
 
