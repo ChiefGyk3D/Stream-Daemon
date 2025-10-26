@@ -233,6 +233,14 @@ See [MESSAGES_FORMAT.md](../MESSAGES_FORMAT.md) for file format details.
 
 For production deployments, use a secrets manager instead of plaintext environment variables.
 
+**🪄 Quick Setup:** Use the interactive wizard to configure secrets automatically:
+```bash
+cd .. && ./scripts/create-secrets.sh
+```
+
+📖 **[Secrets Wizard Guide](../docs/configuration/secrets-wizard.md)** - Interactive setup  
+📖 **[Secrets Management Guide](../docs/configuration/secrets.md)** - Manual configuration
+
 ### Doppler (Recommended)
 
 ```yaml
