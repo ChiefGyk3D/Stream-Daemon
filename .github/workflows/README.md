@@ -26,11 +26,13 @@ This directory contains automated CI/CD workflows for Stream Daemon.
 **What it does:**
 - Reviews dependency changes in PRs
 - Scans for vulnerabilities with Safety and pip-audit
-- Optional Snyk scanning (requires token)
+- **Snyk scanning included** (requires SNYK_TOKEN secret)
 - Uploads security reports as artifacts
 
 **Required Secrets:**
-- `SNYK_TOKEN` (optional, for enhanced scanning)
+- `SNYK_TOKEN` (optional but recommended - get from https://snyk.io)
+
+**Note:** Snyk provides comprehensive vulnerability scanning with a larger database than GitHub's native tools. It's already integrated into this workflow - no need for a separate snyk-security.yml file.
 
 ---
 
@@ -125,9 +127,9 @@ SNYK_TOKEN: your_snyk_token        # For enhanced vulnerability scanning
 Add these to your README.md:
 
 ```markdown
-[![CI Tests](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci-tests.yml)
-[![Docker Build](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/docker-build-publish.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/docker-build-publish.yml)
-[![CodeQL](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/codeql-analysis.yml)
+[![CI Tests](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/ci-tests.yml)
+[![Docker Build](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/docker-build-publish.yml/badge.svg)](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/docker-build-publish.yml)
+[![CodeQL](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ChiefGyk3D/twitch-and-toot/actions/workflows/codeql-analysis.yml)
 ```
 
 ---
@@ -167,7 +169,7 @@ trivy image stream-daemon:test
 | Workflow | Push | PR | Tag | Schedule | Manual |
 |----------|------|----|----|----------|--------|
 | CI Tests | ✅ main/develop/copilot | ✅ | ❌ | ❌ | ✅ |
-| Dependency Review | ❌ | ✅ | ❌ | ✅ Weekly | ✅ |
+| Dependency Review (includes Snyk) | ❌ | ✅ | ❌ | ✅ Weekly | ✅ |
 | Docker Build/Publish | ✅ main | ✅ | ✅ v*.*.* | ❌ | ✅ |
 | CodeQL Analysis | ✅ main/develop | ✅ | ❌ | ✅ Weekly | ✅ |
 
@@ -176,12 +178,23 @@ trivy image stream-daemon:test
 ## 🛡️ Security Features
 
 ### Automated Scans:
+- **Snyk**: Comprehensive vulnerability database (proprietary + open source)
+  - Daily automated scans
+  - Detailed remediation advice
+  - License compliance checking
+  - Container and dependency scanning
+- **CodeQL**: GitHub's native static code analysis
 - **Trivy**: Container vulnerability scanning
-- **CodeQL**: Static code analysis
 - **Bandit**: Python security linting
-- **Safety**: Known vulnerability database
+- **Safety**: Known vulnerability database (PyPI)
 - **pip-audit**: PyPI vulnerability scanner
-- **Snyk**: Comprehensive dependency scanning (optional)
+
+### Why Multiple Security Tools?
+Using Snyk + GitHub Security provides **defense in depth**:
+- **Snyk**: Larger database, faster detection, better remediation
+- **GitHub**: Native integration, free for public repos, backup layer
+- **No Conflicts**: They complement each other perfectly
+- **More Coverage**: Catches vulnerabilities others might miss
 
 ### Dependency Management:
 - **Dependabot**: Automated dependency updates
@@ -201,13 +214,29 @@ trivy image stream-daemon:test
 
 ### Monitoring:
 - Check Actions tab for workflow runs
-- Review Security tab for CodeQL/Trivy findings
+- Review Security tab for CodeQL/Snyk/Trivy findings
 - Check Dependabot PRs weekly
 - Review artifact uploads for detailed reports
+- Monitor Snyk dashboard at https://app.snyk.io
 
 ---
 
 ## 🔗 External Services Integration
+
+### Snyk (Security Scanning) - RECOMMENDED
+1. Sign up at https://snyk.io (free for open source)
+2. Link GitHub repository (authorize GitHub app)
+3. Go to Account Settings → API Tokens
+4. Copy your API token
+5. Add to GitHub: Settings → Secrets → `SNYK_TOKEN`
+6. Workflow will automatically start scanning
+
+**Why Snyk?**
+- Larger vulnerability database than GitHub/Safety
+- Detailed fix guidance with specific version recommendations
+- License compliance checking
+- Daily automated scans
+- Free for open source projects (200 tests/month)
 
 ### Codecov (Code Coverage)
 1. Sign up at https://codecov.io
