@@ -855,5 +855,5 @@ secret/prd/stream-daemon/twitch
 Having issues with secrets management? 
 
 - 📖 Check [Troubleshooting](#-troubleshooting) above
-- 🐛 [Open an issue](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- 💬 [Ask in discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- 🐛 [Open an issue](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- 💬 [Ask in discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
