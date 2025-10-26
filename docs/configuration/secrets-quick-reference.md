@@ -112,7 +112,7 @@ A: Technically yes (it only has config), but still recommended to keep in .gitig
 A: Yes! Doppler stores secrets, .env stores configs + connection info to Doppler.
 
 **Q: Can I switch secrets managers later?**  
-A: Yes! Just re-run `./create-secrets.sh` and choose a different option. The wizard loads existing values.
+A: Yes! Just re-run `./scripts/create-secrets.sh` and choose a different option. The wizard loads existing values.
 
 **Q: What if I chose .env but want to use Doppler now?**  
 A: Re-run wizard, select Doppler. It will load values from .env, put secrets in Doppler, keep config in .env.

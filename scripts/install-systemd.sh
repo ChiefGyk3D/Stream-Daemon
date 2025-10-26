@@ -18,7 +18,8 @@ fi
 
 # Get the directory where the script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-PROJECT_DIR="$SCRIPT_DIR"
+# Project directory is parent of scripts directory
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Get the user who invoked sudo (or current user if not using sudo)
 ACTUAL_USER="${SUDO_USER:-$USER}"

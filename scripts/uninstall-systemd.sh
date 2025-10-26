@@ -37,6 +37,12 @@ else
     echo "Detected Python-based deployment"
 fi
 
+# Extract project directory from service file
+PROJECT_DIR=$(grep "^WorkingDirectory=" "$SERVICE_FILE" 2>/dev/null | cut -d'=' -f2 || echo "")
+if [ -z "$PROJECT_DIR" ]; then
+    PROJECT_DIR="/opt/stream-daemon"  # Fallback default
+fi
+
 # Stop the service if running
 if systemctl is-active --quiet stream-daemon.service; then
     echo "Stopping Stream Daemon service..."

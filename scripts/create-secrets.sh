@@ -12,8 +12,9 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Script directory
+# Script directory and project directory
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Banner
 echo -e "${CYAN}"
@@ -80,10 +81,10 @@ prompt_yes_no() {
 }
 
 # Check if .env exists and offer to load it
-if [ -f "$SCRIPT_DIR/.env" ]; then
+if [ -f "$PROJECT_DIR/.env" ]; then
     echo -e "${YELLOW}Found existing .env file${NC}"
     if prompt_yes_no "Load existing values from .env as defaults?" "Y"; then
-        source "$SCRIPT_DIR/.env"
+        source "$PROJECT_DIR/.env"
         LOAD_FROM_ENV=true
         echo -e "${GREEN}✓${NC} Loaded values from .env"
     else
@@ -714,7 +715,7 @@ create_vault_secrets() {
 # Function to create .env file for secrets managers (CONFIG ONLY + connection info)
 create_env_config_only() {
     local secrets_manager="$1"
-    ENV_FILE="$SCRIPT_DIR/.env"
+    ENV_FILE="$PROJECT_DIR/.env"
     
     echo ""
     echo "Creating .env with configuration (secrets stored in $secrets_manager)..."
@@ -929,7 +930,7 @@ EOF
 
 # Function to create .env file with EVERYTHING (when .env is chosen as secrets manager)
 create_env_file_complete() {
-    ENV_FILE="$SCRIPT_DIR/.env"
+    ENV_FILE="$PROJECT_DIR/.env"
     
     echo "Creating .env file..."
     echo ""
