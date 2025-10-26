@@ -45,8 +45,8 @@ from typing import Dict, Optional, Tuple
 
 # Import from refactored modules
 from stream_daemon.config import get_secret, get_config, get_bool_config
-from stream_daemon.platforms.streaming import TwitchPlatform, YouTubePlatform, KickPlatform
-from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, DiscordPlatform, MatrixPlatform
+# Streaming platforms import commented out until refactoring complete:
+# from stream_daemon.platforms.streaming import TwitchPlatform, YouTubePlatform, KickPlatform
 
 
 def mask_secret(secret: Optional[str]) -> str:
