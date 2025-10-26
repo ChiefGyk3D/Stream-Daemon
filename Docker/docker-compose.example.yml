@@ -27,9 +27,11 @@ services:
       YOUTUBE_CHANNEL_ID: "your_youtube_channel_id"
       YOUTUBE_API_KEY: "your_youtube_api_key"
       
-      # KICK - No API required for public streams
+      # KICK - Get credentials from: https://kick.com/settings/developer
       KICK_ENABLE: "False"
       KICK_USERNAME: "your_kick_username"
+      KICK_CLIENT_ID: "your_kick_client_id"
+      KICK_CLIENT_SECRET: "your_kick_client_secret"
       
       # ===========================================
       # SOCIAL PLATFORMS (Enable at least ONE)
