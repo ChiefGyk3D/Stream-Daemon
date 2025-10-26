@@ -1185,10 +1185,31 @@ If you find Stream Daemon useful, consider supporting development:
 [Patreon](https://patreon.com/chiefgyk3d?utm_medium=unknown&utm_source=join_link&utm_campaign=creatorshare_creator&utm_content=copyLink)
 [StreamElements](https://streamelements.com/chiefgyk3d/tip)
 
-**Cryptocurrency**:
-- Bitcoin: `bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla`
-- Monero: `84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ`
-- Ethereum: `0x554f18cfB684889c3A60219BDBE7b050C39335ED`
+
+<details>
+<summary><b>Cryptocurrency Tips</b> (click to expand)</summary>
+
+<table>
+   <tr>
+      <td align="center">
+         <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bitcoin.svg" width="32" height="32" alt="Bitcoin"/><br/>
+         <b>Bitcoin</b><br/>
+         <code>bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla</code>
+      </td>
+      <td align="center">
+         <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/monero.svg" width="32" height="32" alt="Monero"/><br/>
+         <b>Monero</b><br/>
+         <code>84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ</code>
+      </td>
+      <td align="center">
+         <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/ethereum.svg" width="32" height="32" alt="Ethereum"/><br/>
+         <b>Ethereum</b><br/>
+         <code>0x554f18cfB684889c3A60219BDBE7b050C39335ED</code>
+      </td>
+   </tr>
+</table>
+
+</details>
 
 ---
 
