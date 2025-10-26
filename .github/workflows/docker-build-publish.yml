@@ -57,7 +57,7 @@ jobs:
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build Docker image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./Docker/Dockerfile
@@ -93,7 +93,7 @@ jobs:
 
     - name: Push Docker image
       if: github.event_name != 'pull_request'
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./Docker/Dockerfile
@@ -151,7 +151,7 @@ jobs:
 
     - name: Build and push to Docker Hub
       if: steps.check-credentials.outputs.skip != 'true'
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v6
       with:
         context: .
         file: ./Docker/Dockerfile
