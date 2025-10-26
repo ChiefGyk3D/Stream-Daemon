@@ -8,7 +8,7 @@ The `create-secrets.sh` script is an interactive wizard that helps you create an
 
 ```bash
 # Run the wizard
-./create-secrets.sh
+./scripts/create-secrets.sh
 ```
 
 The wizard will guide you through:
@@ -85,7 +85,7 @@ The wizard will guide you through:
 
 ```bash
 # First time setup
-./create-secrets.sh
+./scripts/create-secrets.sh
 ```
 
 **Follow the prompts:**
@@ -98,7 +98,7 @@ The wizard will guide you through:
 
 ```bash
 # Update with existing .env as defaults
-./create-secrets.sh
+./scripts/create-secrets.sh
 ```
 
 The wizard will:
@@ -111,7 +111,7 @@ The wizard will:
 
 ```bash
 # Example: Moving from .env to Doppler
-./create-secrets.sh
+./scripts/create-secrets.sh
 ```
 
 1. Select new secrets manager (e.g., Doppler)
@@ -604,7 +604,7 @@ ls -la .env
 
 1. **Initial Setup:**
    ```bash
-   ./create-secrets.sh
+   ./scripts/create-secrets.sh
    # Select: 4) Create .env file only
    ```
 
@@ -615,7 +615,7 @@ ls -la .env
 
 3. **Move to Production:**
    ```bash
-   ./create-secrets.sh
+   ./scripts/create-secrets.sh
    # Select: 1) Doppler
    # Wizard loads from .env
    ```
@@ -641,15 +641,15 @@ ls -la .env
 **Setup:**
 ```bash
 # Development
-./create-secrets.sh
+./scripts/create-secrets.sh
 # Select Doppler, config: dev
 
 # Staging
-./create-secrets.sh
+./scripts/create-secrets.sh
 # Select Doppler, config: stg
 
 # Production
-./create-secrets.sh
+./scripts/create-secrets.sh
 # Select Doppler, config: prd
 ```
 
@@ -673,10 +673,10 @@ doppler run --config prd -- python3 stream-daemon.py
 
 ```bash
 # Create secrets
-./create-secrets.sh
+./scripts/create-secrets.sh
 
 # Install service
-sudo ./install-systemd.sh
+sudo ./scripts/install-systemd.sh
 ```
 
 The install script will use secrets from:
@@ -687,7 +687,7 @@ The install script will use secrets from:
 
 ```bash
 # Create secrets
-./create-secrets.sh
+./scripts/create-secrets.sh
 
 # Docker run
 docker run --env-file .env stream-daemon
@@ -742,7 +742,7 @@ export TWITCH_CLIENT_ID=abc123
 # ... etc
 
 # Run wizard
-./create-secrets.sh
+./scripts/create-secrets.sh
 ```
 
 ### Command Line Flags
@@ -750,13 +750,13 @@ export TWITCH_CLIENT_ID=abc123
 *(Future enhancement)*
 ```bash
 # Quick Doppler setup
-./create-secrets.sh --doppler
+./scripts/create-secrets.sh --doppler
 
 # Update existing
-./create-secrets.sh --update
+./scripts/create-secrets.sh --update
 
 # Dry run
-./create-secrets.sh --dry-run
+./scripts/create-secrets.sh --dry-run
 ```
 
 ---

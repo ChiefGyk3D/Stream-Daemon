@@ -13,6 +13,10 @@ __pycache__/
 !.env.example
 config.ini
 
+# Docker user configuration
+Docker/docker-compose.yml
+!Docker/docker-compose.example.yml
+
 # Test outputs
 tests/__pycache__/
 tests/*.pyc

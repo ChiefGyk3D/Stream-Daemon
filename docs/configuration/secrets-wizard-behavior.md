@@ -458,7 +458,7 @@ python stream-daemon.py
 ### From .env to Doppler
 ```bash
 # Run wizard, select Doppler
-./create-secrets.sh
+./scripts/create-secrets.sh
 
 # Wizard loads existing .env values
 # Secrets → Doppler
@@ -469,7 +469,7 @@ python stream-daemon.py
 ### From Doppler to AWS
 ```bash
 # Run wizard, select AWS
-./create-secrets.sh
+./scripts/create-secrets.sh
 
 # Wizard asks for platform configs (Doppler has secrets only)
 # You'll need to re-enter configs

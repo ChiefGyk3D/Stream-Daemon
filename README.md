@@ -126,7 +126,7 @@ When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Ki
 2. **Configure secrets** ⭐ NEW!
    ```bash
    # Interactive wizard for setting up credentials
-   ./create-secrets.sh
+   ./scripts/create-secrets.sh
    ```
    
    Choose your secrets platform:
@@ -153,7 +153,13 @@ That's it! Stream Daemon will now monitor your streams and post announcements au
 
 ```bash
 cd Docker
+# Copy the example configuration
+cp docker-compose.example.yml docker-compose.yml
+
 # Edit docker-compose.yml with your credentials
+nano docker-compose.yml
+
+# Start the container
 docker-compose up -d
 
 # View logs
@@ -166,7 +172,7 @@ Run Stream Daemon as a system service with automatic startup and logging:
 
 ```bash
 # One-command installation
-sudo ./install-systemd.sh
+sudo ./scripts/install-systemd.sh
 
 # Service management
 sudo systemctl start stream-daemon    # Start
@@ -804,6 +810,14 @@ services:
 **Deploy:**
 ```bash
 cd Docker
+
+# Copy example configuration
+cp docker-compose.example.yml docker-compose.yml
+
+# Edit with your credentials
+nano docker-compose.yml
+
+# Start container
 docker-compose up -d
 
 # View logs
@@ -815,6 +829,8 @@ docker-compose restart
 # Stop
 docker-compose down
 ```
+
+**Container Name:** The container will be named `stream-daemon` for easy reference in all Docker commands.
 
 ### Manual Docker Build
 
@@ -1282,3 +1298,4 @@ Made with ❤️ by [ChiefGyk3D](https://github.com/ChiefGyk3D)
 **Stream Daemon** - Automate your multi-platform streaming presence
 
 [⬆ Back to Top](#stream-daemon)
+

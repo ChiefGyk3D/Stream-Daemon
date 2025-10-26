@@ -6,7 +6,7 @@ Run Stream Daemon as a systemd service for automatic startup, monitoring, and lo
 
 ```bash
 # Run the installer (requires sudo)
-sudo ./install-systemd.sh
+sudo ./scripts/install-systemd.sh
 ```
 
 The installer will:
@@ -172,6 +172,8 @@ WantedBy=multi-user.target
 - `YOUR_USERNAME` with your Linux username
 - `/path/to/stream-daemon` with the full path to your project directory
 
+**Note:** The container will be named `stream-daemon` for consistency with Docker Compose deployments.
+
 #### 3. Enable and Start
 
 ```bash
@@ -232,7 +234,7 @@ sudo journalctl -u stream-daemon -n 100
 
 ```bash
 # Run the uninstaller (requires sudo)
-sudo ./uninstall-systemd.sh
+sudo ./scripts/uninstall-systemd.sh
 ```
 
 The uninstaller will:

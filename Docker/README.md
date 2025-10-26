@@ -17,6 +17,13 @@ docker-compose up -d
 
 That's it! Stream Daemon is now running in the background.
 
+> **💡 Tip:** New to Stream Daemon? Use the **secrets wizard** to generate your configuration:
+> ```bash
+> cd ..  # Return to root directory
+> ./scripts/create-secrets.sh
+> ```
+> The wizard helps you set up credentials in Doppler, AWS Secrets Manager, HashiCorp Vault, or generate a `.env` file. See [Secrets Wizard Guide](../docs/configuration/secrets-wizard.md) for details.
+
 ## 📋 Prerequisites
 
 - Docker installed ([Get Docker](https://docs.docker.com/get-docker/))
@@ -33,6 +40,7 @@ That's it! Stream Daemon is now running in the background.
 - ✅ Automatic restart on failure
 - ✅ Volume mounting for message files
 - ✅ Environment variable management
+- ✅ Consistent container name: `stream-daemon`
 
 **Steps:**
 
@@ -74,6 +82,8 @@ That's it! Stream Daemon is now running in the background.
    ```bash
    docker-compose up -d
    ```
+   
+   **Note:** The container will be named `stream-daemon` for easy reference in all Docker commands.
 
 5. **View logs:**
    ```bash
@@ -126,6 +136,13 @@ Doppler CLI automatically provides all secrets to the container.
 ### Environment Variables
 
 Stream Daemon uses **pure environment variables** - no config files needed in Docker!
+
+> **🪄 Quick Setup:** Use the interactive wizard to generate your configuration:
+> ```bash
+> cd .. && ./scripts/create-secrets.sh
+> ```
+> Supports Doppler, AWS Secrets Manager, Vault, or `.env` file generation.  
+> **Documentation:** [Secrets Wizard Guide](../docs/configuration/secrets-wizard.md) • [Config vs Secrets Behavior](../docs/configuration/secrets-wizard-behavior.md)
 
 #### Streaming Platforms (Enable at least ONE)
 
