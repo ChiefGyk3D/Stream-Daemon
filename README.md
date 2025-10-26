@@ -2,6 +2,44 @@
 
 ![Stream Daemon Banner](media/stream_daemon_banner.png)
 
+---
+## 👤 Authors & Socials
+
+Made with ❤️ by [ChiefGyk3D](https://github.com/ChiefGyk3D)
+
+<div align="center">
+   <table>
+      <tr>
+         <td align="center"><a href="https://social.chiefgyk3d.com/@chiefgyk3d" title="Mastodon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastodon.svg" width="32" height="32" alt="Mastodon"/></a></td>
+         <td align="center"><a href="https://bsky.app/profile/chiefgyk3d.com" title="Bluesky"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bluesky.svg" width="32" height="32" alt="Bluesky"/></a></td>
+         <td align="center"><a href="http://twitch.tv/chiefgyk3d" title="Twitch"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitch.svg" width="32" height="32" alt="Twitch"/></a></td>
+         <td align="center"><a href="https://www.youtube.com/channel/UCvFY4KyqVBuYd7JAl3NRyiQ" title="YouTube"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" width="32" height="32" alt="YouTube"/></a></td>
+         <td align="center"><a href="https://kick.com/chiefgyk3d" title="Kick"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/kick.svg" width="32" height="32" alt="Kick"/></a></td>
+         <td align="center"><a href="https://www.tiktok.com/@chiefgyk3d" title="TikTok"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg" width="32" height="32" alt="TikTok"/></a></td>
+         <td align="center"><a href="https://discord.chiefgyk3d.com" title="Discord"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/discord.svg" width="32" height="32" alt="Discord"/></a></td>
+         <td align="center"><a href="https://matrix-invite.chiefgyk3d.com" title="Matrix"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/matrix.svg" width="32" height="32" alt="Matrix"/></a></td>
+      </tr>
+      <tr>
+         <td align="center">Mastodon</td>
+         <td align="center">Bluesky</td>
+         <td align="center">Twitch</td>
+         <td align="center">YouTube</td>
+         <td align="center">Kick</td>
+         <td align="center">TikTok</td>
+         <td align="center">Discord</td>
+         <td align="center">Matrix</td>
+      </tr>
+   </table>
+
+<sub>ChiefGyk3D is the author of Stream Daemon (formerly Twitch and Toot)</sub>
+
+👉 <a href="#donations-and-tips">Jump to Donations & Tips</a>
+
+</div>
+<div align="center">
+
+![Stream Daemon Banner](media/stream_daemon_banner.png)
+
 # Stream Daemon
 
 **Automate your multi-platform live streams with intelligent social media announcements**
