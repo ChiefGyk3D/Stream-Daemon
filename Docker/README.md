@@ -383,8 +383,8 @@ MIT License - See [LICENSE.md](../LICENSE.md)
 ## 🤝 Support
 
 - 📖 Documentation: See main [README.md](../README.md)
-- 🐛 Issues: [GitHub Issues](https://github.com/ChiefGyk3D/twitch-and-toot/issues)
-- 💬 Discussions: [GitHub Discussions](https://github.com/ChiefGyk3D/twitch-and-toot/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/ChiefGyk3D/Stream-Daemon/issues)
+- 💬 Discussions: [GitHub Discussions](https://github.com/ChiefGyk3D/Stream-Daemon/discussions)
 
 ## ⚙️ Configuration
 
