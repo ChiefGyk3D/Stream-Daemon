@@ -100,7 +100,7 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
   - Automatic hashtag generation from stream titles and game names
   - Dynamic, personalized messages that never repeat
   - Graceful fallback to static messages if LLM unavailable
-  - Cost-effective: ~$0.0001 per announcement with Gemini 1.5 Flash
+  - Cost-effective: ~$0.0001 per announcement with Gemini 2.0 Flash Lite
   - Configurable temperature and creativity controls
 
 ### 🔐 Enterprise-Grade Secrets Management
@@ -327,7 +327,7 @@ LLM_TEMPERATURE=0.9  # 0.0-2.0, higher = more creative
 LLM_TOP_P=0.95       # Nucleus sampling
 ```
 
-Cost: ~$0.0001 per message with Gemini 1.5 Flash!  
+Cost: ~$0.0001 per message with Gemini 2.0 Flash Lite!  
 📖 **[AI Messages Guide](docs/features/ai-messages.md)**
 </details>
 
@@ -697,10 +697,10 @@ graph LR
 
 2. **Test Gemini API:**
    ```bash
-   python3 -c "import google.generativeai as genai; \
-     genai.configure(api_key='$GEMINI_API_KEY'); \
-     model = genai.GenerativeModel('gemini-1.5-flash'); \
-     print(model.generate_content('Test').text)"
+   python3 -c "import google.genai; \
+     client = google.genai.Client(api_key='$GEMINI_API_KEY'); \
+     response = client.models.generate_content(model='gemini-2.0-flash-lite', contents='Say hello'); \
+     print(response.text)"
    ```
 
 3. **Check fallback behavior:**

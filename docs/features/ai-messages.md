@@ -89,8 +89,8 @@ LLM_ENABLE=True
 # Your Gemini API key
 GEMINI_API_KEY=AIzaSyA_your_actual_api_key_here
 
-# Model to use (recommended: gemini-1.5-flash)
-LLM_MODEL=gemini-1.5-flash
+# Model to use (recommended: gemini-2.0-flash-lite)
+LLM_MODEL=gemini-2.0-flash-lite
 ```
 
 **Option B: Using Secrets Manager (Recommended for Production)**
@@ -101,7 +101,7 @@ LLM_MODEL=gemini-1.5-flash
 LLM_ENABLE=True
 
 # Model selection (not sensitive, OK in .env)
-LLM_MODEL=gemini-1.5-flash
+LLM_MODEL=gemini-2.0-flash-lite
 
 # Configure secrets manager
 SECRETS_SECRET_MANAGER=doppler
@@ -115,7 +115,7 @@ doppler secrets set GEMINI_API_KEY="AIzaSyA_your_key_here"
 
 # Optional: also store enable flag and model in Doppler
 doppler secrets set LLM_ENABLE="True"
-doppler secrets set LLM_MODEL="gemini-1.5-flash"
+doppler secrets set LLM_MODEL="gemini-2.0-flash-lite"
 ```
 
 ### Step 3: Test It!
@@ -156,15 +156,22 @@ else:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `LLM_MODEL` | Gemini model to use | `gemini-1.5-flash` |
+| `LLM_MODEL` | Gemini model to use | `gemini-2.0-flash-lite` |
 
 ### Model Options
 
-**gemini-1.5-flash** (Recommended):
+**gemini-2.0-flash-lite** (Recommended - Default):
+- ✅ Very fast response time (~1-2 seconds)
+- ✅ Higher rate limits (30 requests/minute vs 15 for 1.5-flash)
+- ✅ Cost-effective (free tier: 30 requests/minute)
+- ✅ Optimized for short-form content like social media posts
+- ✅ Best for most users
+
+**gemini-1.5-flash**:
 - ✅ Fast response time (~1-2 seconds)
 - ✅ Cost-effective (free tier: 15 requests/minute, 1 million tokens/day)
 - ✅ Great quality for social media posts
-- ✅ Best for most users
+- ⚠️ Lower rate limits than 2.0-flash-lite
 
 **gemini-1.5-pro**:
 - ⚠️ Slower response time (~3-5 seconds)
@@ -177,7 +184,7 @@ else:
 - ✅ Latest features
 - ⚠️ Subject to change
 
-**Recommendation:** Stick with `gemini-1.5-flash` unless you have specific needs.
+**Recommendation:** Stick with `gemini-2.0-flash-lite` (the default) unless you have specific needs.
 
 ---
 
@@ -361,6 +368,11 @@ bell for next time! See you in the next stream! 🙏✨ #YouTubeCommunity
 
 ### Google Gemini Free Tier
 
+**gemini-2.0-flash-lite (Default):**
+- ✅ **30 requests per minute**
+- ✅ **High rate limits optimized for social media posting**
+- ✅ **Free tier available**
+
 **gemini-1.5-flash:**
 - ✅ **15 requests per minute**
 - ✅ **1 million tokens per day**
@@ -372,7 +384,8 @@ bell for next time! See you in the next stream! 🙏✨ #YouTubeCommunity
 - **Total per stream: ~8 requests**
 
 **You can handle:**
-- ~187 streams per day (well above reasonable usage)
+- With 2.0-flash-lite: Multiple simultaneous streams with 30 req/min
+- With 1.5-flash: ~187 streams per day (well above reasonable usage)
 - Multiple streams simultaneously
 
 **Cost if exceeding free tier:**
@@ -440,11 +453,11 @@ All scenarios result in stream announcements being posted - you never miss a not
 1. Is `LLM_ENABLE=True` set?
 2. Is `GEMINI_API_KEY` configured?
 3. Is the API key valid (starts with `AIza`)?
-4. Is the model name correct? (`gemini-1.5-flash`)
+4. Is the model name correct? (`gemini-2.0-flash-lite` or `gemini-1.5-flash`)
 
 **Test API key manually:**
 ```bash
-curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=YOUR_KEY" \
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=YOUR_KEY" \
   -H 'Content-Type: application/json' \
   -d '{"contents":[{"parts":[{"text":"Say hello"}]}]}'
 ```
@@ -503,7 +516,7 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:g
 
 2. **Model choice:**
    - Try `gemini-1.5-pro` for slightly better quality
-   - (Though gemini-1.5-flash is usually great)
+   - (Though gemini-2.0-flash-lite is usually great)
 
 3. **Prompts can be tuned** in code:
    - Edit `stream_daemon/ai/generator.py`
