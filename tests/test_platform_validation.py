@@ -63,26 +63,28 @@ class TestEnvironmentValidation:
     
     def test_secrets_manager_configured(self, load_test_env):
         """Test that a secrets manager is configured."""
-        secret_manager = get_config('Secrets', 'manager', 'env')
-        if secret_manager:
-            secret_manager = secret_manager.lower()
+        # Get the secrets manager TYPE/configuration (not actual secrets)
+        manager_type = get_config('Secrets', 'manager', 'env')
+        if manager_type:
+            manager_type = manager_type.lower()
         else:
-            secret_manager = 'env'
+            manager_type = 'env'
         
-        print(f"\nSecrets Manager: {secret_manager}")
+        print(f"\nSecrets Manager Type: {manager_type}")
         
-        assert secret_manager in ['doppler', 'aws', 'vault', 'env'], \
-            f"Invalid secrets manager: {secret_manager}"
+        assert manager_type in ['doppler', 'aws', 'vault', 'env'], \
+            f"Invalid secrets manager: {manager_type}"
     
     def test_doppler_configuration(self, load_test_env):
         """Test Doppler configuration if using Doppler."""
-        secret_manager = get_config('Secrets', 'manager', 'env')
-        if secret_manager:
-            secret_manager = secret_manager.lower()
+        # Get the secrets manager TYPE/configuration (not actual secrets)
+        manager_type = get_config('Secrets', 'manager', 'env')
+        if manager_type:
+            manager_type = manager_type.lower()
         else:
-            secret_manager = 'env'
+            manager_type = 'env'
         
-        if secret_manager != 'doppler':
+        if manager_type != 'doppler':
             pytest.skip("Not using Doppler secrets manager")
         
         doppler_token = os.getenv('DOPPLER_TOKEN')
@@ -533,10 +535,11 @@ class TestAllPlatformsValidation:
         print("=" * 60)
         
         # Secrets Manager
-        secret_manager = get_config('Secrets', 'manager', 'env')
-        if not secret_manager:
-            secret_manager = 'env'
-        print(f"\nSecrets Manager: {secret_manager.upper()}")
+        # Get the secrets manager TYPE/configuration (not actual secrets)
+        manager_type = get_config('Secrets', 'manager', 'env')
+        if not manager_type:
+            manager_type = 'env'
+        print(f"\nSecrets Manager Type: {manager_type.upper()}")
         
         # Streaming Platforms
         print("\nStreaming Platforms:")
