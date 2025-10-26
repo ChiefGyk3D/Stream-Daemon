@@ -280,7 +280,8 @@ SECRETS_VAULT_TWITCH_SECRET_PATH=secret/data/stream-daemon/twitch
 **Priority Chain:** Doppler → AWS → Vault → Environment variables  
 Secrets managers always override environment variables for maximum security.
 
-📖 **[Complete Secrets Guide](docs/configuration/secrets.md)**
+📖 **[Secrets Wizard](docs/configuration/secrets-wizard.md)** - Interactive setup tool (recommended)  
+📖 **[Complete Secrets Guide](docs/configuration/secrets.md)** - Manual configuration
 </details>
 
 <details>
@@ -398,7 +399,11 @@ For platform-specific setup guides, advanced features, and troubleshooting:
 - **[Matrix Setup](docs/platforms/social/matrix.md)** - Bot creation, room IDs, authentication methods
 
 ### ⚙️ Configuration
-- **[Secrets Management](docs/configuration/secrets.md)** - Doppler, AWS Secrets Manager, HashiCorp Vault
+- **[Secrets Wizard](docs/configuration/secrets-wizard.md)** 🪄 - Interactive setup tool for all platforms (recommended)
+  - Automated Doppler, AWS, Vault, or .env configuration
+  - Step-by-step credential collection
+  - Supports updating existing configurations
+- **[Secrets Management](docs/configuration/secrets.md)** - Manual setup: Doppler, AWS Secrets Manager, HashiCorp Vault
   - Environment-specific Doppler tokens (dev/staging/prod)
   - Priority chain and security best practices
   - Docker integration and testing guides
