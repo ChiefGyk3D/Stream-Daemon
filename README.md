@@ -14,6 +14,44 @@ Monitor **Twitch, YouTube, and Kick** streams • Post to **Mastodon, Bluesky, D
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing)
 
+- 🐳 **Production Ready** - Docker, Docker Compose, systemd service support
+- ⚡ **Lightweight** - Runs on anything from Raspberry Pi to AWS Lambda
+
+---
+
+## 👤 Authors & Socials
+
+<div align="center">
+
+Made with ❤️ by [ChiefGyk3D](https://github.com/ChiefGyk3D)
+
+<table>
+   <tr>
+      <td align="center"><a href="https://social.chiefgyk3d.com/@chiefgyk3d" title="Mastodon"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastodon.svg" width="32" height="32" alt="Mastodon"/></a></td>
+      <td align="center"><a href="https://bsky.app/profile/chiefgyk3d.com" title="Bluesky"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bluesky.svg" width="32" height="32" alt="Bluesky"/></a></td>
+      <td align="center"><a href="http://twitch.tv/chiefgyk3d" title="Twitch"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/twitch.svg" width="32" height="32" alt="Twitch"/></a></td>
+      <td align="center"><a href="https://www.youtube.com/channel/UCvFY4KyqVBuYd7JAl3NRyiQ" title="YouTube"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/youtube.svg" width="32" height="32" alt="YouTube"/></a></td>
+      <td align="center"><a href="https://kick.com/chiefgyk3d" title="Kick"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/kick.svg" width="32" height="32" alt="Kick"/></a></td>
+      <td align="center"><a href="https://www.tiktok.com/@chiefgyk3d" title="TikTok"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/tiktok.svg" width="32" height="32" alt="TikTok"/></a></td>
+      <td align="center"><a href="https://discord.chiefgyk3d.com" title="Discord"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/discord.svg" width="32" height="32" alt="Discord"/></a></td>
+      <td align="center"><a href="https://matrix-invite.chiefgyk3d.com" title="Matrix"><img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/matrix.svg" width="32" height="32" alt="Matrix"/></a></td>
+   </tr>
+   <tr>
+      <td align="center">Mastodon</td>
+      <td align="center">Bluesky</td>
+      <td align="center">Twitch</td>
+      <td align="center">YouTube</td>
+      <td align="center">Kick</td>
+      <td align="center">TikTok</td>
+      <td align="center">Discord</td>
+      <td align="center">Matrix</td>
+   </tr>
+</table>
+
+<sub>ChiefGyk3D is the author of Stream Daemon (formerly Twitch and Toot)</sub>
+
+👉 <a href="#donations-and-tips">Jump to Donations & Tips</a>
+
 </div>
 
 ---
@@ -1186,27 +1224,40 @@ If you find Stream Daemon useful, consider supporting development:
 [StreamElements](https://streamelements.com/chiefgyk3d/tip)
 
 
+
 ### Cryptocurrency Tips
 
-<table>
-   <tr>
-      <td align="center">
-         <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bitcoin.svg" width="32" height="32" alt="Bitcoin"/><br/>
-         <b>Bitcoin</b><br/>
-         <code>bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla</code>
-      </td>
-      <td align="center">
-         <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/monero.svg" width="32" height="32" alt="Monero"/><br/>
-         <b>Monero</b><br/>
-         <code>84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ</code>
-      </td>
-      <td align="center">
-         <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/ethereum.svg" width="32" height="32" alt="Ethereum"/><br/>
-         <b>Ethereum</b><br/>
-         <code>0x554f18cfB684889c3A60219BDBE7b050C39335ED</code>
-      </td>
-   </tr>
-</table>
+<div align="center">
+   <table style="border:none;">
+      <tr>
+         <td align="center" style="padding:8px; min-width:120px;">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/bitcoin.svg" width="28" height="28" alt="Bitcoin"/>
+         </td>
+         <td align="left" style="padding:8px;">
+            <b>Bitcoin</b><br/>
+            <code style="font-size:12px;">bc1qztdzcy2wyavj2tsuandu4p0tcklzttvdnzalla</code>
+         </td>
+      </tr>
+      <tr>
+         <td align="center" style="padding:8px; min-width:120px;">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/monero.svg" width="28" height="28" alt="Monero"/>
+         </td>
+         <td align="left" style="padding:8px;">
+            <b>Monero</b><br/>
+            <code style="font-size:12px;">84Y34QubRwQYK2HNviezeH9r6aRcPvgWmKtDkN3EwiuVbp6sNLhm9ffRgs6BA9X1n9jY7wEN16ZEpiEngZbecXseUrW8SeQ</code>
+         </td>
+      </tr>
+      <tr>
+         <td align="center" style="padding:8px; min-width:120px;">
+            <img src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/ethereum.svg" width="28" height="28" alt="Ethereum"/>
+         </td>
+         <td align="left" style="padding:8px;">
+            <b>Ethereum</b><br/>
+            <code style="font-size:12px;">0x554f18cfB684889c3A60219BDBE7b050C39335ED</code>
+         </td>
+      </tr>
+   </table>
+</div>
 
 ---
 
