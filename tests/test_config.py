@@ -127,9 +127,13 @@ class TestSecretLoading:
     
     def test_secret_priority_manager_over_env(self):
         """Test that secrets manager takes priority over environment variables."""
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', '').lower()
-        if secret_manager == 'none':
-            pytest.skip("No secret manager configured")
+        # Check if ANY secrets manager is actually configured with credentials
+        has_doppler = bool(os.getenv('DOPPLER_TOKEN'))
+        has_aws = bool(os.getenv('AWS_ACCESS_KEY_ID') and os.getenv('AWS_SECRET_ACCESS_KEY'))
+        has_vault = bool(os.getenv('SECRETS_VAULT_URL') and os.getenv('SECRETS_VAULT_TOKEN'))
+        
+        if not (has_doppler or has_aws or has_vault):
+            pytest.skip("No secrets manager credentials available (expected in CI)")
         
         # Set an environment variable
         os.environ['TWITCH_CLIENT_ID'] = 'env_var_value'
