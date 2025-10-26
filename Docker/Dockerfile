@@ -1,6 +1,6 @@
 # Use an official Python runtime as a parent image
 # Python 3.13 is the latest STABLE version with full package support
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 # Set the working directory in the container to /app
 WORKDIR /app
