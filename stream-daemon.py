@@ -11,7 +11,7 @@ import logging
 from dotenv import load_dotenv
 import json
 from datetime import datetime, timedelta
-from typing import Optional, Dict
+from typing import Dict
 
 # Import from modularized package
 from stream_daemon.config import get_config, get_bool_config, get_int_config
