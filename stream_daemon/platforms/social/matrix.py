@@ -6,12 +6,11 @@ Messages are posted once and cannot be updated with live viewer counts.
 """
 
 import logging
-import os
 import re
 from typing import Optional
 from urllib.parse import quote, urlparse
 import requests
-from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.config import get_bool_config, get_secret
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +112,9 @@ class MatrixPlatform:
             if not self.access_token:
                 logger.error("✗ Matrix login failed - check username/password")
                 return False
-            logger.info(f"✓ Matrix logged in and obtained access token")
+            # Mask the token to prevent credential leakage in logs
+            masked_token = self.access_token[:8] + "..." if len(self.access_token) > 8 else "***"
+            logger.info(f"✓ Matrix logged in and obtained access token {masked_token}")
         else:
             # Fall back to static access token
             logger.info("Using static access token authentication")
@@ -156,7 +157,9 @@ class MatrixPlatform:
                 data = response.json()
                 access_token = data.get('access_token')
                 if access_token:
-                    logger.info(f"✓ Obtained Matrix access token (expires: {data.get('expires_in_ms', 'never')})")
+                    # Mask the token to prevent credential leakage in logs
+                    masked_token = access_token[:8] + "..." if len(access_token) > 8 else "***"
+                    logger.info(f"✓ Obtained Matrix access token {masked_token} (expires: {data.get('expires_in_ms', 'never')})")
                     return access_token
                 else:
                     logger.error(f"✗ Matrix login succeeded but no access_token in response")

@@ -5,11 +5,9 @@ Configuration via .env files and environment variables only
 """
 
 import time
-import os
 import sys
 import logging
 from dotenv import load_dotenv
-import json
 from datetime import datetime, timedelta
 from typing import Dict
 

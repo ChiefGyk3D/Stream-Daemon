@@ -54,7 +54,6 @@ def clean_test_posts():
     
     # Cleanup after test
     # TODO: Implement actual cleanup once platform classes support deletion
-    pass
 
 
 @pytest.fixture
