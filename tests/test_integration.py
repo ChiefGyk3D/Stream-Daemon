@@ -6,8 +6,7 @@ Simulates real-world scenarios with all platforms working together.
 """
 
 import pytest
-from stream_daemon.platforms.streaming import TwitchPlatform, YouTubePlatform, KickPlatform
-from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, DiscordPlatform, MatrixPlatform
+from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform
 from stream_daemon.models import StreamStatus
 from stream_daemon.config import get_bool_config
 

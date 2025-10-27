@@ -16,7 +16,7 @@ class KickPlatform(StreamingPlatform):
     
     def __init__(self):
         super().__init__("Kick")
-        self.enabled = False
+        # Note: self.enabled is set to False in parent class
         self.access_token = None
         self.use_auth = False
         
