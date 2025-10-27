@@ -5,7 +5,6 @@ Simulates 2 check cycles to test debouncing and posting behavior.
 Tests that stream announcements only occur after debounce confirmation.
 """
 
-import pytest
 from stream_daemon.models import StreamStatus, StreamState
 
 

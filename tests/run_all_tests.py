@@ -5,7 +5,6 @@ Comprehensive test suite for stream-daemon.
 """
 
 import sys
-import os
 
 # Import all test modules
 from test_platforms import run_all_platform_tests

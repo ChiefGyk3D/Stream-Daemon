@@ -6,12 +6,11 @@ Messages are posted once and cannot be updated with live viewer counts.
 """
 
 import logging
-import os
 import re
 from typing import Optional
 from urllib.parse import quote, urlparse
 import requests
-from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.config import get_bool_config, get_secret
 
 logger = logging.getLogger(__name__)
 
