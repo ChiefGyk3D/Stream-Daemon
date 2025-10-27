@@ -167,15 +167,20 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
     # Check if user is in docker group
     if ! groups $ACTUAL_USER | grep -q docker; then
         echo -e "${YELLOW}WARNING: User $ACTUAL_USER is not in the docker group${NC}"
-        echo "You may need to add the user to the docker group:"
-        echo "  sudo usermod -aG docker $ACTUAL_USER"
-        echo "  (then log out and back in)"
+        echo "Adding user to docker group..."
+        usermod -aG docker $ACTUAL_USER
+        echo -e "${GREEN}✓${NC} User added to docker group"
+        echo -e "${YELLOW}NOTE: You'll need to log out and back in for group changes to take effect${NC}"
         echo ""
-        read -p "Continue anyway? (y/N) " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
-        fi
+    fi
+    
+    # Set DOCKER_CMD based on whether user is in docker group
+    # If user is in docker group, run as user. Otherwise, run as root.
+    if groups $ACTUAL_USER | grep -q docker; then
+        DOCKER_CMD="sudo -u $ACTUAL_USER docker"
+    else
+        DOCKER_CMD="docker"
+        echo -e "${YELLOW}NOTE: Running Docker commands as root (user not in docker group yet)${NC}"
     fi
     
     # Check if Docker image exists or needs to be built
@@ -221,12 +226,12 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
             echo ""
             GHCR_IMAGE="ghcr.io/chiefgyk3d/stream-daemon:latest"
             
-            if docker pull "$GHCR_IMAGE"; then
+            if $DOCKER_CMD pull "$GHCR_IMAGE"; then
                 echo ""
                 echo -e "${GREEN}✓${NC} Image pulled successfully!"
                 
                 # Tag it as stream-daemon:latest for local use
-                docker tag "$GHCR_IMAGE" "$IMAGE_NAME:latest"
+                $DOCKER_CMD tag "$GHCR_IMAGE" "$IMAGE_NAME:latest"
                 echo -e "${GREEN}✓${NC} Tagged as ${IMAGE_NAME}:latest"
                 
                 # Show image info
@@ -274,12 +279,8 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
         echo ""
         cd "$PROJECT_DIR"
         
-        # Note: We run docker build without sudo -u because:
-        # 1. Docker daemon already runs as root
-        # 2. The image is stored in Docker's system-wide storage
-        # 3. Using sudo -u can cause permission issues with Docker socket
         BUILD_OUTPUT=$(mktemp)
-        if docker build -t $IMAGE_NAME -f Docker/Dockerfile . 2>&1 | tee "$BUILD_OUTPUT"; then
+        if $DOCKER_CMD build -t $IMAGE_NAME -f Docker/Dockerfile . 2>&1 | tee "$BUILD_OUTPUT"; then
             echo ""
             echo -e "${GREEN}✓${NC} Docker image built successfully!"
             
