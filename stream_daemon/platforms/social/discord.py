@@ -7,10 +7,33 @@ import os
 import re
 import time
 from typing import Optional
+from urllib.parse import urlparse
 import requests
 from stream_daemon.config import get_config, get_bool_config, get_secret
 
 logger = logging.getLogger(__name__)
+
+
+def _is_url_for_domain(url: str, domain: str) -> bool:
+    """
+    Safely check if a URL is for a specific domain.
+    
+    Args:
+        url: The URL to check
+        domain: The domain to match (e.g., 'kick.com', 'twitch.tv')
+    
+    Returns:
+        True if the URL's hostname matches or is a subdomain of the domain
+    """
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Check exact match or subdomain (e.g., www.kick.com matches kick.com)
+        return hostname == domain or hostname.endswith('.' + domain)
+    except Exception:
+        return False
 
 
 class DiscordPlatform:
@@ -63,7 +86,7 @@ class DiscordPlatform:
                                       doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
             if platform_role:
                 self.role_mentions[platform] = platform_role
-                logger.info(f"  • Discord role configured for {platform.upper()}: {platform_role}")
+                logger.info(f"  • Discord role configured for {platform.upper()}")
         
         self.enabled = True
         if self.webhook_url:
@@ -102,13 +125,13 @@ class DiscordPlatform:
                 color = 0x9146FF  # Default purple
                 platform_title = "Live Stream"
                 
-                if 'twitch.tv' in first_url:
+                if _is_url_for_domain(first_url, 'twitch.tv'):
                     color = 0x9146FF  # Twitch purple
                     platform_title = "🟣 Live on Twitch"
-                elif 'youtube.com' in first_url or 'youtu.be' in first_url:
+                elif _is_url_for_domain(first_url, 'youtube.com') or _is_url_for_domain(first_url, 'youtu.be'):
                     color = 0xFF0000  # YouTube red
                     platform_title = "🔴 Live on YouTube"
-                elif 'kick.com' in first_url:
+                elif _is_url_for_domain(first_url, 'kick.com'):
                     color = 0x53FC18  # Kick green
                     platform_title = "🟢 Live on Kick"
                 
@@ -211,13 +234,13 @@ class DiscordPlatform:
             color = 0x9146FF  # Default purple
             platform_title = "Live Stream"
             
-            if 'twitch.tv' in stream_url or platform_key == 'twitch':
+            if _is_url_for_domain(stream_url, 'twitch.tv') or platform_key == 'twitch':
                 color = 0x9146FF
                 platform_title = "🟣 Live on Twitch"
-            elif 'youtube.com' in stream_url or 'youtu.be' in stream_url or platform_key == 'youtube':
+            elif _is_url_for_domain(stream_url, 'youtube.com') or _is_url_for_domain(stream_url, 'youtu.be') or platform_key == 'youtube':
                 color = 0xFF0000
                 platform_title = "🔴 Live on YouTube"
-            elif 'kick.com' in stream_url or platform_key == 'kick':
+            elif _is_url_for_domain(stream_url, 'kick.com') or platform_key == 'kick':
                 color = 0x53FC18
                 platform_title = "🟢 Live on Kick"
             
@@ -324,13 +347,13 @@ class DiscordPlatform:
             color = 0x808080  # Gray for ended
             platform_title = "Stream Ended"
             
-            if 'twitch.tv' in stream_url or platform_key == 'twitch':
+            if _is_url_for_domain(stream_url, 'twitch.tv') or platform_key == 'twitch':
                 color = 0x6441A5  # Muted purple
                 platform_title = "⏹️ Stream Ended - Twitch"
-            elif 'youtube.com' in stream_url or 'youtu.be' in stream_url or platform_key == 'youtube':
+            elif _is_url_for_domain(stream_url, 'youtube.com') or _is_url_for_domain(stream_url, 'youtu.be') or platform_key == 'youtube':
                 color = 0xCC0000  # Muted red
                 platform_title = "⏹️ Stream Ended - YouTube"
-            elif 'kick.com' in stream_url or platform_key == 'kick':
+            elif _is_url_for_domain(stream_url, 'kick.com') or platform_key == 'kick':
                 color = 0x42C814  # Muted green
                 platform_title = "⏹️ Stream Ended - Kick"
             

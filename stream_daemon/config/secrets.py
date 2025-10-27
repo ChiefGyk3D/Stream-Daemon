@@ -27,7 +27,7 @@ def load_secrets_from_aws(secret_name):
         logger.debug(f"Successfully loaded AWS secret: {secret_name}")
         return secrets
     except Exception as e:
-        logger.error(f"Failed to load AWS secret {secret_name}: {e}")
+        logger.error(f"Failed to load AWS secret {secret_name}: {type(e).__name__}")
         return {}
 
 
@@ -110,11 +110,11 @@ def load_secrets_from_doppler(secret_name):
                         secrets_dict[key_suffix] = secret_value.get('computed', secret_value.get('raw', ''))
                 
                 if not secrets_dict:
-                    logger.debug(f"No secrets found with prefix '{secret_name.upper()}_*'. Available secrets: {[k for k in all_keys if not k.startswith('DOPPLER_')]}")
+                    logger.debug(f"No secrets found with prefix '{secret_name.upper()}_*'")
             
             return secrets_dict
         except Exception as e:
-            logger.error(f"Failed to fetch Doppler secret {secret_name}: {e}")
+            logger.error(f"Failed to fetch Doppler secret {secret_name}: {type(e).__name__}")
             return {}
             
     except Exception as e:

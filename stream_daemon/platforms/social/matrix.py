@@ -9,11 +9,33 @@ import logging
 import os
 import re
 from typing import Optional
-from urllib.parse import quote
+from urllib.parse import quote, urlparse
 import requests
 from stream_daemon.config import get_config, get_bool_config, get_secret
 
 logger = logging.getLogger(__name__)
+
+
+def _is_url_for_domain(url: str, domain: str) -> bool:
+    """
+    Safely check if a URL is for a specific domain.
+    
+    Args:
+        url: The URL to check
+        domain: The domain to match (e.g., 'kick.com', 'twitch.tv')
+    
+    Returns:
+        True if the URL's hostname matches or is a subdomain of the domain
+    """
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Check exact match or subdomain (e.g., www.kick.com matches kick.com)
+        return hostname == domain or hostname.endswith('.' + domain)
+    except Exception:
+        return False
 
 
 class MatrixPlatform:
@@ -120,12 +142,11 @@ class MatrixPlatform:
                 access_token = data.get('access_token')
                 if access_token:
                     logger.info(f"✓ Obtained Matrix access token (expires: {data.get('expires_in_ms', 'never')})")
-                    logger.debug(f"Token starts with: {access_token[:20]}...")
                     return access_token
                 else:
-                    logger.error(f"✗ Matrix login succeeded but no access_token in response: {data}")
+                    logger.error(f"✗ Matrix login succeeded but no access_token in response")
             else:
-                logger.error(f"✗ Matrix login failed: {response.status_code} - {response.text}")
+                logger.error(f"✗ Matrix login failed: {response.status_code}")
             
             return None
         except Exception as e:
@@ -155,11 +176,11 @@ class MatrixPlatform:
                 html_body = re.sub(url_pattern, f'<a href="{first_url}">{first_url}</a>', message)
                 
                 # Add platform-specific styling
-                if 'twitch.tv' in first_url:
+                if _is_url_for_domain(first_url, 'twitch.tv'):
                     html_body = f'<p><strong>🟣 Live on Twitch!</strong></p><p>{html_body}</p>'
-                elif 'youtube.com' in first_url or 'youtu.be' in first_url:
+                elif _is_url_for_domain(first_url, 'youtube.com') or _is_url_for_domain(first_url, 'youtu.be'):
                     html_body = f'<p><strong>🔴 Live on YouTube!</strong></p><p>{html_body}</p>'
-                elif 'kick.com' in first_url:
+                elif _is_url_for_domain(first_url, 'kick.com'):
                     html_body = f'<p><strong>🟢 Live on Kick!</strong></p><p>{html_body}</p>'
             
             # Build Matrix message event

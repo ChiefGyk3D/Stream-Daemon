@@ -5,10 +5,33 @@ Bluesky social platform implementation with threading and rich embed support.
 import logging
 import re
 from typing import Optional
+from urllib.parse import urlparse
 from atproto import Client, models, client_utils
 from stream_daemon.config import get_config, get_bool_config, get_secret
 
 logger = logging.getLogger(__name__)
+
+
+def _is_url_for_domain(url: str, domain: str) -> bool:
+    """
+    Safely check if a URL is for a specific domain.
+    
+    Args:
+        url: The URL to check
+        domain: The domain to match (e.g., 'kick.com', 'twitch.tv')
+    
+    Returns:
+        True if the URL's hostname matches or is a subdomain of the domain
+    """
+    try:
+        parsed = urlparse(url)
+        hostname = parsed.hostname
+        if not hostname:
+            return False
+        # Check exact match or subdomain (e.g., www.kick.com matches kick.com)
+        return hostname == domain or hostname.endswith('.' + domain)
+    except Exception:
+        return False
 
 
 class BlueskyPlatform:
@@ -80,7 +103,7 @@ class BlueskyPlatform:
             if first_url:
                 try:
                     # Special handling for Kick with stream_data - use provided metadata
-                    if 'kick.com/' in first_url and stream_data:
+                    if _is_url_for_domain(first_url, 'kick.com') and stream_data:
                         logger.info(f"ℹ Using stream metadata for Kick embed (CloudFlare bypass)")
                         
                         title = stream_data.get('title', 'Live on Kick')
@@ -115,12 +138,12 @@ class BlueskyPlatform:
                                 thumb=thumb_blob if thumb_blob else None
                             )
                         )
-                    elif 'kick.com/' in first_url:
+                    elif _is_url_for_domain(first_url, 'kick.com'):
                         # Kick.com without stream_data - blocks automated requests with CloudFlare security policies
                         # Links will still be clickable, just without embed cards
                         logger.info(f"ℹ Kick.com blocks automated requests, posting with clickable link only")
                         embed = None
-                    elif stream_data and ('twitch.tv/' in first_url or 'youtube.com/' in first_url or 'youtu.be/' in first_url):
+                    elif stream_data and (_is_url_for_domain(first_url, 'twitch.tv') or _is_url_for_domain(first_url, 'youtube.com') or _is_url_for_domain(first_url, 'youtu.be')):
                         # Use stream_data for Twitch/YouTube if available (more reliable than scraping)
                         logger.info(f"ℹ Using stream metadata for embed")
                         
