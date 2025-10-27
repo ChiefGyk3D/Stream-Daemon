@@ -190,19 +190,69 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
         echo -e "${GREEN}✓${NC} Docker image found: ${IMAGE_NAME}:${IMAGE_TAG} (${IMAGE_SIZE}, ID: ${IMAGE_ID:0:12})"
         IMAGE_EXISTS=true
         
-        # Ask if they want to rebuild
+        # Ask if they want to rebuild or pull
         echo ""
-        read -p "Rebuild Docker image? (y/N) " -n 1 -r
+        read -p "Use existing image? (Y/n) " -n 1 -r
         echo
-        if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            # Use existing image, skip to service creation
+            IMAGE_EXISTS=true
+        else
             IMAGE_EXISTS=false
         fi
     else
         echo -e "${YELLOW}Docker image '$IMAGE_NAME' not found${NC}"
     fi
     
-    # Build or rebuild the image
+    # Get or build the image
     if [ "$IMAGE_EXISTS" = false ]; then
+        echo ""
+        echo "How would you like to get the Docker image?"
+        echo "  1) Build locally from source (recommended for development)"
+        echo "  2) Pull from GitHub Container Registry (faster, production-ready)"
+        echo ""
+        read -p "Select option [1-2]: " -n 1 -r IMAGE_SOURCE
+        echo ""
+        echo ""
+        
+        if [ "$IMAGE_SOURCE" = "2" ]; then
+            # Pull from GitHub Container Registry
+            echo "Pulling Docker image from GitHub Container Registry..."
+            echo ""
+            GHCR_IMAGE="ghcr.io/chiefgyk3d/stream-daemon:latest"
+            
+            if docker pull "$GHCR_IMAGE"; then
+                echo ""
+                echo -e "${GREEN}✓${NC} Image pulled successfully!"
+                
+                # Tag it as stream-daemon:latest for local use
+                docker tag "$GHCR_IMAGE" "$IMAGE_NAME:latest"
+                echo -e "${GREEN}✓${NC} Tagged as ${IMAGE_NAME}:latest"
+                
+                # Show image info
+                NEW_IMAGE_SIZE=$(docker images --format "{{.Size}}" "$IMAGE_NAME" | head -n 1)
+                NEW_IMAGE_ID=$(docker images --format "{{.ID}}" "$IMAGE_NAME" | head -n 1)
+                echo -e "${GREEN}✓${NC} Image: ${IMAGE_NAME}:latest (${NEW_IMAGE_SIZE}, ID: ${NEW_IMAGE_ID:0:12})"
+            else
+                echo ""
+                echo -e "${RED}✗${NC} Failed to pull Docker image from GitHub Container Registry"
+                echo ""
+                echo -e "${YELLOW}Possible issues:${NC}"
+                echo "  • Image may not be published yet"
+                echo "  • Network connectivity issues"
+                echo "  • GitHub Container Registry may be unavailable"
+                echo ""
+                read -p "Would you like to build locally instead? (y/N) " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    exit 1
+                fi
+                IMAGE_SOURCE="1"
+            fi
+        fi
+        
+        if [ "$IMAGE_SOURCE" = "1" ]; then
+            # Build locally
         echo "Building Docker image..."
         echo ""
         
@@ -224,8 +274,12 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
         echo ""
         cd "$PROJECT_DIR"
         
+        # Note: We run docker build without sudo -u because:
+        # 1. Docker daemon already runs as root
+        # 2. The image is stored in Docker's system-wide storage
+        # 3. Using sudo -u can cause permission issues with Docker socket
         BUILD_OUTPUT=$(mktemp)
-        if sudo -u $ACTUAL_USER docker build -t $IMAGE_NAME -f Docker/Dockerfile . 2>&1 | tee "$BUILD_OUTPUT"; then
+        if docker build -t $IMAGE_NAME -f Docker/Dockerfile . 2>&1 | tee "$BUILD_OUTPUT"; then
             echo ""
             echo -e "${GREEN}✓${NC} Docker image built successfully!"
             
@@ -285,6 +339,7 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
         fi
         
         rm -f "$BUILD_OUTPUT"
+        fi
     fi
     
     # Create systemd service file for Docker
