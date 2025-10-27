@@ -12,8 +12,7 @@ WORKDIR /app
 
 # Install system dependencies needed for Python packages
 # These packages are available on both amd64 and arm64
-# Apply security updates to address vulnerabilities in base image
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libffi-dev \
     libssl-dev \
