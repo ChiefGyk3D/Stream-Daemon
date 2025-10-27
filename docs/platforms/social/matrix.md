@@ -258,7 +258,7 @@ MATRIX_ROOM_ID=!your_room_id:matrix.org
 MATRIX_ENABLE_POSTING=True
 
 # Doppler secret configuration
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 SECRETS_DOPPLER_MATRIX_SECRET_NAME=MATRIX
 ```
 

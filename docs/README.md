@@ -156,7 +156,7 @@ SETTINGS_POST_INTERVAL=5   # Minutes when live
 
 **Secrets Management (Recommended):**
 ```bash
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.dev.xxx
 SECRETS_DOPPLER_TWITCH_SECRET_NAME=TWITCH
 ```

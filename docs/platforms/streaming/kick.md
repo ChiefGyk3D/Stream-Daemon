@@ -123,7 +123,7 @@ KICK_ENABLE=True
 KICK_USERNAME=your_kick_username
 
 # Configure secrets manager
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 SECRETS_DOPPLER_KICK_SECRET_NAME=KICK
 ```
 

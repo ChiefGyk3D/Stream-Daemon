@@ -333,7 +333,7 @@ services:
     build: ..
     environment:
       # Secrets Manager
-      SECRETS_SECRET_MANAGER: doppler
+      SECRETS_MANAGER: doppler
       DOPPLER_TOKEN: ${DOPPLER_TOKEN}  # From .env file
       
       # Secret prefixes
@@ -508,7 +508,7 @@ sudo systemctl enable --now stream-daemon
 **Use IAM roles for AWS Secrets:**
 ```bash
 # No AWS credentials needed! Use instance role
-SECRETS_SECRET_MANAGER=aws
+SECRETS_MANAGER=aws
 AWS_REGION=us-east-1
 SECRETS_AWS_TWITCH_SECRET_NAME=stream-daemon/twitch
 ```
@@ -610,7 +610,7 @@ pip install black flake8 pytest
 cp .env.example .env.dev
 
 # Use Doppler dev environment
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.dev.your_dev_token
 # Or set up .env.dev with test credentials
 ```

@@ -374,7 +374,7 @@ Creating secrets in AWS Secrets Manager...
 ✓ Secrets created in AWS Secrets Manager!
 
 Set these environment variables to use AWS Secrets:
-  export SECRETS_SECRET_MANAGER=aws
+  export SECRETS_MANAGER=aws
   export AWS_REGION=us-east-1
   export SECRETS_AWS_TWITCH_SECRET_NAME=stream-daemon/twitch
   export SECRETS_AWS_YOUTUBE_SECRET_NAME=stream-daemon/youtube
@@ -416,7 +416,7 @@ Creating secrets in Vault...
 ✓ Secrets created in Vault!
 
 Set these environment variables to use Vault:
-  export SECRETS_SECRET_MANAGER=vault
+  export SECRETS_MANAGER=vault
   export SECRETS_VAULT_URL=https://vault.example.com
   export SECRETS_VAULT_TOKEN=s.abc123
   export SECRETS_VAULT_TWITCH_SECRET_PATH=secret/stream-daemon/twitch

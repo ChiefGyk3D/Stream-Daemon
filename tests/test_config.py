@@ -77,9 +77,9 @@ class TestSecretLoading:
     
     def test_doppler_secret_loading(self, skip_if_no_secrets):
         """Test loading secrets from Doppler."""
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', '').lower()
+        secret_manager = os.getenv('SECRETS_MANAGER', '').lower()
         if secret_manager != 'doppler':
-            pytest.skip("Doppler not configured (SECRETS_SECRET_MANAGER != doppler)")
+            pytest.skip("Doppler not configured (SECRETS_MANAGER != doppler)")
         
         # Test loading a Twitch secret
         client_id = get_secret(
@@ -95,9 +95,9 @@ class TestSecretLoading:
     
     def test_aws_secret_loading(self, skip_if_no_secrets):
         """Test loading secrets from AWS Secrets Manager."""
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', '').lower()
+        secret_manager = os.getenv('SECRETS_MANAGER', '').lower()
         if secret_manager != 'aws':
-            pytest.skip("AWS Secrets Manager not configured (SECRETS_SECRET_MANAGER != aws)")
+            pytest.skip("AWS Secrets Manager not configured (SECRETS_MANAGER != aws)")
         
         # Test loading a Twitch secret
         client_id = get_secret(
@@ -111,9 +111,9 @@ class TestSecretLoading:
     
     def test_vault_secret_loading(self, skip_if_no_secrets):
         """Test loading secrets from HashiCorp Vault."""
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', '').lower()
+        secret_manager = os.getenv('SECRETS_MANAGER', '').lower()
         if secret_manager != 'vault':
-            pytest.skip("Vault not configured (SECRETS_SECRET_MANAGER != vault)")
+            pytest.skip("Vault not configured (SECRETS_MANAGER != vault)")
         
         # Test loading a Twitch secret
         client_id = get_secret(
@@ -187,7 +187,7 @@ class TestSecretsManagerIntegration:
     
     def test_doppler_connectivity(self):
         """Test that Doppler API is accessible."""
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', '').lower()
+        secret_manager = os.getenv('SECRETS_MANAGER', '').lower()
         if secret_manager != 'doppler':
             pytest.skip("Doppler not configured")
         
@@ -208,7 +208,7 @@ class TestSecretsManagerIntegration:
     
     def test_aws_connectivity(self):
         """Test that AWS Secrets Manager is accessible."""
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', '').lower()
+        secret_manager = os.getenv('SECRETS_MANAGER', '').lower()
         if secret_manager != 'aws':
             pytest.skip("AWS Secrets Manager not configured")
         
@@ -229,7 +229,7 @@ class TestSecretsManagerIntegration:
     
     def test_vault_connectivity(self):
         """Test that HashiCorp Vault is accessible."""
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', '').lower()
+        secret_manager = os.getenv('SECRETS_MANAGER', '').lower()
         if secret_manager != 'vault':
             pytest.skip("Vault not configured")
         

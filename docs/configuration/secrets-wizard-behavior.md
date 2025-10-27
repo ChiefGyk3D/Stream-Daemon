@@ -221,7 +221,7 @@ Secret: `stream-daemon/llm`
 **What gets stored in .env:**
 ```ini
 # AWS connection
-SECRETS_SECRET_MANAGER=aws
+SECRETS_MANAGER=aws
 AWS_REGION=us-east-1
 SECRETS_AWS_PREFIX=stream-daemon
 
@@ -289,7 +289,7 @@ gemini_api_key: AIza...
 **What gets stored in .env:**
 ```ini
 # Vault connection
-SECRETS_SECRET_MANAGER=vault
+SECRETS_MANAGER=vault
 SECRETS_VAULT_URL=https://vault.example.com
 SECRETS_VAULT_TOKEN=s.abc123xyz
 
@@ -498,8 +498,8 @@ python stream-daemon.py
 
 ### "Stream Daemon can't find my secrets"
 - **Doppler**: Run with `doppler run --project stream-daemon --config dev -- python stream-daemon.py`
-- **AWS**: Check `SECRETS_SECRET_MANAGER=aws` is set in .env
-- **Vault**: Check `SECRETS_SECRET_MANAGER=vault` and connection vars are set
+- **AWS**: Check `SECRETS_MANAGER=aws` is set in .env
+- **Vault**: Check `SECRETS_MANAGER=vault` and connection vars are set
 - **.env**: Make sure .env is in the same directory as stream-daemon.py
 
 ---

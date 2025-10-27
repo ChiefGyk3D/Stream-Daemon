@@ -60,9 +60,9 @@ def clean_test_posts():
 @pytest.fixture
 def skip_if_no_secrets():
     """Skip test if secret manager is not configured."""
-    secret_manager = os.getenv('SECRETS_SECRET_MANAGER', 'none').lower()
+    secret_manager = os.getenv('SECRETS_MANAGER', 'none').lower()
     if secret_manager == 'none':
-        pytest.skip("No secret manager configured (set SECRETS_SECRET_MANAGER)")
+        pytest.skip("No secret manager configured (set SECRETS_MANAGER)")
 
 
 @pytest.fixture

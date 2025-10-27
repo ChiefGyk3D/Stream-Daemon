@@ -104,7 +104,7 @@ LLM_ENABLE=True
 LLM_MODEL=gemini-2.0-flash-lite
 
 # Configure secrets manager
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 SECRETS_DOPPLER_LLM_SECRET_NAME=LLM
 ```
 

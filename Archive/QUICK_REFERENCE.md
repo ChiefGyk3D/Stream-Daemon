@@ -4,7 +4,7 @@
 
 ```bash
 # In .env file
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.your_token_here  # Environment-specific (dev/stg/prd)
 DOPPLER_CONFIG=dev  # Must match your token's environment
 ```
