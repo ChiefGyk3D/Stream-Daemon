@@ -118,7 +118,7 @@ def load_secrets_from_doppler(secret_name):
             return {}
             
     except Exception as e:
-        logger.error(f"Failed to configure Doppler: {e}")
+        logger.error(f"Failed to configure Doppler: {type(e).__name__}")
         return {}
 
 
