@@ -3,27 +3,21 @@
 Test debouncing with 2 consecutive checks to verify stream_data storage
 """
 
-import sys
-sys.path.insert(0, '.')
-
-import importlib.util
-spec = importlib.util.spec_from_file_location("stream_daemon", "stream-daemon.py")
-stream_daemon = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(stream_daemon)
+import os
+from stream_daemon.platforms.streaming import KickPlatform
+from stream_daemon.models import StreamStatus
 
 print("="*80)
 print("DEBOUNCING TEST WITH stream_data")
 print("="*80)
 
 # Initialize
-kick = stream_daemon.KickPlatform()
+kick = KickPlatform()
 kick.authenticate()
 
-import os
 username = os.getenv('KICK_USERNAME', 'daletanhardt')
 
 # Create status
-StreamStatus = stream_daemon.StreamStatus
 status = StreamStatus(platform_name='Kick', username=username)
 
 print(f"\n📊 Initial state:")

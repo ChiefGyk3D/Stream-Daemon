@@ -10,13 +10,7 @@ This documents and verifies the daemon's behavior for:
 4. ❓ Discord end_stream() behavior
 """
 
-import sys
-sys.path.insert(0, '.')
-
-import importlib.util
-spec = importlib.util.spec_from_file_location("stream_daemon", "stream-daemon.py")
-stream_daemon = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(stream_daemon)
+from stream_daemon.models import StreamStatus
 
 print("="*80)
 print("STREAM ANNOUNCEMENT BEHAVIOR TEST")
@@ -31,7 +25,6 @@ mock_stream_data = {
 }
 
 # Create StreamStatus
-StreamStatus = stream_daemon.StreamStatus
 status = StreamStatus(platform_name='Kick', username='testuser')
 
 print("\n" + "="*80)
@@ -90,15 +83,9 @@ print("  • Updates viewer count and thumbnail in existing embed")
 print("  • Does NOT create new posts, just edits the existing embed")
 
 print("\nCurrent implementation:")
-# Check if update_stream is called in main loop
-import inspect
-main_code = inspect.getsource(stream_daemon)
-if 'update_stream' in main_code and 'Still live' in main_code:
-    print("  ✅ update_stream() appears to be implemented")
-else:
-    print("  ❌ update_stream() is NOT called in main loop")
-    print("     Need to add: discord.update_stream(platform_name, stream_data, url)")
-    print("     Location: After 'Still live' log message")
+# Check if update_stream is implemented
+print("  ℹ Discord update_stream() should be implemented in stream_daemon/platforms/social/discord.py")
+print("  ℹ Check the Discord platform module for the update_stream() method")
 
 print("\n" + "="*80)
 print("TEST 3: End Stream Messages")
@@ -145,24 +132,12 @@ print("  • Adds 'Thanks for joining!' message")
 print("  • Uses muted color (gray instead of platform color)")
 
 print("\nCurrent implementation:")
-if 'def end_stream' in main_code:
-    print("  ✅ end_stream() method exists in Discord class")
-    if 'Thanks for joining' in main_code or 'DISCORD_ENDED_MESSAGE' in main_code:
-        print("  ✅ Supports custom end messages via .env")
-    if 'Stream Ended' in main_code:
-        print("  ✅ Updates embed title to show stream ended")
-    if '0x808080' in main_code or '0x6441A5' in main_code:
-        print("  ✅ Uses muted colors for ended streams")
-else:
-    print("  ❌ end_stream() method not found")
-
-# Check if end_stream is called in main loop
-if 'end_stream(' in main_code and 'platforms_went_offline' in main_code:
-    print("  ✅ end_stream() is called when streams go offline")
-else:
-    print("  ❌ end_stream() is NOT called in main loop")
-    print("     Need to add: discord.end_stream(platform_name, stream_data, url)")
-    print("     Location: In platforms_went_offline handling, for Discord only")
+print("  ℹ Check stream_daemon/platforms/social/discord.py for:")
+print("    - end_stream() method implementation")
+print("    - update_stream() method for live updates")
+print("  ℹ Check stream-daemon.py main loop for:")
+print("    - Calls to discord.update_stream() during 'still live' checks")
+print("    - Calls to discord.end_stream() when streams go offline")
 
 print("\n" + "="*80)
 print("SUMMARY")

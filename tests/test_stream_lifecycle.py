@@ -4,13 +4,7 @@ Test stream_data handling through complete stream lifecycle:
 OFFLINE -> CHECK 1 (debouncing) -> CHECK 2 (goes LIVE) -> CHECK 3+ (still live)
 """
 
-import sys
-sys.path.insert(0, '.')
-
-import importlib.util
-spec = importlib.util.spec_from_file_location("stream_daemon", "stream-daemon.py")
-stream_daemon = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(stream_daemon)
+from stream_daemon.models import StreamStatus
 
 print("="*80)
 print("STREAM LIFECYCLE TEST - OFFLINE TO LIVE")
@@ -25,7 +19,6 @@ mock_stream_data = {
 }
 
 # Create a fresh StreamStatus (starts OFFLINE)
-StreamStatus = stream_daemon.StreamStatus
 status = StreamStatus(platform_name='Kick', username='testuser')
 
 print(f"\n📊 INITIAL STATE (Stream is offline):")

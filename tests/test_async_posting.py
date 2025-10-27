@@ -4,9 +4,9 @@ Test async posting performance improvement
 import time
 import sys
 import os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
 from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 load_dotenv()
 
 # Mock the social platforms and AI generator for testing
@@ -29,11 +29,6 @@ class MockSocialPlatform:
         # Simulate posting time
         time.sleep(self.delay)
         return f"mock_post_id_{self.name}_{int(time.time() * 1000)}"
-
-# Import the async function after mocking
-import importlib.util
-spec = importlib.util.spec_from_file_location("stream_daemon", "stream-daemon.py")
-stream_daemon = importlib.util.module_from_spec(spec)
 
 # Mock the logger
 import logging
