@@ -1,7 +1,7 @@
 # Use an official Python runtime as a parent image
 # Python 3.13 is the latest STABLE version with full package support
 # Multi-arch support: amd64, arm64
-FROM python:3.14-slim
+FROM python:3.13-slim
 
 # Set build arguments for platform detection (automatically set by buildx)
 ARG TARGETPLATFORM
@@ -27,6 +27,7 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY Docker/requirements.txt /app/
 
 # Install any needed packages specified in requirements.txt
+# Upgrade pip to latest version to address security vulnerabilities
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
