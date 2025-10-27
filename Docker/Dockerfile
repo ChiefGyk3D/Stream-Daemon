@@ -1,11 +1,17 @@
 # Use an official Python runtime as a parent image
 # Python 3.13 is the latest STABLE version with full package support
+# Multi-arch support: amd64, arm64
 FROM python:3.14-slim
+
+# Set build arguments for platform detection (automatically set by buildx)
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
 
 # Set the working directory in the container to /app
 WORKDIR /app
 
 # Install system dependencies needed for Python packages
+# These packages are available on both amd64 and arm64
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libffi-dev \
