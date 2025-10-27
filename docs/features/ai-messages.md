@@ -409,37 +409,76 @@ You'll never miss a stream announcement due to rate limits.
 
 ## Fallback Behavior
 
-AI generation can fail for several reasons. Stream Daemon gracefully handles all scenarios:
+AI generation can fail for several reasons. Stream Daemon gracefully handles all scenarios with **automatic retry logic**.
 
-### Automatic Fallback Scenarios
+### Automatic Retry for Transient Errors
+
+Stream Daemon automatically retries API calls for temporary failures:
+
+| Error Type | Retry? | Behavior |
+|------------|--------|----------|
+| **503 Service Unavailable** | ✅ Yes | Retries with exponential backoff |
+| **429 Rate Limit Exceeded** | ✅ Yes | Waits and retries automatically |
+| **Model Overloaded** | ✅ Yes | Intelligent retry with backoff |
+| **Network Timeout** | ✅ Yes | Retries up to max attempts |
+| **Quota Exceeded** | ✅ Yes | Retries with delays |
+| **Invalid API Key** | ❌ No | Immediate fallback to static |
+| **Authentication Error** | ❌ No | Immediate fallback to static |
+
+**Retry Configuration** (customize in `.env`):
+```bash
+# Maximum retry attempts (default: 3)
+LLM_MAX_RETRIES=3
+
+# Base delay for exponential backoff in seconds (default: 2)
+# Actual delays: 2s, 4s, 8s for attempts 1, 2, 3
+LLM_RETRY_DELAY_BASE=2
+```
+
+**Exponential Backoff Pattern:**
+- Attempt 1: Wait 2 seconds
+- Attempt 2: Wait 4 seconds  
+- Attempt 3: Wait 8 seconds
+- After 3 failed retries: Fall back to static messages
+
+### Fallback Scenarios
 
 | Scenario | Behavior |
 |----------|----------|
-| **LLM_ENABLE=False** | Always use static messages |
-| **API Key Missing** | Fall back to static messages |
-| **Network Error** | Retry 3x, then use static |
-| **Rate Limit Hit** | Wait and retry, then use static |
-| **Invalid Response** | Use static messages |
-| **Generation Empty** | Use static messages |
+| **LLM_ENABLE=False** | Always use static messages (no API calls) |
+| **API Key Missing** | Fall back to static messages immediately |
+| **Network Error** | Retry 3x with backoff, then use static |
+| **503 Overload** | Retry 3x (2s, 4s, 8s delays), then use static |
+| **Rate Limit Hit** | Retry 3x with exponential backoff, then use static |
+| **Invalid Response** | Use static messages immediately |
+| **Generation Empty** | Use static messages immediately |
 
-### What You'll See
+### What You'll See in Logs
 
-**Successful AI generation:**
+**Successful generation (no retry):**
 ```
-✓ AI generated start message for Twitch → bluesky
-```
-
-**Fallback to static:**
-```
-⚠ AI generation failed: Rate limit exceeded, using fallback message
+✨ Generated stream start message (245 chars content + URL = 280/300 total)
 ```
 
-**Complete failure (AI disabled):**
+**Retry in progress:**
+```
+⚠ API error (attempt 1/4): 503 UNAVAILABLE. Retrying in 2s...
+⚠ API error (attempt 2/4): 503 UNAVAILABLE. Retrying in 4s...
+✨ Generated stream start message (238 chars content + URL = 273/300 total)
+```
+
+**Retry exhausted, using fallback:**
+```
+✗ Failed after 4 attempts: 503 Service Unavailable
+⚠ AI generation failed, using fallback message
+```
+
+**AI disabled:**
 ```
 ℹ AI messages disabled, using static messages
 ```
 
-All scenarios result in stream announcements being posted - you never miss a notification!
+**All scenarios guarantee announcements are posted** - you never miss a notification!
 
 ---
 

@@ -133,7 +133,10 @@ class TestTwitchValidation:
             print(f"  Viewers: {stream_data.get('viewer_count', 0)}")
         
         assert isinstance(is_live, bool), "is_live should be boolean"
-        assert isinstance(stream_data, dict), "stream_data should be dict"
+        # stream_data can be None when offline or dict when live
+        assert stream_data is None or isinstance(stream_data, dict), "stream_data should be None or dict"
+        if is_live:
+            assert isinstance(stream_data, dict), "stream_data must be dict when live"
 
 
 @pytest.mark.streaming
@@ -204,7 +207,10 @@ class TestYouTubeValidation:
             print(f"  Video ID: {stream_data.get('video_id', 'N/A')}")
         
         assert isinstance(is_live, bool), "is_live should be boolean"
-        assert isinstance(stream_data, dict), "stream_data should be dict"
+        # stream_data can be None when offline or dict when live
+        assert stream_data is None or isinstance(stream_data, dict), "stream_data should be None or dict"
+        if is_live:
+            assert isinstance(stream_data, dict), "stream_data must be dict when live"
 
 
 @pytest.mark.streaming
@@ -260,7 +266,10 @@ class TestKickValidation:
             print(f"  Viewers: {stream_data.get('viewers', 0)}")
         
         assert isinstance(is_live, bool), "is_live should be boolean"
-        assert isinstance(stream_data, dict), "stream_data should be dict"
+        # stream_data can be None when offline or dict when live
+        assert stream_data is None or isinstance(stream_data, dict), "stream_data should be None or dict"
+        if is_live:
+            assert isinstance(stream_data, dict), "stream_data must be dict when live"
 
 
 @pytest.mark.social

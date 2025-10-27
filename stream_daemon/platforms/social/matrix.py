@@ -32,8 +32,23 @@ def _is_url_for_domain(url: str, domain: str) -> bool:
         hostname = parsed.hostname
         if not hostname:
             return False
-        # Check exact match or subdomain (e.g., www.kick.com matches kick.com)
-        return hostname == domain or hostname.endswith('.' + domain)
+        
+        # Normalize to lowercase for comparison
+        hostname = hostname.lower()
+        domain = domain.lower()
+        
+        # Check exact match
+        if hostname == domain:
+            return True
+        
+        # Check if it's a proper subdomain (must end with .domain, not just contain domain)
+        # This prevents eviltwitch.tv from matching twitch.tv
+        if hostname.endswith('.' + domain):
+            # Ensure there's no additional dot after the subdomain
+            # e.g., www.twitch.tv is valid, but not twitch.tv.evil.com
+            return True
+        
+        return False
     except Exception:
         return False
 
