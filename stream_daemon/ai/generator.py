@@ -2,6 +2,7 @@
 
 import os
 import logging
+import time
 import google.genai
 from typing import Optional
 from ..config import get_config, get_bool_config, get_secret
@@ -29,6 +30,68 @@ class AIMessageGenerator:
         self.client = None
         self.bluesky_max_chars = 300
         self.mastodon_max_chars = 500
+        # Retry configuration for handling transient API errors (503, 429, etc.)
+        self.max_retries = int(get_config('LLM', 'max_retries', default='3'))
+        self.retry_delay_base = int(get_config('LLM', 'retry_delay_base', default='2'))
+    
+    def _generate_with_retry(self, prompt: str, max_retries: int = None) -> Optional[str]:
+        """
+        Generate content with exponential backoff retry logic.
+        
+        Handles transient errors like:
+        - 503 Service Unavailable (model overloaded)
+        - 429 Rate Limit Exceeded
+        - Network timeouts
+        
+        Args:
+            prompt: The prompt to send to the model
+            max_retries: Maximum retry attempts (defaults to self.max_retries)
+        
+        Returns:
+            Generated text or None if all retries fail
+        """
+        if max_retries is None:
+            max_retries = self.max_retries
+        
+        last_error = None
+        
+        for attempt in range(max_retries + 1):  # +1 for initial attempt
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt
+                )
+                return response.text.strip()
+                
+            except Exception as e:
+                last_error = e
+                error_str = str(e)
+                
+                # Check if it's a retryable error
+                is_retryable = (
+                    '503' in error_str or  # Service Unavailable
+                    '429' in error_str or  # Rate Limit
+                    'overloaded' in error_str.lower() or
+                    'quota' in error_str.lower() or
+                    'timeout' in error_str.lower()
+                )
+                
+                if not is_retryable or attempt >= max_retries:
+                    # Non-retryable error or final attempt - give up
+                    logger.error(f"✗ Failed to generate content: {e}")
+                    return None
+                
+                # Calculate exponential backoff delay
+                delay = self.retry_delay_base ** attempt
+                logger.warning(
+                    f"⚠ API error (attempt {attempt + 1}/{max_retries + 1}): {error_str}. "
+                    f"Retrying in {delay}s..."
+                )
+                time.sleep(delay)
+        
+        # Should not reach here, but just in case
+        logger.error(f"✗ Failed after {max_retries + 1} attempts: {last_error}")
+        return None
         
     def authenticate(self):
         """
@@ -128,11 +191,12 @@ Requirements:
 
 Generate ONLY the message text with hashtags, nothing else."""
 
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt
-            )
-            message = response.text.strip()
+            # Use retry logic for API call
+            message = self._generate_with_retry(prompt)
+            
+            if message is None:
+                # Retry failed
+                return None
             
             # Verify content length (without URL yet)
             if len(message) > content_max:
@@ -195,11 +259,12 @@ Requirements:
 
 Generate ONLY the message text with hashtags, nothing else."""
 
-            response = self.client.models.generate_content(
-                model=self.model,
-                contents=prompt
-            )
-            message = response.text.strip()
+            # Use retry logic for API call
+            message = self._generate_with_retry(prompt)
+            
+            if message is None:
+                # Retry failed
+                return None
             
             # Verify length
             if len(message) > max_chars:

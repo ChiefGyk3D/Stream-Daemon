@@ -24,10 +24,10 @@ def load_secrets_from_aws(secret_name):
         client = boto3.client('secretsmanager')
         response = client.get_secret_value(SecretId=secret_name)
         secrets = json.loads(response['SecretString'])
-        logger.debug(f"Successfully loaded AWS secret: {secret_name}")
+        logger.debug(f"Successfully loaded AWS secret")
         return secrets
     except Exception as e:
-        logger.error(f"Failed to load AWS secret {secret_name}: {e}")
+        logger.error(f"Failed to load AWS secret: {type(e).__name__}")
         return {}
 
 
@@ -56,10 +56,10 @@ def load_secrets_from_vault(secret_path):
         
         response = client.secrets.kv.v2.read_secret_version(path=secret_path)
         secrets = response['data']['data']
-        logger.debug(f"Successfully loaded Vault secret: {secret_path}")
+        logger.debug(f"Successfully loaded Vault secret")
         return secrets
     except Exception as e:
-        logger.error(f"Failed to load Vault secret {secret_path}: {e}")
+        logger.error(f"Failed to load Vault secret: {type(e).__name__}")
         return {}
 
 
@@ -100,7 +100,7 @@ def load_secrets_from_doppler(secret_name):
             secrets_dict = {}
             if hasattr(secrets_response, 'secrets'):
                 all_keys = list(secrets_response.secrets.keys())
-                logger.info(f"Doppler connection successful. Found {len(all_keys)} total secrets in project '{doppler_project}', config '{doppler_config}'")
+                logger.info(f"Doppler connection successful. Found {len(all_keys)} total secrets")
                 
                 for secret_key, secret_value in secrets_response.secrets.items():
                     # Match secrets with the platform prefix
@@ -110,15 +110,15 @@ def load_secrets_from_doppler(secret_name):
                         secrets_dict[key_suffix] = secret_value.get('computed', secret_value.get('raw', ''))
                 
                 if not secrets_dict:
-                    logger.debug(f"No secrets found with prefix '{secret_name.upper()}_*'. Available secrets: {[k for k in all_keys if not k.startswith('DOPPLER_')]}")
+                    logger.debug(f"No secrets found with specified prefix")
             
             return secrets_dict
         except Exception as e:
-            logger.error(f"Failed to fetch Doppler secret {secret_name}: {e}")
+            logger.error(f"Failed to fetch Doppler secret: {type(e).__name__}")
             return {}
             
     except Exception as e:
-        logger.error(f"Failed to configure Doppler: {e}")
+        logger.error(f"Failed to configure Doppler: {type(e).__name__}")
         return {}
 
 
@@ -202,5 +202,5 @@ def get_secret(platform, key, secret_name_env=None, secret_path_env=None, dopple
         return None
         
     except Exception as e:
-        logger.error(f"Error getting secret for {platform}.{key}: {e}")
+        logger.error(f"Error getting secret for {platform}.{key}: {type(e).__name__}")
         return None
