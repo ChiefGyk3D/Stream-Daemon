@@ -129,7 +129,7 @@ Instead of putting sensitive credentials directly in `.env`, you can use a secre
 ### Option 1: AWS Secrets Manager
 
 ```bash
-SECRETS_SECRET_MANAGER=aws
+SECRETS_MANAGER=aws
 
 # Create secrets in AWS with these names:
 SECRETS_AWS_TWITCH_SECRET_NAME=twitch-api-keys
@@ -148,7 +148,7 @@ The AWS secret should be JSON:
 ### Option 2: HashiCorp Vault
 
 ```bash
-SECRETS_SECRET_MANAGER=vault
+SECRETS_MANAGER=vault
 SECRETS_VAULT_URL=https://vault.example.com
 SECRETS_VAULT_TOKEN=your_vault_token
 SECRETS_VAULT_TWITCH_SECRET_PATH=secret/twitch
@@ -157,7 +157,7 @@ SECRETS_VAULT_TWITCH_SECRET_PATH=secret/twitch
 ### Option 3: Doppler
 
 ```bash
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.your_token_here
 ```
 
@@ -220,7 +220,7 @@ MASTODON_ENABLE_POSTING=True  # At least one of: Mastodon, Bluesky, Discord
 
 ### Secrets manager not working
 
-1. Verify `SECRETS_SECRET_MANAGER` is set to `aws`, `vault`, or `doppler`
+1. Verify `SECRETS_MANAGER` is set to `aws`, `vault`, or `doppler`
 2. Check credentials for the secrets manager itself
 3. Verify secret names/paths are correct
 4. Check logs for specific error messages

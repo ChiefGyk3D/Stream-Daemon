@@ -123,7 +123,7 @@ Stream Daemon uses a **priority-based** system for loading secrets:
 - Usernames: `TWITCH_USERNAME`, `YOUTUBE_USERNAME`
 - Public URLs: `MASTODON_INSTANCE_URL`, `MATRIX_HOMESERVER`
 - Intervals: `SETTINGS_CHECK_INTERVAL`, `SETTINGS_POST_INTERVAL`
-- Secrets manager config: `SECRETS_SECRET_MANAGER`, `DOPPLER_TOKEN`
+- Secrets manager config: `SECRETS_MANAGER`, `DOPPLER_TOKEN`
 
 ### Example: Priority in Action
 
@@ -134,7 +134,7 @@ TWITCH_USERNAME=chiefgyk3d
 TWITCH_CLIENT_ID=dev_client_id_12345        # ← IGNORED if in Doppler
 TWITCH_CLIENT_SECRET=dev_client_secret_67890  # ← IGNORED if in Doppler
 
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.dev.xxxxx
 ```
 
@@ -312,7 +312,7 @@ Edit your `.env` file:
 # =====================================
 # SECRETS MANAGER
 # =====================================
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.dev.your_token_here_abc123xyz
 
 # Secret name prefix (must match Doppler secret names)
@@ -401,7 +401,7 @@ services:
     build: .
     environment:
       # Secrets Manager
-      SECRETS_SECRET_MANAGER: doppler
+      SECRETS_MANAGER: doppler
       DOPPLER_TOKEN: ${DOPPLER_TOKEN}  # From host .env
       
       # Secret prefixes
@@ -492,7 +492,7 @@ aws secretsmanager create-secret \
 
 ```bash
 # .env
-SECRETS_SECRET_MANAGER=aws
+SECRETS_MANAGER=aws
 AWS_REGION=us-east-1
 
 # Secret names in AWS
@@ -538,7 +538,7 @@ services:
   stream-daemon:
     build: .
     environment:
-      SECRETS_SECRET_MANAGER: aws
+      SECRETS_MANAGER: aws
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
@@ -607,7 +607,7 @@ vault kv put secret/stream-daemon/discord \
 
 ```bash
 # .env
-SECRETS_SECRET_MANAGER=vault
+SECRETS_MANAGER=vault
 SECRETS_VAULT_URL=http://127.0.0.1:8200
 SECRETS_VAULT_TOKEN=your_vault_token
 
@@ -636,7 +636,7 @@ services:
   stream-daemon:
     image: stream-daemon:latest
     environment:
-      SECRETS_SECRET_MANAGER: doppler
+      SECRETS_MANAGER: doppler
       DOPPLER_TOKEN: ${DOPPLER_TOKEN}
       # All other secrets fetched from Doppler
 ```
@@ -649,7 +649,7 @@ services:
   stream-daemon:
     image: stream-daemon:latest
     environment:
-      SECRETS_SECRET_MANAGER: aws
+      SECRETS_MANAGER: aws
       AWS_REGION: us-east-1
       # No AWS credentials - uses IAM role
 ```
@@ -664,7 +664,7 @@ services:
     secrets:
       - doppler_token
     environment:
-      SECRETS_SECRET_MANAGER: doppler
+      SECRETS_MANAGER: doppler
       DOPPLER_TOKEN_FILE: /run/secrets/doppler_token
 
 secrets:

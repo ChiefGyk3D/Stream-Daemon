@@ -110,7 +110,7 @@ In your `.env` file, configure Doppler:
 
 ```bash
 # Enable Doppler
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.xxxxxxxxxxxx
 
 # Point to Doppler secrets by prefix
@@ -140,7 +140,7 @@ python tests/test_doppler_kick.py
 ### Secret not found
 - Verify the secret exists in Doppler with exact name (case-sensitive)
 - Check that `DOPPLER_TOKEN` is set correctly
-- Ensure `SECRETS_SECRET_MANAGER=doppler`
+- Ensure `SECRETS_MANAGER=doppler`
 
 ### Wrong prefix
 - If `SECRETS_DOPPLER_TWITCH_SECRET_NAME=TWITCH`, secrets must start with `TWITCH_`

@@ -202,7 +202,7 @@ Keep credentials safe with enterprise secrets management:
 
 ```bash
 # Secrets Manager (10-min setup, free!)
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.dev.your_token_here
 SECRETS_DOPPLER_TWITCH_SECRET_NAME=TWITCH
 SECRETS_DOPPLER_MASTODON_SECRET_NAME=MASTODON

@@ -78,7 +78,7 @@ TWITCH_ENABLE=True
 TWITCH_USERNAME=your_twitch_username
 
 # Configure secrets manager
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 SECRETS_DOPPLER_TWITCH_SECRET_NAME=TWITCH
 ```
 

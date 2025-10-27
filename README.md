@@ -316,19 +316,19 @@ MATRIX_ROOM_ID=!roomid:matrix.org
 
 ```bash
 # Doppler (Recommended)
-SECRETS_SECRET_MANAGER=doppler
+SECRETS_MANAGER=doppler
 DOPPLER_TOKEN=dp.st.dev.xxxx  # Environment-specific token
 DOPPLER_CONFIG=dev  # dev, stg, or prd
 SECRETS_DOPPLER_TWITCH_SECRET_NAME=twitch
 SECRETS_DOPPLER_YOUTUBE_SECRET_NAME=youtube
 
 # AWS Secrets Manager
-SECRETS_SECRET_MANAGER=aws
+SECRETS_MANAGER=aws
 AWS_REGION=us-east-1
 SECRETS_AWS_TWITCH_SECRET_NAME=prod/stream-daemon/twitch
 
 # HashiCorp Vault
-SECRETS_SECRET_MANAGER=vault
+SECRETS_MANAGER=vault
 SECRETS_VAULT_URL=https://vault.example.com
 SECRETS_VAULT_TOKEN=your_vault_token
 SECRETS_VAULT_TWITCH_SECRET_PATH=secret/data/stream-daemon/twitch
@@ -705,7 +705,7 @@ graph LR
 
 1. **Verify secrets manager configuration:**
    ```bash
-   echo $SECRETS_SECRET_MANAGER  # Should be: doppler, aws, or vault
+   echo $SECRETS_MANAGER  # Should be: doppler, aws, or vault
    echo $DOPPLER_TOKEN  # If using Doppler
    echo $DOPPLER_CONFIG  # Should match environment: dev, stg, prd
    ```
@@ -866,7 +866,7 @@ services:
     restart: unless-stopped
     environment:
       # Secrets Management
-      - SECRETS_SECRET_MANAGER=doppler
+      - SECRETS_MANAGER=doppler
       - DOPPLER_TOKEN=${DOPPLER_TOKEN}
       - DOPPLER_CONFIG=prd
       
@@ -988,7 +988,7 @@ docker exec -it stream-daemon /bin/bash
 # Pass Doppler token only, fetch all other secrets from Doppler
 docker run -d \
   --name stream-daemon \
-  -e SECRETS_SECRET_MANAGER=doppler \
+  -e SECRETS_MANAGER=doppler \
   -e DOPPLER_TOKEN=dp.st.prd.xxxx \
   -e DOPPLER_CONFIG=prd \
   -e TWITCH_ENABLE=True \
@@ -1007,7 +1007,7 @@ All credentials (client IDs, secrets, tokens) are fetched securely from Doppler!
 ```bash
 docker run -d \
   --name stream-daemon \
-  -e SECRETS_SECRET_MANAGER=aws \
+  -e SECRETS_MANAGER=aws \
   -e AWS_REGION=us-east-1 \
   -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
   -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \

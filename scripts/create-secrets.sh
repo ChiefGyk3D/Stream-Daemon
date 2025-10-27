@@ -769,7 +769,7 @@ EOF
         aws)
             cat >> "$ENV_FILE" << EOF
 # AWS Secrets Manager Configuration
-SECRETS_SECRET_MANAGER=aws
+SECRETS_MANAGER=aws
 AWS_REGION=$AWS_SECRETS_REGION
 SECRETS_AWS_PREFIX=$AWS_SECRET_PREFIX
 
@@ -788,7 +788,7 @@ EOF
         vault)
             cat >> "$ENV_FILE" << EOF
 # HashiCorp Vault Configuration
-SECRETS_SECRET_MANAGER=vault
+SECRETS_MANAGER=vault
 SECRETS_VAULT_URL=$VAULT_URL_CONFIG
 SECRETS_VAULT_TOKEN=$VAULT_TOKEN_VALUE
 

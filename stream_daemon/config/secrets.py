@@ -173,7 +173,7 @@ def get_secret(platform, key, secret_name_env=None, secret_path_env=None, dopple
                     logger.debug(f"Direct key lookup failed for {key}: {e}")
         
         # Check which secrets manager is enabled (for AWS/Vault)
-        secret_manager = os.getenv('SECRETS_SECRET_MANAGER', 'none').lower()
+        secret_manager = os.getenv('SECRETS_MANAGER', 'none').lower()
         
         # Try AWS Secrets Manager
         if secret_manager == 'aws' and secret_name_env:

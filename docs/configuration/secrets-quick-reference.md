@@ -32,7 +32,7 @@ python3 stream-daemon.py  # if DOPPLER_TOKEN in .env
 | API Keys | AWS | `stream-daemon/twitch`: `{"client_id": "...", "client_secret": "..."}` |
 | Tokens | AWS | `stream-daemon/mastodon`: `{"access_token": "..."}` |
 | Webhooks | AWS | `stream-daemon/discord`: `{"webhook_url": "..."}` |
-| **Connection** | .env | `SECRETS_SECRET_MANAGER=aws` |
+| **Connection** | .env | `SECRETS_MANAGER=aws` |
 | Secret Names | .env | `SECRETS_AWS_TWITCH_SECRET_NAME=stream-daemon/twitch` |
 | Region | .env | `AWS_REGION=us-east-1` |
 | Usernames | .env | `TWITCH_USERNAME=yourname` |
@@ -52,7 +52,7 @@ python3 stream-daemon.py
 | API Keys | Vault | `secret/stream-daemon/twitch`: `client_id`, `client_secret` |
 | Tokens | Vault | `secret/stream-daemon/mastodon`: `access_token` |
 | Webhooks | Vault | `secret/stream-daemon/discord`: `webhook_url` |
-| **Connection** | .env | `SECRETS_SECRET_MANAGER=vault` |
+| **Connection** | .env | `SECRETS_MANAGER=vault` |
 | Vault URL | .env | `SECRETS_VAULT_URL=https://vault.example.com` |
 | Vault Token | .env | `SECRETS_VAULT_TOKEN=s.abc123` |
 | Secret Paths | .env | `SECRETS_VAULT_TWITCH_SECRET_PATH=secret/stream-daemon/twitch` |
@@ -141,7 +141,7 @@ doppler run --project stream-daemon --config dev -- python3 stream-daemon.py
 **AWS:**
 ```bash
 # Check .env has
-SECRETS_SECRET_MANAGER=aws
+SECRETS_MANAGER=aws
 AWS_REGION=us-east-1
 SECRETS_AWS_TWITCH_SECRET_NAME=stream-daemon/twitch
 
@@ -152,7 +152,7 @@ aws secretsmanager get-secret-value --secret-id stream-daemon/twitch --region us
 **Vault:**
 ```bash
 # Check .env has
-SECRETS_SECRET_MANAGER=vault
+SECRETS_MANAGER=vault
 SECRETS_VAULT_URL=http://...
 SECRETS_VAULT_TOKEN=s.abc123
 
