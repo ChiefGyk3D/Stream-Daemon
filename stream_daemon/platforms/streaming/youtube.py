@@ -216,10 +216,23 @@ class YouTubePlatform(StreamingPlatform):
             
             if video_response.get('items'):
                 video_data = video_response['items'][0]
+                snippet = video_data.get('snippet', {})
                 
-                # Check if actually live (has liveStreamingDetails and no actualEndTime)
+                # Check liveBroadcastContent flag for explicit live status
+                # "live" = currently streaming
+                # "upcoming" = scheduled stream (not live yet)
+                # "none" = regular on-demand video
+                live_broadcast_content = snippet.get('liveBroadcastContent', 'none')
+                
+                if live_broadcast_content != 'live':
+                    # Not currently live (could be upcoming or regular video)
+                    logger.debug(f"YouTube video is not live (liveBroadcastContent: {live_broadcast_content})")
+                    return False, None
+                
+                # Double-check with liveStreamingDetails (has actualEndTime = stream ended)
                 live_details = video_data.get('liveStreamingDetails')
                 if not live_details or live_details.get('actualEndTime'):
+                    logger.debug(f"YouTube video marked as live but has no streaming details or already ended")
                     return False, None
                 
                 # Safe field access with defaults
