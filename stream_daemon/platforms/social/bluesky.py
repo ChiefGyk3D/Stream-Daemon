@@ -70,31 +70,41 @@ class BlueskyPlatform:
             return None
             
         try:
-            # Use TextBuilder to create rich text with explicit links
+            # Use TextBuilder to create rich text with explicit links and hashtags
             text_builder = client_utils.TextBuilder()
             
-            # Parse message to find URLs and convert them to clickable links
-            # Pattern matches http:// and https:// URLs
+            # Combined pattern for URLs and hashtags
+            # URL pattern: http:// and https:// URLs
+            # Hashtag pattern: # followed by alphanumeric characters (including Unicode)
             url_pattern = r'https?://[^\s]+'
+            hashtag_pattern = r'#\w+'
+            combined_pattern = f'({url_pattern}|{hashtag_pattern})'
+            
             last_pos = 0
             first_url = None  # Track first URL for embed card
             
-            for match in re.finditer(url_pattern, message):
-                # Add text before URL
+            for match in re.finditer(combined_pattern, message):
+                # Add text before URL/hashtag
                 if match.start() > last_pos:
                     text_builder.text(message[last_pos:match.start()])
                 
-                # Add URL as clickable link
-                url = match.group()
-                text_builder.link(url, url)
+                matched_text = match.group()
                 
-                # Capture first URL for embed card
-                if first_url is None:
-                    first_url = url
+                # Check if it's a URL or hashtag
+                if matched_text.startswith('http://') or matched_text.startswith('https://'):
+                    # Add URL as clickable link
+                    text_builder.link(matched_text, matched_text)
+                    
+                    # Capture first URL for embed card
+                    if first_url is None:
+                        first_url = matched_text
+                elif matched_text.startswith('#'):
+                    # Add hashtag as clickable tag
+                    text_builder.tag(matched_text[1:], matched_text)  # tag() expects tag without #
                 
                 last_pos = match.end()
             
-            # Add any remaining text after last URL
+            # Add any remaining text after last URL/hashtag
             if last_pos < len(message):
                 text_builder.text(message[last_pos:])
             
