@@ -43,7 +43,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade "pip>=25.3"
         pip install -r requirements.txt
 
     - name: Run pytest with coverage
@@ -77,7 +77,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade "pip>=25.3"
         pip install ruff bandit[toml] safety
 
     - name: Lint with Ruff

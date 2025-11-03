@@ -28,7 +28,8 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 COPY Docker/requirements.txt /app/
 
 # Install any needed packages specified in requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && \
+# Upgrade pip to 25.3+ to fix CVE-2025-8869 (symbolic link extraction vulnerability)
+RUN pip install --no-cache-dir --upgrade "pip>=25.3" && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy the entire project structure from parent directory
