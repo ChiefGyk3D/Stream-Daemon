@@ -1,3 +1,19 @@
+# Docker Build & Publish
+#
+# This workflow builds and publishes multi-architecture Docker images:
+# - Builds for amd64 and arm64 (Raspberry Pi support)
+# - Scans images for vulnerabilities using Trivy
+# - Publishes to GitHub Container Registry (ghcr.io)
+# - Creates both versioned tags and 'latest' tag
+#
+# Runs on:
+# - Push to main branch (publishes latest)
+# - Version tags (v*.*.* - publishes versioned release)
+# - Pull requests to main (build and test only, no publish)
+# - Manual trigger via workflow_dispatch
+#
+# Image published to: ghcr.io/chiefgyk3d/stream-daemon
+
 name: Docker Build & Publish
 
 on:

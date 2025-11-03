@@ -1,3 +1,18 @@
+# Continuous Integration - Tests
+#
+# This workflow runs the Python test suite to ensure code quality:
+# - Runs all unit tests and integration tests
+# - Tests against multiple Python versions (3.10-3.14)
+# - Generates code coverage reports
+# - Uploads coverage to Codecov
+#
+# Runs on:
+# - Push to main, develop, or copilot/** branches
+# - Pull requests to main/develop
+# - Manual trigger via workflow_dispatch
+#
+# Matrix testing ensures compatibility across Python versions
+
 name: CI - Tests
 
 on:

@@ -1,3 +1,18 @@
+# CodeQL Security Analysis
+#
+# This workflow performs static code analysis to identify security vulnerabilities:
+# - Scans Python code for security issues
+# - Detects common vulnerability patterns (SQL injection, XSS, etc.)
+# - Identifies potential bugs and code quality issues
+#
+# Runs on:
+# - Push to main/develop branches
+# - Pull requests to main/develop
+# - Weekly schedule (Sundays at 00:00 UTC)
+# - Manual trigger via workflow_dispatch
+#
+# Results are uploaded to GitHub Security > Code Scanning tab
+
 name: CodeQL Analysis
 
 on:
