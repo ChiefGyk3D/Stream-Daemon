@@ -1,7 +1,5 @@
 # Use an official Python runtime as a parent image
-# Python 3.13 is the latest STABLE version with full package support
-# Multi-arch support: amd64, arm64
-# Python 3.13 includes SQLite 3.46.1 (fixes FTS5 integer overflow CVE)
+# Python 3.14 with multi-arch support: amd64, arm64
 FROM python:3.14-slim
 
 # Set build arguments for platform detection (automatically set by buildx)
@@ -11,12 +9,28 @@ ARG BUILDPLATFORM
 # Set the working directory in the container to /app
 WORKDIR /app
 
-# Install system dependencies needed for Python packages
-# These packages are available on both amd64 and arm64
+# Install system dependencies and upgrade SQLite to fix CVE-2025-7709
+# CVE-2025-7709: Integer overflow in SQLite FTS5 extension (fixed in 3.50.3)
+# Debian trixie ships 3.46.1-7, so we compile SQLite 3.50.3 from source
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libffi-dev \
     libssl-dev \
+    wget \
+    make \
+    tcl \
+    && cd /tmp \
+    && wget https://www.sqlite.org/2025/sqlite-autoconf-3500300.tar.gz \
+    && tar xzf sqlite-autoconf-3500300.tar.gz \
+    && cd sqlite-autoconf-3500300 \
+    && ./configure --prefix=/usr --enable-fts5 \
+    && make \
+    && make install \
+    && ldconfig \
+    && cd / \
+    && rm -rf /tmp/sqlite-autoconf-3500300* \
+    && apt-get purge -y wget make tcl \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create and activate virtual environment
