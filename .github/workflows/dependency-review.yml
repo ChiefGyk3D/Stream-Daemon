@@ -11,6 +11,7 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  security-events: write
 
 jobs:
   dependency-review:
@@ -75,6 +76,9 @@ jobs:
     name: Snyk Security Scan
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request' || github.event_name == 'schedule'
+    permissions:
+      security-events: write
+      contents: read
     
     steps:
     - name: Checkout code
