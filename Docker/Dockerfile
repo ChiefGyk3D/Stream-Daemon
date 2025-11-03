@@ -14,6 +14,7 @@ WORKDIR /app
 # Debian trixie ships 3.46.1-7, so we compile SQLite 3.50.3 from source
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    libc6-dev \
     libffi-dev \
     libssl-dev \
     wget \
@@ -24,7 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && tar xzf sqlite-autoconf-3500300.tar.gz \
     && cd sqlite-autoconf-3500300 \
     && ./configure --prefix=/usr --enable-fts5 \
-    && make \
+    && make -j$(nproc) \
     && make install \
     && ldconfig \
     && cd / \
