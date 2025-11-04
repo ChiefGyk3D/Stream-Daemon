@@ -12,7 +12,10 @@ WORKDIR /app
 
 # CVE-2025-7709: Update SQLite to address FTS5 integer overflow vulnerability
 # Upgrade libsqlite3-0 from 3.46.1-7 (vulnerable) to 3.46.1-8 (patched)
+# Using Debian unstable only for this specific security patch with APT pinning
+# to prevent unintended installation of other unstable packages
 RUN echo 'deb http://deb.debian.org/debian unstable main' >> /etc/apt/sources.list && \
+    printf "Package: *\nPin: release a=unstable\nPin-Priority: 100\n\nPackage: libsqlite3-0\nPin: release a=unstable\nPin-Priority: 500\n" > /etc/apt/preferences.d/unstable && \
     apt-get update && \
     apt-get install -y --no-install-recommends libsqlite3-0=3.46.1-8 && \
     rm -rf /var/lib/apt/lists/*
