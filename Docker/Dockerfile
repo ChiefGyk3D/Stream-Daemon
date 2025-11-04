@@ -1,7 +1,6 @@
 # Use an official Python runtime as a parent image
-# Python 3.13 is the latest STABLE version with full package support
+# Python 3.14 provides latest features and security updates
 # Multi-arch support: amd64, arm64
-# Python 3.13 includes SQLite 3.46.1 (fixes FTS5 integer overflow CVE)
 FROM python:3.14-slim
 
 # Set build arguments for platform detection (automatically set by buildx)
@@ -10,6 +9,13 @@ ARG BUILDPLATFORM
 
 # Set the working directory in the container to /app
 WORKDIR /app
+
+# CVE-2025-7709: Update SQLite to address FTS5 integer overflow vulnerability
+# Upgrade libsqlite3-0 from 3.46.1-7 (vulnerable) to 3.46.1-8 (patched)
+RUN echo 'deb http://deb.debian.org/debian unstable main' >> /etc/apt/sources.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends libsqlite3-0=3.46.1-8 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install system dependencies needed for Python packages
 # These packages are available on both amd64 and arm64

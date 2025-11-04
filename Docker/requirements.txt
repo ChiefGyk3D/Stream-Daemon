@@ -30,8 +30,8 @@ zipp==3.23.0
 # CVE-2025-78866: Open redirect fixed in urllib3 >= 2.5.0
 # Using latest stable v2.x (v1.26.19 is legacy Python 2.7 support)
 urllib3==2.5.0
-# pip symbolic link extraction vulnerability fix
-# Ensures pip >= 24.2 for CVE fixes
+# CVE-2025-8869: pip symbolic link extraction vulnerability fix
+# Fixed in pip >= 25.3
 pip==25.3
 # Testing framework
 pytest==8.4.2
