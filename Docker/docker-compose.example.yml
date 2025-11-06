@@ -79,9 +79,10 @@ services:
       
       # ===========================================
       # TIMING SETTINGS
+      # Uses values from .env file or falls back to defaults
       # ===========================================
-      SETTINGS_POST_INTERVAL: "5"   # Minutes to wait when stream is live
-      SETTINGS_CHECK_INTERVAL: "5"   # Minutes to wait when stream is offline
+      SETTINGS_POST_INTERVAL: "${SETTINGS_POST_INTERVAL:-2}"   # Minutes to wait when stream is live (default: 2)
+      SETTINGS_CHECK_INTERVAL: "${SETTINGS_CHECK_INTERVAL:-2}"   # Minutes to wait when stream is offline (default: 2)
       
       # ===========================================
       # SECRET MANAGERS (Optional - Advanced)
