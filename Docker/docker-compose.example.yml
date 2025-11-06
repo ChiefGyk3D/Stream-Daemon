@@ -80,8 +80,8 @@ services:
       # ===========================================
       # TIMING SETTINGS
       # ===========================================
-      SETTINGS_POST_INTERVAL: "5"   # Minutes to wait when stream is live
-      SETTINGS_CHECK_INTERVAL: "5"   # Minutes to wait when stream is offline
+      SETTINGS_POST_INTERVAL: "2"   # Minutes to wait when stream is live
+      SETTINGS_CHECK_INTERVAL: "2"   # Minutes to wait when stream is offline
       
       # ===========================================
       # SECRET MANAGERS (Optional - Advanced)
