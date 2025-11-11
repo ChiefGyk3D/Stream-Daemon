@@ -102,10 +102,14 @@ services:
       # SECRETS_VAULT_MASTODON_SECRET_PATH: "secret/mastodon"
       # SECRETS_VAULT_BLUESKY_SECRET_PATH: "secret/bluesky"
     
-    # Optional: Mount custom message files
-    # volumes:
-    #   - ./custom_messages.txt:/app/messages.txt:ro
-    #   - ./custom_end_messages.txt:/app/end_messages.txt:ro
+    # Mount timezone and custom message files
+    volumes:
+      # Sync container time with host system timezone
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      # Optional: Mount custom message files
+      # - ./custom_messages.txt:/app/messages.txt:ro
+      # - ./custom_end_messages.txt:/app/end_messages.txt:ro
     
     # Optional: Logging configuration
     logging:
