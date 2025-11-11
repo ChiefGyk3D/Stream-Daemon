@@ -286,6 +286,12 @@ def main():
                             # Thread to previous posts
                             reply_to_ids = last_live_post_ids.copy()
                         
+                        # Add delay between streaming platforms to prevent API burst
+                        # Each platform posts to 4 social platforms in parallel
+                        # 3-5 second delay keeps us under Gemini's burst limit
+                        if idx > 0:
+                            time.sleep(4)  # Wait 4 seconds between each streaming platform
+                        
                         # Post to all platforms asynchronously
                         post_results = post_to_social_async(
                             enabled_social=enabled_social,
@@ -421,13 +427,17 @@ def main():
                 
                 else:
                     # SEPARATE or THREAD MODE: Post for each platform
-                    for status in platforms_went_offline:
+                    for idx, status in enumerate(platforms_went_offline):
                         platform_end_messages = end_messages.get(status.platform_name, [])
                         if not platform_end_messages:
                             logger.debug(f"  No end messages for {status.platform_name}")
                             continue
                         
                         logger.info(f"📢 Posting 'OFFLINE' announcement for {status.platform_name}/{status.username}")
+                        
+                        # Add delay between streaming platforms to prevent API burst
+                        if idx > 0:
+                            time.sleep(4)  # Wait 4 seconds between each streaming platform
                         
                         # Handle Discord separately (update embed)
                         discord_count = 0

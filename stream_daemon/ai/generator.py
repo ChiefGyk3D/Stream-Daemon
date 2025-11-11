@@ -43,6 +43,9 @@ class AIMessageGenerator:
         - 429 Rate Limit Exceeded
         - Network timeouts
         
+        Uses a global semaphore to limit concurrent API calls and prevent
+        quota exhaustion when multiple platforms go live simultaneously.
+        
         Args:
             prompt: The prompt to send to the model
             max_retries: Maximum retry attempts (defaults to self.max_retries)
