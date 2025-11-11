@@ -68,7 +68,7 @@ services:
       LLM_ENABLE: "False"
       LLM_PROVIDER: "gemini"
       LLM_GEMINI_API_KEY: "your_gemini_api_key"
-      LLM_GEMINI_MODEL: "gemini-2.0-flash-exp"
+      LLM_MODEL: "${LLM_MODEL:-gemini-2.0-flash-lite}"   # Uses values from .env file or falls back to default
       
       # ===========================================
       # MESSAGES & BEHAVIOR
@@ -102,10 +102,14 @@ services:
       # SECRETS_VAULT_MASTODON_SECRET_PATH: "secret/mastodon"
       # SECRETS_VAULT_BLUESKY_SECRET_PATH: "secret/bluesky"
     
-    # Optional: Mount custom message files
-    # volumes:
-    #   - ./custom_messages.txt:/app/messages.txt:ro
-    #   - ./custom_end_messages.txt:/app/end_messages.txt:ro
+    # Mount timezone and custom message files
+    volumes:
+      # Sync container time with host system timezone
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+      # Optional: Mount custom message files
+      # - ./custom_messages.txt:/app/messages.txt:ro
+      # - ./custom_end_messages.txt:/app/end_messages.txt:ro
     
     # Optional: Logging configuration
     logging:
