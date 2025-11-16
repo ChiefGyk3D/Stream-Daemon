@@ -70,24 +70,15 @@ class BlueskyPlatform:
             return None
             
         try:
-            # Bluesky has a 300 character limit - validate and truncate if needed
+            # Bluesky has a strict 300 character limit - final safety check
+            # The AI generator should prevent this, but double-check just in case
             if len(message) > 300:
-                logger.warning(f"⚠ Message exceeds 300 chars ({len(message)}), truncating...")
-                # Truncate message, keeping URL intact if possible
-                # Try to find URL at the end and preserve it
-                url_match = re.search(r'\n\nhttps?://[^\s]+$', message)
-                if url_match:
-                    url = url_match.group()
-                    text_part = message[:url_match.start()]
-                    # Truncate text part to fit: 300 - len(url) - 3 for "..."
-                    max_text = 300 - len(url) - 3
-                    if len(text_part) > max_text:
-                        text_part = text_part[:max_text] + "..."
-                    message = text_part + url
-                else:
-                    # No URL found, just truncate
-                    message = message[:297] + "..."
-                logger.info(f"  Truncated to {len(message)} characters")
+                logger.error(f"✗ CRITICAL: Message exceeds Bluesky's 300 char limit ({len(message)} chars)")
+                logger.error(f"   This should not happen - check AI generator logic!")
+                logger.error(f"   Message: {message}")
+                # Emergency truncate as last resort
+                message = message[:300]
+                logger.warning(f"   Emergency truncated to 300 chars")
             
             # Use TextBuilder to create rich text with explicit links and hashtags
             text_builder = client_utils.TextBuilder()
