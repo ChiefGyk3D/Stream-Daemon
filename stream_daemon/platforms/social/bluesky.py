@@ -65,7 +65,7 @@ class BlueskyPlatform:
             logger.warning(f"✗ Bluesky authentication failed: {e}")
             return False
     
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None, username: Optional[str] = None) -> Optional[str]:
         if not self.enabled or not self.client:
             return None
             

@@ -167,7 +167,7 @@ class MatrixPlatform:
             logger.error(f"✗ Matrix login error: {e}")
             return None
     
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None, username: Optional[str] = None) -> Optional[str]:
         if not self.enabled:
             logger.debug(f"⚠ Matrix post skipped: disabled (enabled={self.enabled})")
             return None

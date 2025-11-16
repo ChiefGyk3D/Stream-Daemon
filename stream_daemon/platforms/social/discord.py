@@ -37,15 +37,17 @@ def _is_url_for_domain(url: str, domain: str) -> bool:
 
 
 class DiscordPlatform:
-    """Discord webhook platform with flexible per-platform webhook and role support."""
+    """Discord webhook platform with flexible per-platform and per-username webhook and role support."""
     
     def __init__(self):
         self.name = "Discord"
         self.enabled = False
         self.webhook_url = None  # Default webhook
         self.webhook_urls = {}  # platform_name -> webhook_url mapping
+        self.webhook_urls_per_user = {}  # "platform/username" -> webhook_url mapping
         self.role_id = None  # Default role
         self.role_mentions = {}  # platform_name -> role_id mapping
+        self.role_mentions_per_user = {}  # "platform/username" -> role_id mapping
         self.active_messages = {}  # platform_name -> {message_id, webhook_url, last_update} tracking
         
     def authenticate(self):
@@ -88,24 +90,52 @@ class DiscordPlatform:
                 self.role_mentions[platform] = platform_role
                 logger.info(f"  • Discord role configured for {platform.upper()}")
         
+        # Get per-username webhook URLs and roles (optional - most specific, overrides everything)
+        # Format: DISCORD_WEBHOOK_TWITCH_USERNAME or DISCORD_ROLE_YOUTUBE_USERNAME
+        # This allows different Discord channels/roles for each streamer
+        for platform in ['twitch', 'youtube', 'kick']:
+            # We don't know usernames yet at authenticate() time, so we'll check dynamically
+            # in the post() method. Just log that per-user config is supported.
+            pass
+        
         self.enabled = True
         if self.webhook_url:
             logger.info("✓ Discord webhook configured (default)")
         if self.webhook_urls:
             logger.info(f"✓ Discord webhooks configured ({len(self.webhook_urls)} platform-specific)")
+        logger.info("  • Per-username webhooks/roles supported (DISCORD_WEBHOOK_PLATFORM_USERNAME)")
         return True
     
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
+    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None, username: Optional[str] = None) -> Optional[str]:
         if not self.enabled:
             return None
         
-        # Determine which webhook to use for this platform
+        # Determine which webhook to use for this platform/username combination
+        # Priority: per-username > per-platform > default
         webhook_url = None
-        if platform_name and platform_name.lower() in self.webhook_urls:
-            # Use platform-specific webhook if available
+        lookup_key = None
+        
+        # Try per-username webhook first (most specific)
+        if platform_name and username:
+            lookup_key = f"{platform_name.lower()}_{username.lower()}"
+            # Try to load per-user webhook dynamically if not cached
+            if lookup_key not in self.webhook_urls_per_user:
+                user_webhook = get_secret('Discord', f'webhook_{lookup_key}',
+                                         secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
+                                         secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
+                                         doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
+                if user_webhook:
+                    self.webhook_urls_per_user[lookup_key] = user_webhook
+                    logger.debug(f"  • Loaded Discord webhook for {platform_name}/{username}")
+            
+            webhook_url = self.webhook_urls_per_user.get(lookup_key)
+        
+        # Fall back to per-platform webhook
+        if not webhook_url and platform_name and platform_name.lower() in self.webhook_urls:
             webhook_url = self.webhook_urls[platform_name.lower()]
-        else:
-            # Fall back to default webhook
+        
+        # Fall back to default webhook
+        if not webhook_url:
             webhook_url = self.webhook_url
         
         if not webhook_url:
@@ -175,13 +205,35 @@ class DiscordPlatform:
             # Build content: LLM message + role mention
             content = message  # Start with the LLM-generated message
             
-            # Add role mention if configured for this platform
-            if platform_name and platform_name.lower() in self.role_mentions:
-                role_id = self.role_mentions[platform_name.lower()]
-                content += f" <@&{role_id}>"
-            elif self.role_id:
-                # Use default role if no platform-specific role
-                content += f" <@&{self.role_id}>"
+            # Add role mention if configured
+            # Priority: per-username > per-platform > default
+            role_to_mention = None
+            
+            # Try per-username role first (most specific)
+            if lookup_key:
+                # Try to load per-user role dynamically if not cached
+                if lookup_key not in self.role_mentions_per_user:
+                    user_role = get_secret('Discord', f'role_{lookup_key}',
+                                          secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
+                                          secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
+                                          doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
+                    if user_role:
+                        self.role_mentions_per_user[lookup_key] = user_role
+                        logger.debug(f"  • Loaded Discord role for {platform_name}/{username}")
+                
+                role_to_mention = self.role_mentions_per_user.get(lookup_key)
+            
+            # Fall back to per-platform role
+            if not role_to_mention and platform_name and platform_name.lower() in self.role_mentions:
+                role_to_mention = self.role_mentions[platform_name.lower()]
+            
+            # Fall back to default role
+            if not role_to_mention:
+                role_to_mention = self.role_id
+            
+            # Add role mention if we found one
+            if role_to_mention:
+                content += f" <@&{role_to_mention}>"
             
             # Build webhook payload
             data = {}
