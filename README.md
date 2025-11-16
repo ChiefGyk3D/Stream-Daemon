@@ -20,13 +20,13 @@ Monitor **Twitch, YouTube, and Kick** streams • Post to **Mastodon, Bluesky, D
 
 ## 🎯 What is Stream Daemon?
 
-Stream Daemon is an enterprise-grade, open-source automation platform for content creators. Monitor your live streams across **Twitch, YouTube, and Kick**, then automatically announce to **Mastodon, Bluesky, Discord, and Matrix** when you go live or end your stream.
+Stream Daemon is an enterprise-grade, open-source automation platform for content creators. Monitor your live streams across **Twitch, YouTube, and Kick**, then automatically announce to **Mastodon, Bluesky, Discord, Matrix, and Threads** when you go live or end your stream.
 
 ### Why Stream Daemon?
 
 - 🤖 **AI-Powered Messages** - Google Gemini generates unique, engaging announcements for every stream
 - � **Enterprise Security** - Doppler, AWS Secrets Manager, HashiCorp Vault integration
-- 🌐 **7 Platform Support** - Streaming: Twitch, YouTube, Kick | Social: Mastodon, Bluesky, Discord, Matrix
+- 🌐 **8 Platform Support** - Streaming: Twitch, YouTube, Kick | Social: Mastodon, Bluesky, Discord, Matrix, Threads
 - 📊 **Discord Rich Embeds** - Real-time viewer counts, live thumbnails, in-place updates
 - 🎯 **Smart Multi-Platform** - Stream to multiple platforms? Choose combined, threaded, or separate announcements
 - 🐳 **Production Ready** - Docker, Docker Compose, systemd service support
@@ -60,10 +60,15 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
   - Custom display names and avatars
   - Homeserver configuration support
   - Message retry with exponential backoff
+- **Threads (Meta)** - Instagram-connected social platform:
+  - Two-step posting with container creation and publishing
+  - 500 character limit with automatic management
+  - Threading/reply support for stream end messages
+  - Long-lived access tokens (60 days) with refresh capability
 
 ### 🤖 AI-Powered Messaging (NEW!)
 - **Google Gemini LLM Integration** - Generate unique announcements for every stream
-  - Platform-aware character limits (Bluesky: 300, Mastodon: 500, Discord: 2000)
+  - Platform-aware character limits (Bluesky: 300, Mastodon/Threads: 500, Discord: 2000)
   - Automatic hashtag generation from stream titles and game names
   - Dynamic, personalized messages that never repeat
   - Graceful fallback to static messages if LLM unavailable
@@ -1107,6 +1112,7 @@ black stream-daemon.py stream_daemon/
 - [x] **AI Message Generation** - Google Gemini LLM integration for dynamic announcements
 - [x] **Modular Architecture** - Platform classes extracted to `stream_daemon/platforms/`
 - [x] **Multi-Platform Strategies** - Combined, threaded, and separate posting modes
+- [x] **Threads (Meta) Support** - Instagram-connected social platform with threading
 - [x] **Comprehensive Documentation** - Platform guides, feature docs, migration guides
 
 ### 🚧 In Progress
@@ -1117,10 +1123,10 @@ black stream-daemon.py stream_daemon/
 
 ### 🔮 Future Enhancements
 - [ ] **Additional Social Platforms**
-  - Threads (Meta)
   - X/Twitter (API permitting)
   - LinkedIn
   - Telegram channels
+  - Nostr
 - [ ] **Streaming Platform Expansion**
   - Facebook Gaming
   - Trovo

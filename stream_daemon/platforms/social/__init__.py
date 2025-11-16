@@ -6,10 +6,12 @@ from .mastodon import MastodonPlatform
 from .bluesky import BlueskyPlatform
 from .discord import DiscordPlatform
 from .matrix import MatrixPlatform
+from .threads import ThreadsPlatform
 
 __all__ = [
     'MastodonPlatform',
     'BlueskyPlatform',
     'DiscordPlatform',
     'MatrixPlatform',
+    'ThreadsPlatform',
 ]

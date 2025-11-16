@@ -16,7 +16,7 @@ from stream_daemon.config import get_config, get_bool_config, get_int_config, ge
 from stream_daemon.models import StreamState, StreamStatus
 from stream_daemon.ai import AIMessageGenerator
 from stream_daemon.utils import parse_sectioned_message_file
-from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, DiscordPlatform, MatrixPlatform
+from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, DiscordPlatform, MatrixPlatform, ThreadsPlatform
 from stream_daemon.platforms.streaming import TwitchPlatform, YouTubePlatform, KickPlatform
 from stream_daemon.publisher import post_to_social_async
 
@@ -68,7 +68,8 @@ def main():
         MastodonPlatform(),
         BlueskyPlatform(),
         DiscordPlatform(),
-        MatrixPlatform()
+        MatrixPlatform(),
+        ThreadsPlatform()
     ]
     
     enabled_social = []
@@ -78,7 +79,7 @@ def main():
     
     if not enabled_social:
         logger.error("✗ No social platforms configured!")
-        logger.error("   Enable at least one: Mastodon, Bluesky, Discord, or Matrix")
+        logger.error("   Enable at least one: Mastodon, Bluesky, Discord, Matrix, or Threads")
         sys.exit(1)
     
     # Initialize AI message generator (optional)

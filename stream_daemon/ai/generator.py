@@ -30,6 +30,7 @@ class AIMessageGenerator:
         self.client = None
         self.bluesky_max_chars = 300
         self.mastodon_max_chars = 500
+        self.threads_max_chars = 500
         # Retry configuration for handling transient API errors (503, 429, etc.)
         self.max_retries = int(get_config('LLM', 'max_retries', default='3'))
         self.retry_delay_base = int(get_config('LLM', 'retry_delay_base', default='2'))
@@ -168,6 +169,8 @@ class AIMessageGenerator:
                 max_chars = self.bluesky_max_chars
             elif social_platform.lower() == 'mastodon':
                 max_chars = self.mastodon_max_chars
+            elif social_platform.lower() == 'threads':
+                max_chars = self.threads_max_chars
             else:
                 max_chars = 500  # Default for Discord/Matrix
             
@@ -183,6 +186,10 @@ class AIMessageGenerator:
                 # Hard cap content at 240 chars, regardless of URL length
                 # This ensures we never exceed 300 even with long URLs and hashtags
                 content_max = min(240, max_chars - url_formatting_space)
+            elif social_platform.lower() == 'threads':
+                # Threads has 500 char limit, be conservative like Bluesky
+                # Cap at 440 chars to leave room for URL + hashtags + buffer
+                content_max = min(440, max_chars - url_formatting_space)
             else:
                 # Other platforms are more forgiving
                 content_max = max_chars - url_formatting_space
@@ -266,6 +273,10 @@ Generate ONLY the message text with hashtags, nothing else."""
             elif social_platform.lower() == 'mastodon':
                 max_chars = self.mastodon_max_chars
                 prompt_max = max_chars
+            elif social_platform.lower() == 'threads':
+                max_chars = self.threads_max_chars
+                # For Threads end messages, cap at 480 to leave room for hashtags
+                prompt_max = 480
             else:
                 max_chars = 500  # Default for Discord/Matrix
                 prompt_max = max_chars
