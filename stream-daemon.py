@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from typing import Dict
 
 # Import from modularized package
-from stream_daemon.config import get_config, get_bool_config, get_int_config
+from stream_daemon.config import get_config, get_bool_config, get_int_config, get_usernames
 from stream_daemon.models import StreamState, StreamStatus
 from stream_daemon.ai import AIMessageGenerator
 from stream_daemon.utils import parse_sectioned_message_file
@@ -158,18 +158,22 @@ def main():
             logger.debug(f"  • No end messages for {platform.name} (optional)")
     
     # Get usernames for each platform and create StreamStatus trackers
+    # Key format: "PlatformName/username" for unique identification
     stream_statuses: Dict[str, StreamStatus] = {}
     for platform in enabled_streaming:
-        username = get_config(platform.name, 'username')
-        if username:
-            status = StreamStatus(
-                platform_name=platform.name,
-                username=username
-            )
-            stream_statuses[platform.name] = status
-            logger.info(f"  • Monitoring {platform.name}/{username}")
+        usernames = get_usernames(platform.name)
+        if usernames:
+            for username in usernames:
+                # Create unique key for each stream
+                status_key = f"{platform.name}/{username}"
+                status = StreamStatus(
+                    platform_name=platform.name,
+                    username=username
+                )
+                stream_statuses[status_key] = status
+                logger.info(f"  • Monitoring {platform.name}/{username}")
         else:
-            logger.warning(f"⚠ No username configured for {platform.name}, skipping")
+            logger.warning(f"⚠ No username(s) configured for {platform.name}, skipping")
     
     if not stream_statuses:
         logger.error("✗ No usernames configured for any streaming platforms!")
@@ -198,10 +202,11 @@ def main():
             platforms_went_live = []
             platforms_went_offline = []
             
-            # Check all streaming platforms
-            for platform in enabled_streaming:
-                status = stream_statuses.get(platform.name)
-                if not status:
+            # Check all streaming platforms (iterate over each stream status)
+            for status_key, status in stream_statuses.items():
+                # Find the corresponding platform client
+                platform = next((p for p in enabled_streaming if p.name == status.platform_name), None)
+                if not platform:
                     continue
                 
                 # Check if stream is live (returns is_live bool and stream_data dict)
@@ -213,7 +218,7 @@ def main():
                 if state_changed:
                     if status.state == StreamState.LIVE:
                         platforms_went_live.append(status)
-                        platforms_that_went_live.add(status.platform_name)
+                        platforms_that_went_live.add(f"{status.platform_name}/{status.username}")
                     elif status.state == StreamState.OFFLINE:
                         platforms_went_offline.append(status)
                 else:
@@ -225,7 +230,7 @@ def main():
                         for social in enabled_social:
                             if isinstance(social, DiscordPlatform) and status.stream_data:
                                 if social.update_stream(status.platform_name, status.stream_data, status.url):
-                                    logger.info(f"  ✓ Updated Discord embed for {status.platform_name} (viewers: {status.stream_data.get('viewer_count', 'N/A')})")
+                                    logger.info(f"  ✓ Updated Discord embed for {status.platform_name}/{status.username} (viewers: {status.stream_data.get('viewer_count', 'N/A')})")
                     else:
                         logger.debug(f"  {status.platform_name}/{status.username}: Still offline ({status.consecutive_offline_checks} checks)")
             
@@ -328,20 +333,20 @@ def main():
             if platforms_went_offline and end_threading_mode != 'disabled':
                 
                 if end_threading_mode == 'single_when_all_end':
-                    # Check if ALL platforms that went live are now offline
+                    # Check if ALL streams that went live are now offline
                     all_ended = all(
-                        stream_statuses[pname].state == StreamState.OFFLINE 
-                        for pname in platforms_that_went_live
+                        stream_statuses[status_key].state == StreamState.OFFLINE 
+                        for status_key in platforms_that_went_live
                     )
                     
                     if all_ended and platforms_that_went_live:
                         # Post single "all streams ended" message
                         platform_names = ', '.join(sorted(platforms_that_went_live))
                         
-                        # Use first platform's end messages as template
-                        first_platform_name = next(iter(platforms_that_went_live))
-                        first_status = stream_statuses[first_platform_name]
-                        platform_end_messages = end_messages.get(first_platform_name, [])
+                        # Use first stream's end messages as template
+                        first_status_key = next(iter(platforms_that_went_live))
+                        first_status = stream_statuses[first_status_key]
+                        platform_end_messages = end_messages.get(first_status.platform_name, [])
                         
                         if platform_end_messages:
                             logger.info(f"📢 Posting final 'ALL STREAMS ENDED' announcement for {platform_names}")
@@ -350,11 +355,11 @@ def main():
                             discord_count = 0
                             for social in enabled_social:
                                 if isinstance(social, DiscordPlatform):
-                                    for pname in platforms_that_went_live:
-                                        status = stream_statuses[pname]
+                                    for status_key in platforms_that_went_live:
+                                        status = stream_statuses[status_key]
                                         if social.end_stream(status.platform_name, status.stream_data or {}, status.url):
                                             discord_count += 1
-                                            logger.debug(f"  ✓ Updated Discord embed for {status.platform_name}")
+                                            logger.debug(f"  ✓ Updated Discord embed for {status.platform_name}/{status.username}")
                             
                             # Post to non-Discord platforms asynchronously
                             non_discord_social = [s for s in enabled_social if not isinstance(s, DiscordPlatform)]
@@ -403,7 +408,7 @@ def main():
                                 for status in platforms_went_offline:
                                     if social.end_stream(status.platform_name, status.stream_data or {}, status.url):
                                         discord_count += 1
-                                        logger.debug(f"  ✓ Updated Discord embed for {status.platform_name}")
+                                        logger.debug(f"  ✓ Updated Discord embed for {status.platform_name}/{status.username}")
                         
                         # Post to non-Discord platforms asynchronously
                         non_discord_social = [s for s in enabled_social if not isinstance(s, DiscordPlatform)]
@@ -483,8 +488,8 @@ def main():
             any_live = any(s.state == StreamState.LIVE for s in stream_statuses.values())
             if any_live:
                 sleep_time = post_interval * 60  # POST_INTERVAL is now in minutes, not hours
-                live_platforms = [s.platform_name for s in stream_statuses.values() if s.state == StreamState.LIVE]
-                logger.info(f"⏰ Streams active ({', '.join(live_platforms)}), checking again in {post_interval} minute(s)")
+                live_streams = [f"{s.platform_name}/{s.username}" for s in stream_statuses.values() if s.state == StreamState.LIVE]
+                logger.info(f"⏰ Streams active ({', '.join(live_streams)}), checking again in {post_interval} minute(s)")
             else:
                 sleep_time = check_interval * 60
                 logger.info(f"⏰ No streams live, checking again in {check_interval} minute(s)")

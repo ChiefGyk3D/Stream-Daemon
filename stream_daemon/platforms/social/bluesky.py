@@ -70,6 +70,25 @@ class BlueskyPlatform:
             return None
             
         try:
+            # Bluesky has a 300 character limit - validate and truncate if needed
+            if len(message) > 300:
+                logger.warning(f"⚠ Message exceeds 300 chars ({len(message)}), truncating...")
+                # Truncate message, keeping URL intact if possible
+                # Try to find URL at the end and preserve it
+                url_match = re.search(r'\n\nhttps?://[^\s]+$', message)
+                if url_match:
+                    url = url_match.group()
+                    text_part = message[:url_match.start()]
+                    # Truncate text part to fit: 300 - len(url) - 3 for "..."
+                    max_text = 300 - len(url) - 3
+                    if len(text_part) > max_text:
+                        text_part = text_part[:max_text] + "..."
+                    message = text_part + url
+                else:
+                    # No URL found, just truncate
+                    message = message[:297] + "..."
+                logger.info(f"  Truncated to {len(message)} characters")
+            
             # Use TextBuilder to create rich text with explicit links and hashtags
             text_builder = client_utils.TextBuilder()
             
