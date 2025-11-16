@@ -35,12 +35,18 @@ def _is_url_for_domain(url: str, domain: str) -> bool:
 
 
 class BlueskyPlatform:
-    """Bluesky social platform with threading support."""
+    """
+    Bluesky social platform with threading support.
+    
+    Supports per-username configuration for multi-streamer monitoring.
+    Each streamer can post to a different Bluesky account.
+    """
     
     def __init__(self):
         self.name = "Bluesky"
         self.enabled = False
-        self.client = None
+        self.client = None  # Default client
+        self.clients_per_user = {}  # "platform_username" -> Client instances
         
     def authenticate(self):
         if not get_bool_config('Bluesky', 'enable_posting', default=False):
@@ -59,16 +65,56 @@ class BlueskyPlatform:
             self.client = Client()
             self.client.login(handle, app_password)
             self.enabled = True
-            logger.info("✓ Bluesky authenticated")
+            logger.info("✓ Bluesky authenticated (default account)")
+            logger.info("  Per-username accounts supported (BLUESKY_HANDLE_PLATFORM_USERNAME)")
             return True
         except Exception as e:
             logger.warning(f"✗ Bluesky authentication failed: {e}")
             return False
     
     def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None, username: Optional[str] = None) -> Optional[str]:
-        if not self.enabled or not self.client:
+        if not self.enabled:
             return None
+        
+        # Determine which client to use (per-username > default)
+        client = None
+        lookup_key = None
+        
+        if platform_name and username:
+            # Try per-username configuration first
+            lookup_key = f"{platform_name.lower()}_{username.lower()}"
             
+            # Check if we've already loaded this user's client
+            if lookup_key in self.clients_per_user:
+                client = self.clients_per_user[lookup_key]
+                logger.debug(f"Using cached per-user Bluesky client for {platform_name}/{username}")
+            else:
+                # Try to dynamically load per-username credentials
+                handle = get_config('Bluesky', f'handle_{lookup_key}')
+                app_password = get_secret('Bluesky', f'app_password_{lookup_key}',
+                                         secret_name_env=f'SECRETS_AWS_BLUESKY_{lookup_key.upper()}_SECRET_NAME',
+                                         secret_path_env=f'SECRETS_VAULT_BLUESKY_{lookup_key.upper()}_SECRET_PATH',
+                                         doppler_secret_env=f'SECRETS_DOPPLER_BLUESKY_{lookup_key.upper()}_SECRET_NAME')
+                
+                if handle and app_password:
+                    try:
+                        logger.info(f"Loading per-user Bluesky account for {platform_name}/{username}")
+                        user_client = Client()
+                        user_client.login(handle, app_password)
+                        self.clients_per_user[lookup_key] = user_client
+                        client = user_client
+                        logger.info(f"✓ Per-user Bluesky authenticated for {platform_name}/{username}")
+                    except Exception as auth_error:
+                        logger.warning(f"⚠ Per-user Bluesky authentication failed for {platform_name}/{username}: {auth_error}")
+                        logger.info(f"  Falling back to default Bluesky account")
+        
+        # Fallback to default client if no per-username client found
+        if not client:
+            client = self.client
+            if not client:
+                logger.error("✗ No Bluesky client available (neither per-user nor default)")
+                return None
+        
         try:
             # Bluesky has a strict 300 character limit - final safety check
             # The AI generator should prevent this, but double-check just in case
@@ -140,7 +186,7 @@ class BlueskyPlatform:
                                 }
                                 img_response = requests.get(thumbnail_url, headers=headers, timeout=10)
                                 if img_response.status_code == 200:
-                                    upload_response = self.client.upload_blob(img_response.content)
+                                    upload_response = client.upload_blob(img_response.content)
                                     thumb_blob = upload_response.blob if hasattr(upload_response, 'blob') else None
                             except Exception as img_error:
                                 logger.warning(f"⚠ Could not upload Kick thumbnail: {img_error}")
@@ -181,7 +227,7 @@ class BlueskyPlatform:
                                 }
                                 img_response = requests.get(thumbnail_url, headers=headers, timeout=10)
                                 if img_response.status_code == 200:
-                                    upload_response = self.client.upload_blob(img_response.content)
+                                    upload_response = client.upload_blob(img_response.content)
                                     thumb_blob = upload_response.blob if hasattr(upload_response, 'blob') else None
                             except Exception as img_error:
                                 logger.warning(f"⚠ Could not upload thumbnail: {img_error}")
@@ -249,7 +295,7 @@ class BlueskyPlatform:
                                 img_response = requests.get(image_url, headers=headers, timeout=10)
                                 if img_response.status_code == 200:
                                     # Upload image as blob and extract the blob reference
-                                    upload_response = self.client.upload_blob(img_response.content)
+                                    upload_response = client.upload_blob(img_response.content)
                                     # The upload_blob returns a Response object with a blob attribute
                                     thumb_blob = upload_response.blob if hasattr(upload_response, 'blob') else None
                             except Exception as img_error:
@@ -272,11 +318,11 @@ class BlueskyPlatform:
                 # Threading on Bluesky requires parent and root references
                 try:
                     # Get the parent post details
-                    parent_response = self.client.app.bsky.feed.get_posts({'uris': [reply_to_id]})
+                    parent_response = client.app.bsky.feed.get_posts({'uris': [reply_to_id]})
                     
                     if not parent_response or not hasattr(parent_response, 'posts') or not parent_response.posts:
                         logger.warning(f"⚠ Could not fetch parent post, posting without thread")
-                        response = self.client.send_post(text_builder, embed=embed)
+                        response = client.send_post(text_builder, embed=embed)
                         return response.uri if hasattr(response, 'uri') else None
                     
                     parent_post = parent_response.posts[0]
@@ -298,17 +344,17 @@ class BlueskyPlatform:
                     )
                     
                     # Send threaded post with rich text and embed
-                    response = self.client.send_post(text_builder, reply_to=reply_ref, embed=embed)
+                    response = client.send_post(text_builder, reply_to=reply_ref, embed=embed)
                     return response.uri if hasattr(response, 'uri') else None
                     
                 except Exception as thread_error:
                     logger.warning(f"⚠ Bluesky threading failed, posting without thread: {thread_error}")
                     # Fall back to non-threaded post
-                    response = self.client.send_post(text_builder, embed=embed)
+                    response = client.send_post(text_builder, embed=embed)
                     return response.uri if hasattr(response, 'uri') else None
             else:
                 # Simple post without threading, with rich text and embed card
-                response = self.client.send_post(text_builder, embed=embed)
+                response = client.send_post(text_builder, embed=embed)
                 return response.uri if hasattr(response, 'uri') else None
                 
         except Exception as e:

@@ -58,6 +58,9 @@ class MatrixPlatform:
     
     NOTE: Matrix does NOT support editing messages like Discord.
     Messages are posted once and cannot be updated with live viewer counts.
+    
+    Supports per-username configuration for multi-streamer monitoring.
+    Each streamer can post to a different Matrix room (same or different homeserver).
     """
     
     def __init__(self):
@@ -68,6 +71,7 @@ class MatrixPlatform:
         self.room_id = None
         self.username = None
         self.password = None
+        self.configs_per_user = {}  # "platform_username" -> {homeserver, access_token, room_id} dict
         
     def authenticate(self):
         if not get_bool_config('Matrix', 'enable_posting', default=False):
@@ -126,27 +130,32 @@ class MatrixPlatform:
                 return False
         
         self.enabled = True
-        logger.info(f"✓ Matrix authenticated ({self.room_id})")
+        logger.info(f"✓ Matrix authenticated (default room: {self.room_id})")
+        logger.info("  Per-username rooms supported (MATRIX_ROOM_ID_PLATFORM_USERNAME)")
         return True
     
     def _login_and_get_token(self):
-        """Login with username/password to get access token."""
+        """Login with username/password to get access token (for default account)."""
+        return self._login_and_get_token_for_user(self.homeserver, self.username, self.password)
+    
+    def _login_and_get_token_for_user(self, homeserver, username, password):
+        """Login with username/password to get access token (for any account)."""
         try:
             # Extract just the username part from full MXID (@username:domain)
             # Matrix login expects just "username", not "@username:domain"
-            username_local = self.username
+            username_local = username
             if username_local.startswith('@'):
                 # Remove @ prefix and :domain suffix
                 username_local = username_local[1:].split(':')[0]
             
-            login_url = f"{self.homeserver}/_matrix/client/r0/login"
+            login_url = f"{homeserver}/_matrix/client/r0/login"
             login_data = {
                 "type": "m.login.password",
                 "identifier": {
                     "type": "m.id.user",
                     "user": username_local
                 },
-                "password": self.password
+                "password": password
             }
             
             response = requests.post(login_url, json=login_data, timeout=10)
@@ -171,9 +180,87 @@ class MatrixPlatform:
         if not self.enabled:
             logger.debug(f"⚠ Matrix post skipped: disabled (enabled={self.enabled})")
             return None
-        if not all([self.homeserver, self.access_token, self.room_id]):
-            logger.warning(f"⚠ Matrix post skipped: missing credentials (homeserver={bool(self.homeserver)}, token={bool(self.access_token)}, room={bool(self.room_id)})")
-            return None
+        
+        # Determine which configuration to use (per-username > default)
+        homeserver = None
+        access_token = None
+        room_id = None
+        lookup_key = None
+        
+        if platform_name and username:
+            # Try per-username configuration first
+            lookup_key = f"{platform_name.lower()}_{username.lower()}"
+            
+            # Check if we've already loaded this user's config
+            if lookup_key in self.configs_per_user:
+                config = self.configs_per_user[lookup_key]
+                homeserver = config['homeserver']
+                access_token = config['access_token']
+                room_id = config['room_id']
+                logger.debug(f"Using cached per-user Matrix config for {platform_name}/{username}")
+            else:
+                # Try to dynamically load per-username configuration
+                user_homeserver = get_secret('Matrix', f'homeserver_{lookup_key}',
+                                            secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
+                                            secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
+                                            doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                user_room_id = get_secret('Matrix', f'room_id_{lookup_key}',
+                                         secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
+                                         secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
+                                         doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                
+                if user_homeserver and user_room_id:
+                    # Ensure homeserver has proper format
+                    if not user_homeserver.startswith('http'):
+                        user_homeserver = f"https://{user_homeserver}"
+                    
+                    # Check for username/password (preferred)
+                    user_username = get_secret('Matrix', f'username_{lookup_key}',
+                                              secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
+                                              secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
+                                              doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                    user_password = get_secret('Matrix', f'password_{lookup_key}',
+                                              secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
+                                              secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
+                                              doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                    
+                    user_access_token = None
+                    if user_username and user_password:
+                        # Login to get fresh access token
+                        logger.info(f"Loading per-user Matrix account for {platform_name}/{username} (username/password)")
+                        user_access_token = self._login_and_get_token_for_user(user_homeserver, user_username, user_password)
+                        if not user_access_token:
+                            logger.warning(f"⚠ Per-user Matrix login failed for {platform_name}/{username}")
+                    else:
+                        # Fall back to static access token
+                        user_access_token = get_secret('Matrix', f'access_token_{lookup_key}',
+                                                       secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
+                                                       secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
+                                                       doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                    
+                    if user_access_token:
+                        # Cache the configuration
+                        self.configs_per_user[lookup_key] = {
+                            'homeserver': user_homeserver,
+                            'access_token': user_access_token,
+                            'room_id': user_room_id
+                        }
+                        homeserver = user_homeserver
+                        access_token = user_access_token
+                        room_id = user_room_id
+                        logger.info(f"✓ Per-user Matrix authenticated for {platform_name}/{username} (room: {room_id})")
+                    else:
+                        logger.warning(f"⚠ Per-user Matrix configuration incomplete for {platform_name}/{username}")
+                        logger.info(f"  Falling back to default Matrix room")
+        
+        # Fallback to default configuration if no per-username config found
+        if not all([homeserver, access_token, room_id]):
+            homeserver = self.homeserver
+            access_token = self.access_token
+            room_id = self.room_id
+            if not all([homeserver, access_token, room_id]):
+                logger.warning(f"⚠ Matrix post skipped: missing credentials (homeserver={bool(homeserver)}, token={bool(access_token)}, room={bool(room_id)})")
+                return None
             
         try:
             # Extract URL from message for rich formatting
@@ -214,9 +301,9 @@ class MatrixPlatform:
                 }
             
             # Send message via Matrix Client-Server API
-            url = f"{self.homeserver}/_matrix/client/r0/rooms/{quote(self.room_id)}/send/m.room.message"
+            url = f"{homeserver}/_matrix/client/r0/rooms/{quote(room_id)}/send/m.room.message"
             headers = {
-                "Authorization": f"Bearer {self.access_token}",
+                "Authorization": f"Bearer {access_token}",
                 "Content-Type": "application/json"
             }
             

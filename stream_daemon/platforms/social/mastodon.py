@@ -37,11 +37,17 @@ class SocialPlatform:
 
 
 class MastodonPlatform(SocialPlatform):
-    """Mastodon social platform with threading support."""
+    """
+    Mastodon social platform with threading support.
+    
+    Supports per-username configuration for multi-streamer monitoring.
+    Each streamer can post to a different Mastodon instance/account.
+    """
     
     def __init__(self):
         super().__init__("Mastodon")
-        self.client = None
+        self.client = None  # Default client
+        self.clients_per_user = {}  # "platform_username" -> Mastodon client instances
         
     def authenticate(self):
         if not get_bool_config('Mastodon', 'enable_posting', default=False):
@@ -72,16 +78,68 @@ class MastodonPlatform(SocialPlatform):
                 api_base_url=api_base_url
             )
             self.enabled = True
-            logger.info("✓ Mastodon authenticated")
+            logger.info("✓ Mastodon authenticated (default account)")
+            logger.info("  Per-username accounts supported (MASTODON_API_BASE_URL_PLATFORM_USERNAME)")
             return True
         except Exception as e:
             logger.warning(f"✗ Mastodon authentication failed: {e}")
             return False
     
     def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None, username: Optional[str] = None) -> Optional[str]:
-        if not self.enabled or not self.client:
+        if not self.enabled:
             return None
+        
+        # Determine which client to use (per-username > default)
+        client = None
+        lookup_key = None
+        
+        if platform_name and username:
+            # Try per-username configuration first
+            lookup_key = f"{platform_name.lower()}_{username.lower()}"
             
+            # Check if we've already loaded this user's client
+            if lookup_key in self.clients_per_user:
+                client = self.clients_per_user[lookup_key]
+                logger.debug(f"Using cached per-user Mastodon client for {platform_name}/{username}")
+            else:
+                # Try to dynamically load per-username credentials
+                client_id = get_secret('Mastodon', f'client_id_{lookup_key}',
+                                      secret_name_env=f'SECRETS_AWS_MASTODON_{lookup_key.upper()}_SECRET_NAME',
+                                      secret_path_env=f'SECRETS_VAULT_MASTODON_{lookup_key.upper()}_SECRET_PATH',
+                                      doppler_secret_env=f'SECRETS_DOPPLER_MASTODON_{lookup_key.upper()}_SECRET_NAME')
+                client_secret = get_secret('Mastodon', f'client_secret_{lookup_key}',
+                                          secret_name_env=f'SECRETS_AWS_MASTODON_{lookup_key.upper()}_SECRET_NAME',
+                                          secret_path_env=f'SECRETS_VAULT_MASTODON_{lookup_key.upper()}_SECRET_PATH',
+                                          doppler_secret_env=f'SECRETS_DOPPLER_MASTODON_{lookup_key.upper()}_SECRET_NAME')
+                access_token = get_secret('Mastodon', f'access_token_{lookup_key}',
+                                         secret_name_env=f'SECRETS_AWS_MASTODON_{lookup_key.upper()}_SECRET_NAME',
+                                         secret_path_env=f'SECRETS_VAULT_MASTODON_{lookup_key.upper()}_SECRET_PATH',
+                                         doppler_secret_env=f'SECRETS_DOPPLER_MASTODON_{lookup_key.upper()}_SECRET_NAME')
+                api_base_url = get_config('Mastodon', f'api_base_url_{lookup_key}')
+                
+                if all([client_id, client_secret, access_token, api_base_url]):
+                    try:
+                        logger.info(f"Loading per-user Mastodon account for {platform_name}/{username}")
+                        user_client = Mastodon(
+                            client_id=client_id,
+                            client_secret=client_secret,
+                            access_token=access_token,
+                            api_base_url=api_base_url
+                        )
+                        self.clients_per_user[lookup_key] = user_client
+                        client = user_client
+                        logger.info(f"✓ Per-user Mastodon authenticated for {platform_name}/{username}")
+                    except Exception as auth_error:
+                        logger.warning(f"⚠ Per-user Mastodon authentication failed for {platform_name}/{username}: {auth_error}")
+                        logger.info(f"  Falling back to default Mastodon account")
+        
+        # Fallback to default client if no per-username client found
+        if not client:
+            client = self.client
+            if not client:
+                logger.error("✗ No Mastodon client available (neither per-user nor default)")
+                return None
+        
         try:
             # Check if we should attach a thumbnail image
             media_ids = []
@@ -127,7 +185,7 @@ class MastodonPlatform(SocialPlatform):
                                 if game_name:
                                     description += f" • {game_name}"
                                 
-                                media = self.client.media_post(tmp_path, description=description)
+                                media = client.media_post(tmp_path, description=description)
                                 media_ids.append(media['id'])
                                 logger.info(f"✓ Uploaded thumbnail to Mastodon (media ID: {media['id']})")
                             finally:
@@ -137,7 +195,7 @@ class MastodonPlatform(SocialPlatform):
                         logger.warning(f"⚠ Could not upload thumbnail to Mastodon: {img_error}")
             
             # Post as a reply if reply_to_id is provided (threading)
-            status = self.client.status_post(
+            status = client.status_post(
                 message, 
                 in_reply_to_id=reply_to_id,
                 media_ids=media_ids if media_ids else None
