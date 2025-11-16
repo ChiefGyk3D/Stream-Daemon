@@ -16,11 +16,13 @@ def get_config(section, key, default=None):
         default: Default value if not found
         
     Returns:
-        Config value or default
+        Config value or default (also returns default if value is empty string)
     """
     try:
         env_key = f'{section.upper()}_{key.upper()}'
-        return os.getenv(env_key, default)
+        value = os.getenv(env_key, default)
+        # Return default if value is empty string
+        return value if value else default
     except Exception as e:
         logger.error(f"Error getting config {section}.{key}: {e}")
         return default

@@ -20,6 +20,9 @@ from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, Di
 from stream_daemon.platforms.streaming import TwitchPlatform, YouTubePlatform, KickPlatform
 from stream_daemon.publisher import post_to_social_async
 
+# Configure logging to use local timezone instead of UTC
+logging.Formatter.converter = time.localtime
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
