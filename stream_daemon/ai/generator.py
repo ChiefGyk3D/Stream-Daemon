@@ -171,10 +171,21 @@ class AIMessageGenerator:
             else:
                 max_chars = 500  # Default for Discord/Matrix
             
-            # Reserve space for URL and spacing (more conservative to avoid truncation)
-            # URL can be 30-50 chars + 2 newlines + safety margin
-            url_space = len(url) + 20  # URL + newlines + safety buffer
-            content_max = max_chars - url_space
+            # Calculate exact space needed for URL and formatting
+            # Format will be: "{message}\n\n{url}"
+            # Reserve: 2 chars for "\n\n" + actual URL length
+            url_formatting_space = len(url) + 2  # URL + two newlines
+            
+            # For Bluesky, cap content at 240 chars max to ensure room for URL + hashtags
+            # This gives us: 240 (content) + 2 (newlines) + ~50 (typical URL) = ~292 chars
+            # Leaves 8-char buffer for any URL length variations or formatting
+            if social_platform.lower() == 'bluesky':
+                # Hard cap content at 240 chars, regardless of URL length
+                # This ensures we never exceed 300 even with long URLs and hashtags
+                content_max = min(240, max_chars - url_formatting_space)
+            else:
+                # Other platforms are more forgiving
+                content_max = max_chars - url_formatting_space
             
             prompt = f"""Generate an exciting, engaging social media post announcing a livestream has just started.
 
@@ -203,11 +214,20 @@ Generate ONLY the message text with hashtags, nothing else."""
             
             # Verify content length (without URL yet)
             if len(message) > content_max:
-                # Truncate if AI generated too much
-                message = message[:content_max-3] + "..."
+                logger.warning(f"⚠ AI generated message too long ({len(message)} > {content_max}), truncating to fit")
+                message = message[:content_max]
             
             # Add URL to the message
             full_message = f"{message}\n\n{url}"
+            
+            # Final validation: ensure total length doesn't exceed limit
+            if len(full_message) > max_chars:
+                # This should rarely happen with our conservative limits, but handle it
+                logger.warning(f"⚠ Final message exceeds {max_chars} chars ({len(full_message)}), truncating content")
+                # Recalculate to fit exactly
+                allowed_content = max_chars - url_formatting_space
+                message = message[:allowed_content]
+                full_message = f"{message}\n\n{url}"
             
             logger.info(f"✨ Generated stream start message ({len(message)} chars content + URL = {len(full_message)}/{max_chars} total)")
             return full_message
@@ -240,10 +260,15 @@ Generate ONLY the message text with hashtags, nothing else."""
             # Determine character limit
             if social_platform.lower() == 'bluesky':
                 max_chars = self.bluesky_max_chars
+                # For Bluesky end messages, cap at 280 to leave room for hashtags
+                # No URL in end messages, so we can be slightly less conservative
+                prompt_max = 280
             elif social_platform.lower() == 'mastodon':
                 max_chars = self.mastodon_max_chars
+                prompt_max = max_chars
             else:
                 max_chars = 500  # Default for Discord/Matrix
+                prompt_max = max_chars
             
             prompt = f"""Generate a warm, thankful social media post announcing a livestream has ended.
 
@@ -253,7 +278,7 @@ Stream Details:
 - Title: {title}
 
 Requirements:
-- Maximum {max_chars} characters
+- Maximum {prompt_max} characters
 - Thank viewers for joining
 - Include 1-3 relevant hashtags based on the stream title
 - Grateful and friendly tone
@@ -269,9 +294,10 @@ Generate ONLY the message text with hashtags, nothing else."""
                 # Retry failed
                 return None
             
-            # Verify length
+            # Verify length - truncate if needed
             if len(message) > max_chars:
-                message = message[:max_chars-3] + "..."
+                logger.warning(f"⚠ AI generated end message too long ({len(message)} > {max_chars}), truncating to fit")
+                message = message[:max_chars]
             
             logger.info(f"✨ Generated stream end message ({len(message)}/{max_chars} chars)")
             return message
