@@ -64,11 +64,13 @@ services:
       # ===========================================
       # AI / LLM (Optional - Free Gemini API)
       # Get API key from: https://aistudio.google.com/apikey
+      # Note: LLM_MODEL should be set in .env or Doppler
+      #       Default: gemini-2.0-flash-lite (if not set anywhere)
       # ===========================================
       LLM_ENABLE: "False"
       LLM_PROVIDER: "gemini"
       LLM_GEMINI_API_KEY: "your_gemini_api_key"
-      LLM_MODEL: "${LLM_MODEL:-gemini-2.0-flash-lite}"   # Uses values from .env file or falls back to default
+      # LLM_MODEL is read from .env or Doppler - do not set here!
       
       # ===========================================
       # MESSAGES & BEHAVIOR
