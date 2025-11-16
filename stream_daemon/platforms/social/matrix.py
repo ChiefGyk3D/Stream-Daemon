@@ -123,7 +123,7 @@ class MatrixPlatform:
                 return False
         
         self.enabled = True
-        logger.info(f"✓ Matrix authenticated (default room: {self.room_id})")
+        logger.info("✓ Matrix authenticated (default room configured)")
         logger.info("  Per-username rooms supported (MATRIX_ROOM_ID_PLATFORM_USERNAME)")
         return True
     
@@ -249,10 +249,10 @@ class MatrixPlatform:
                         homeserver = user_homeserver
                         access_token = user_access_token
                         room_id = user_room_id
-                        logger.info(f"✓ Per-user Matrix authenticated for {platform_name}/{username} (room: {room_id})")
+                        logger.info(f"✓ Per-user Matrix authenticated for {platform_name}/{username}")
                     else:
                         logger.warning(f"⚠ Per-user Matrix configuration incomplete for {platform_name}/{username}")
-                        logger.info(f"  Falling back to default Matrix room")
+                        logger.info("  Falling back to default Matrix room")
         
         # Fallback to default configuration if no per-username config found
         if not all([homeserver, access_token, room_id]):
@@ -313,10 +313,10 @@ class MatrixPlatform:
             if response.status_code == 200:
                 data = response.json()
                 event_id = data.get('event_id')
-                logger.info(f"✓ Matrix message posted")
+                logger.info("✓ Matrix message posted")
                 return event_id
             else:
-                logger.warning(f"⚠ Matrix post failed with status {response.status_code}: {response.text}")
+                logger.warning(f"⚠ Matrix post failed with status {response.status_code}")
             return None
         except Exception as e:
             logger.error(f"✗ Matrix post failed: {e}")
