@@ -11,6 +11,11 @@ from typing import Optional
 from urllib.parse import quote, urlparse
 import requests
 from stream_daemon.config import get_bool_config, get_secret
+from stream_daemon.config.constants import (
+    SECRETS_AWS_MATRIX_SECRET_NAME,
+    SECRETS_VAULT_MATRIX_SECRET_PATH,
+    SECRETS_DOPPLER_MATRIX_SECRET_NAME
+)
 
 logger = logging.getLogger(__name__)
 
@@ -79,15 +84,15 @@ class MatrixPlatform:
         
         # Get homeserver (required)
         self.homeserver = get_secret('Matrix', 'homeserver',
-                                     secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
-                                     secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
-                                     doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+                                     secret_name_env=SECRETS_AWS_MATRIX_SECRET_NAME,
+                                     secret_path_env=SECRETS_VAULT_MATRIX_SECRET_PATH,
+                                     doppler_secret_env=SECRETS_DOPPLER_MATRIX_SECRET_NAME)
         
         # Get room ID (required)
         self.room_id = get_secret('Matrix', 'room_id',
-                                  secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
-                                  secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
-                                  doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+                                  secret_name_env=SECRETS_AWS_MATRIX_SECRET_NAME,
+                                  secret_path_env=SECRETS_VAULT_MATRIX_SECRET_PATH,
+                                  doppler_secret_env=SECRETS_DOPPLER_MATRIX_SECRET_NAME)
         
         if not self.homeserver or not self.room_id:
             return False
@@ -98,14 +103,14 @@ class MatrixPlatform:
         
         # Check for username/password first (preferred for bot accounts with auto-rotation)
         self.username = get_secret('Matrix', 'username',
-                                   secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
-                                   secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
-                                   doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+                                   secret_name_env=SECRETS_AWS_MATRIX_SECRET_NAME,
+                                   secret_path_env=SECRETS_VAULT_MATRIX_SECRET_PATH,
+                                   doppler_secret_env=SECRETS_DOPPLER_MATRIX_SECRET_NAME)
         
         self.password = get_secret('Matrix', 'password',
-                                   secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
-                                   secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
-                                   doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+                                   secret_name_env=SECRETS_AWS_MATRIX_SECRET_NAME,
+                                   secret_path_env=SECRETS_VAULT_MATRIX_SECRET_PATH,
+                                   doppler_secret_env=SECRETS_DOPPLER_MATRIX_SECRET_NAME)
         
         # Priority: Username/Password > Access Token
         # If both are set, username/password takes precedence for automatic token rotation
@@ -121,9 +126,9 @@ class MatrixPlatform:
             # Fall back to static access token
             logger.info("Using static access token authentication")
             self.access_token = get_secret('Matrix', 'access_token',
-                                           secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
-                                           secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
-                                           doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
+                                           secret_name_env=SECRETS_AWS_MATRIX_SECRET_NAME,
+                                           secret_path_env=SECRETS_VAULT_MATRIX_SECRET_PATH,
+                                           doppler_secret_env=SECRETS_DOPPLER_MATRIX_SECRET_NAME)
             
             if not self.access_token:
                 logger.error("✗ Matrix authentication failed - need either access_token OR username+password")
@@ -200,14 +205,21 @@ class MatrixPlatform:
                 logger.debug(f"Using cached per-user Matrix config for {platform_name}/{username}")
             else:
                 # Try to dynamically load per-username configuration
+                # Build dynamic secret env names for per-username configs
+                secret_suffix = f"_{lookup_key.upper()}_SECRET_NAME"
+                path_suffix = f"_{lookup_key.upper()}_SECRET_PATH"
+                aws_secret = f"{SECRETS_AWS_MATRIX_SECRET_NAME.replace('_SECRET_NAME', '')}{secret_suffix}"
+                vault_secret = f"{SECRETS_VAULT_MATRIX_SECRET_PATH.replace('_SECRET_PATH', '')}{path_suffix}"
+                doppler_secret = f"{SECRETS_DOPPLER_MATRIX_SECRET_NAME.replace('_SECRET_NAME', '')}{secret_suffix}"
+                
                 user_homeserver = get_secret('Matrix', f'homeserver_{lookup_key}',
-                                            secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
-                                            secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
-                                            doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                                            secret_name_env=aws_secret,
+                                            secret_path_env=vault_secret,
+                                            doppler_secret_env=doppler_secret)
                 user_room_id = get_secret('Matrix', f'room_id_{lookup_key}',
-                                         secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
-                                         secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
-                                         doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                                         secret_name_env=aws_secret,
+                                         secret_path_env=vault_secret,
+                                         doppler_secret_env=doppler_secret)
                 
                 if user_homeserver and user_room_id:
                     # Ensure homeserver has proper format
@@ -215,14 +227,15 @@ class MatrixPlatform:
                         user_homeserver = f"https://{user_homeserver}"
                     
                     # Check for username/password (preferred)
+                    # Reuse the same secret env names for all per-user Matrix secrets
                     user_username = get_secret('Matrix', f'username_{lookup_key}',
-                                              secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
-                                              secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
-                                              doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                                              secret_name_env=aws_secret,
+                                              secret_path_env=vault_secret,
+                                              doppler_secret_env=doppler_secret)
                     user_password = get_secret('Matrix', f'password_{lookup_key}',
-                                              secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
-                                              secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
-                                              doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                                              secret_name_env=aws_secret,
+                                              secret_path_env=vault_secret,
+                                              doppler_secret_env=doppler_secret)
                     
                     user_access_token = None
                     if user_username and user_password:
@@ -234,9 +247,9 @@ class MatrixPlatform:
                     else:
                         # Fall back to static access token
                         user_access_token = get_secret('Matrix', f'access_token_{lookup_key}',
-                                                       secret_name_env=f'SECRETS_AWS_MATRIX_{lookup_key.upper()}_SECRET_NAME',
-                                                       secret_path_env=f'SECRETS_VAULT_MATRIX_{lookup_key.upper()}_SECRET_PATH',
-                                                       doppler_secret_env=f'SECRETS_DOPPLER_MATRIX_{lookup_key.upper()}_SECRET_NAME')
+                                                       secret_name_env=aws_secret,
+                                                       secret_path_env=vault_secret,
+                                                       doppler_secret_env=doppler_secret)
                     
                     if user_access_token:
                         # Cache the configuration

@@ -1,6 +1,19 @@
 """
-Discord webhook platform implementation with per-platform webhook and role support.
+Discord webhook platform implementation with rich embeds and live updates.
 """
+
+import logging
+import re
+import time
+from typing import Optional
+from urllib.parse import urlparse
+import requests
+from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.config.constants import (
+    SECRETS_AWS_DISCORD_SECRET_NAME,
+    SECRETS_VAULT_DISCORD_SECRET_PATH,
+    SECRETS_DOPPLER_DISCORD_SECRET_NAME
+)
 
 import logging
 import os
@@ -121,9 +134,9 @@ class DiscordPlatform:
             # Try to load per-user webhook dynamically if not cached
             if lookup_key not in self.webhook_urls_per_user:
                 user_webhook = get_secret('Discord', f'webhook_{lookup_key}',
-                                         secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
-                                         secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
-                                         doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
+                                         secret_name_env=SECRETS_AWS_DISCORD_SECRET_NAME,
+                                         secret_path_env=SECRETS_VAULT_DISCORD_SECRET_PATH,
+                                         doppler_secret_env=SECRETS_DOPPLER_DISCORD_SECRET_NAME)
                 if user_webhook:
                     self.webhook_urls_per_user[lookup_key] = user_webhook
                     logger.debug(f"  • Loaded Discord webhook for {platform_name}/{username}")
@@ -214,9 +227,9 @@ class DiscordPlatform:
                 # Try to load per-user role dynamically if not cached
                 if lookup_key not in self.role_mentions_per_user:
                     user_role = get_secret('Discord', f'role_{lookup_key}',
-                                          secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
-                                          secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
-                                          doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
+                                          secret_name_env=SECRETS_AWS_DISCORD_SECRET_NAME,
+                                          secret_path_env=SECRETS_VAULT_DISCORD_SECRET_PATH,
+                                          doppler_secret_env=SECRETS_DOPPLER_DISCORD_SECRET_NAME)
                     if user_role:
                         self.role_mentions_per_user[lookup_key] = user_role
                         logger.debug(f"  • Loaded Discord role for {platform_name}/{username}")
