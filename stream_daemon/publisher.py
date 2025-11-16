@@ -63,7 +63,8 @@ def post_to_social_async(enabled_social: list,
                 message,
                 reply_to_id=reply_to_id,
                 platform_name=platform_name,
-                stream_data=stream_data
+                stream_data=stream_data,
+                username=username
             )
             
             if post_id:

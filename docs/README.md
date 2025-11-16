@@ -55,6 +55,13 @@ Configure where Stream Daemon posts your announcements:
   - HashiCorp Vault (for enterprise/self-hosted)
   - Priority system and best practices
   - Docker integration
+- **[Per-Username Social Platforms](configuration/per-username-social-platforms.md)** 🆕 **NEW!** - Multi-streamer control
+  - Discord: Different webhooks and role mentions per streamer
+  - Bluesky: Different accounts per streamer
+  - Mastodon: Different instances/accounts per streamer
+  - Matrix: Different rooms per streamer
+  - Complete examples and migration guide
+  - [Discord Testing Guide](configuration/per-username-discord-testing.md)
 
 ---
 
@@ -84,6 +91,14 @@ Enhance your stream announcements with powerful features:
   - Track 3-5 streamers per platform
   - Comma-separated username lists
   - Independent state tracking for each stream
+  - 100% backward compatible
+
+- **[Per-Username Social Platforms](configuration/per-username-social-platforms.md)** 🆕 **NEW!** - Granular social media control
+  - Different Discord webhooks/roles per streamer
+  - Different Bluesky accounts per streamer
+  - Different Mastodon instances per streamer
+  - Different Matrix rooms per streamer
+  - Two-tier priority: per-username > default
   - 100% backward compatible
 
 ---
@@ -168,6 +183,23 @@ SECRETS_DOPPLER_TWITCH_SECRET_NAME=TWITCH
 ```
 
 See [Secrets Management Guide](configuration/secrets.md) for complete setup.
+
+**Per-Username Configuration (Multi-Streamer Setups):**
+```bash
+# Monitor multiple streamers
+TWITCH_USERNAME=alice,bob,carol
+
+# Each streamer posts to different Discord channel
+DISCORD_WEBHOOK_TWITCH_ALICE=https://discord.com/api/webhooks/111/aaa
+DISCORD_WEBHOOK_TWITCH_BOB=https://discord.com/api/webhooks/222/bbb
+DISCORD_WEBHOOK_TWITCH_CAROL=https://discord.com/api/webhooks/333/ccc
+
+# Each streamer has own Bluesky account
+BLUESKY_HANDLE_TWITCH_ALICE=alice-streams.bsky.social
+BLUESKY_APP_PASSWORD_TWITCH_ALICE=alice_password
+```
+
+See [Per-Username Configuration Guide](configuration/per-username-social-platforms.md) for all platforms.
 
 ### Command Reference
 

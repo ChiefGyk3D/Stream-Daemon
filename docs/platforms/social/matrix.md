@@ -4,6 +4,8 @@
 
 Matrix is a decentralized, open-source communication platform. Stream Daemon can post stream notifications to Matrix rooms using the Matrix Client-Server API.
 
+**🆕 NEW: Per-Username Configuration** - Monitor multiple streamers, each posting to different Matrix rooms! See [Per-Username Configuration Guide](../../configuration/per-username-social-platforms.md#matrix-per-username-configuration).
+
 **Important Limitations:**
 - ⚠️ **Matrix does NOT support editing messages** (unlike Discord)
 - ⚠️ **No live viewer count updates** - messages post once and stay static

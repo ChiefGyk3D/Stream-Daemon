@@ -7,6 +7,11 @@ from typing import Optional, Tuple
 from twitchAPI.twitch import Twitch
 
 from stream_daemon.config import get_secret
+from stream_daemon.config.constants import (
+    SECRETS_AWS_TWITCH_SECRET_NAME,
+    SECRETS_VAULT_TWITCH_SECRET_PATH,
+    SECRETS_DOPPLER_TWITCH_SECRET_NAME
+)
 from stream_daemon.platforms.base import StreamingPlatform
 
 logger = logging.getLogger(__name__)
@@ -27,13 +32,13 @@ class TwitchPlatform(StreamingPlatform):
         """Authenticate with Twitch API with error handling."""
         try:
             self.client_id = get_secret('Twitch', 'client_id', 
-                                  secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',
-                                  secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',
-                                  doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')
+                                  secret_name_env=SECRETS_AWS_TWITCH_SECRET_NAME,
+                                  secret_path_env=SECRETS_VAULT_TWITCH_SECRET_PATH,
+                                  doppler_secret_env=SECRETS_DOPPLER_TWITCH_SECRET_NAME)
             self.client_secret = get_secret('Twitch', 'client_secret',
-                                       secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',
-                                       secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',
-                                       doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')
+                                       secret_name_env=SECRETS_AWS_TWITCH_SECRET_NAME,
+                                       secret_path_env=SECRETS_VAULT_TWITCH_SECRET_PATH,
+                                       doppler_secret_env=SECRETS_DOPPLER_TWITCH_SECRET_NAME)
             
             if not all([self.client_id, self.client_secret]):
                 logger.warning("✗ Twitch credentials not found")

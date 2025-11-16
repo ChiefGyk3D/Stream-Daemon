@@ -6,6 +6,11 @@ from typing import Optional, Tuple
 import requests
 
 from stream_daemon.config import get_bool_config, get_secret
+from stream_daemon.config.constants import (
+    SECRETS_AWS_KICK_SECRET_NAME,
+    SECRETS_VAULT_KICK_SECRET_PATH,
+    SECRETS_DOPPLER_KICK_SECRET_NAME
+)
 from stream_daemon.platforms.base import StreamingPlatform
 
 logger = logging.getLogger(__name__)
@@ -27,13 +32,13 @@ class KickPlatform(StreamingPlatform):
         
         # Try to get credentials for authenticated API
         client_id = get_secret('Kick', 'client_id',
-                              secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',
-                              secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',
-                              doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')
+                              secret_name_env=SECRETS_AWS_KICK_SECRET_NAME,
+                              secret_path_env=SECRETS_VAULT_KICK_SECRET_PATH,
+                              doppler_secret_env=SECRETS_DOPPLER_KICK_SECRET_NAME)
         client_secret = get_secret('Kick', 'client_secret',
-                                   secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',
-                                   secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',
-                                   doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')
+                                   secret_name_env=SECRETS_AWS_KICK_SECRET_NAME,
+                                   secret_path_env=SECRETS_VAULT_KICK_SECRET_PATH,
+                                   doppler_secret_env=SECRETS_DOPPLER_KICK_SECRET_NAME)
         
         if client_id and client_secret:
             # Try to get access token using OAuth client credentials flow

@@ -165,6 +165,66 @@ DISCORD_ROLE_KICK=666666666666666666
 
 ---
 
+### Configuration Mode 4: Per-Username Webhooks & Roles (NEW!)
+
+**Use when:** Monitoring multiple streamers per platform, each needs their own channel/role
+
+This is the **most granular** configuration option, perfect for:
+- Communities with multiple streamers
+- Different channels per streamer
+- Different role mentions per streamer
+- Any combination of the above
+
+```bash
+# In .env
+DISCORD_ENABLE_POSTING=True
+
+# Monitor multiple streamers
+TWITCH_USERNAME=streamer1,streamer2,streamer3
+
+# Per-username webhooks (format: DISCORD_WEBHOOK_PLATFORM_USERNAME)
+DISCORD_WEBHOOK_TWITCH_STREAMER1=https://discord.com/api/webhooks/aaa/xxx
+DISCORD_WEBHOOK_TWITCH_STREAMER2=https://discord.com/api/webhooks/bbb/yyy
+DISCORD_WEBHOOK_TWITCH_STREAMER3=https://discord.com/api/webhooks/ccc/zzz
+
+# Per-username roles (format: DISCORD_ROLE_PLATFORM_USERNAME)
+DISCORD_ROLE_TWITCH_STREAMER1=111111111111111111  # @Streamer1Fans
+DISCORD_ROLE_TWITCH_STREAMER2=222222222222222222  # @Streamer2Squad
+DISCORD_ROLE_TWITCH_STREAMER3=333333333333333333  # @Streamer3Viewers
+
+# Works with any platform
+YOUTUBE_USERNAME=creator1,creator2
+DISCORD_WEBHOOK_YOUTUBE_CREATOR1=https://discord.com/api/webhooks/ddd/aaa
+DISCORD_WEBHOOK_YOUTUBE_CREATOR2=https://discord.com/api/webhooks/eee/bbb
+```
+
+**Priority Chain (most specific to least):**
+1. Per-username: `DISCORD_WEBHOOK_TWITCH_STREAMER1`
+2. Per-platform: `DISCORD_WEBHOOK_TWITCH`
+3. Default: `DISCORD_WEBHOOK_URL`
+
+**Example Scenario:**
+```bash
+# Server with 3 Twitch streamers, each in their own channel
+TWITCH_USERNAME=alice,bob,carol
+
+# Alice streams go to #alice-live with @AliceFans role
+DISCORD_WEBHOOK_TWITCH_ALICE=https://discord.com/api/webhooks/alice/token
+DISCORD_ROLE_TWITCH_ALICE=111111111111111111
+
+# Bob streams go to #bob-streams with @BobSquad role  
+DISCORD_WEBHOOK_TWITCH_BOB=https://discord.com/api/webhooks/bob/token
+DISCORD_ROLE_TWITCH_BOB=222222222222222222
+
+# Carol streams go to #carol-gaming with @CarolViewers role
+DISCORD_WEBHOOK_TWITCH_CAROL=https://discord.com/api/webhooks/carol/token
+DISCORD_ROLE_TWITCH_CAROL=333333333333333333
+```
+
+**100% Backward Compatible!** Existing single-streamer setups work without any changes.
+
+---
+
 ### Using Secrets Manager (Recommended for Production)
 
 **In your `.env` file:**
@@ -396,6 +456,19 @@ DISCORD_ENDED_MESSAGE_YOUTUBE=Missed it? Watch the VOD! Subscribe for more 🔔
 | `DISCORD_ROLE_TWITCH` | Twitch role ID | `111111111111111111` |
 | `DISCORD_ROLE_YOUTUBE` | YouTube role ID | `222222222222222222` |
 | `DISCORD_ROLE_KICK` | Kick role ID | `333333333333333333` |
+
+### Optional Settings (Per-Username Mode)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DISCORD_WEBHOOK_TWITCH_ALICE` | Alice's Twitch webhook | `https://discord.com/api/webhooks/111/aaa` |
+| `DISCORD_WEBHOOK_YOUTUBE_CREATOR1` | Creator1's YouTube webhook | `https://discord.com/api/webhooks/222/bbb` |
+| `DISCORD_WEBHOOK_KICK_GAMER99` | Gamer99's Kick webhook | `https://discord.com/api/webhooks/333/ccc` |
+| `DISCORD_ROLE_TWITCH_ALICE` | Alice's Twitch role ID | `111111111111111111` |
+| `DISCORD_ROLE_YOUTUBE_CREATOR1` | Creator1's YouTube role ID | `222222222222222222` |
+| `DISCORD_ROLE_KICK_GAMER99` | Gamer99's Kick role ID | `333333333333333333` |
+
+**Format:** `DISCORD_WEBHOOK_<PLATFORM>_<USERNAME>` and `DISCORD_ROLE_<PLATFORM>_<USERNAME>` (all uppercase)
 
 ### Stream Ended Messages (Configuration, not secrets!)
 
