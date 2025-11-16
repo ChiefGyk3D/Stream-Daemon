@@ -7,6 +7,11 @@ from typing import Optional, Tuple
 from googleapiclient.discovery import build
 
 from stream_daemon.config import get_config, get_secret
+from stream_daemon.config.constants import (
+    SECRETS_AWS_YOUTUBE_SECRET_NAME,
+    SECRETS_VAULT_YOUTUBE_SECRET_PATH,
+    SECRETS_DOPPLER_YOUTUBE_SECRET_NAME
+)
 from stream_daemon.platforms.base import StreamingPlatform
 
 logger = logging.getLogger(__name__)
@@ -29,9 +34,9 @@ class YouTubePlatform(StreamingPlatform):
         """Authenticate with YouTube API with error handling."""
         try:
             api_key = get_secret('YouTube', 'api_key',
-                                secret_name_env='SECRETS_AWS_YOUTUBE_SECRET_NAME',
-                                secret_path_env='SECRETS_VAULT_YOUTUBE_SECRET_PATH',
-                                doppler_secret_env='SECRETS_DOPPLER_YOUTUBE_SECRET_NAME')
+                                secret_name_env=SECRETS_AWS_YOUTUBE_SECRET_NAME,
+                                secret_path_env=SECRETS_VAULT_YOUTUBE_SECRET_PATH,
+                                doppler_secret_env=SECRETS_DOPPLER_YOUTUBE_SECRET_NAME)
             self.username = get_config('YouTube', 'username')
             
             # Optional: Channel ID for direct lookup (faster, but username works too)

@@ -8,6 +8,11 @@ from typing import Optional
 from urllib.parse import urlparse
 from atproto import Client, models, client_utils
 from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.config.constants import (
+    SECRETS_AWS_BLUESKY_SECRET_NAME,
+    SECRETS_VAULT_BLUESKY_SECRET_PATH,
+    SECRETS_DOPPLER_BLUESKY_SECRET_NAME
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +59,9 @@ class BlueskyPlatform:
             
         handle = get_config('Bluesky', 'handle')
         app_password = get_secret('Bluesky', 'app_password',
-                                  secret_name_env='SECRETS_AWS_BLUESKY_SECRET_NAME',
-                                  secret_path_env='SECRETS_VAULT_BLUESKY_SECRET_PATH',
-                                  doppler_secret_env='SECRETS_DOPPLER_BLUESKY_SECRET_NAME')
+                                  secret_name_env=SECRETS_AWS_BLUESKY_SECRET_NAME,
+                                  secret_path_env=SECRETS_VAULT_BLUESKY_SECRET_PATH,
+                                  doppler_secret_env=SECRETS_DOPPLER_BLUESKY_SECRET_NAME)
         
         if not all([handle, app_password]):
             return False
@@ -91,10 +96,17 @@ class BlueskyPlatform:
             else:
                 # Try to dynamically load per-username credentials
                 handle = get_config('Bluesky', f'handle_{lookup_key}')
+                
+                # Build dynamic secret env names from base constants
+                secret_suffix = f"_{lookup_key.upper()}_SECRET_NAME"
+                aws_secret = f"{SECRETS_AWS_BLUESKY_SECRET_NAME.replace('_SECRET_NAME', '')}{secret_suffix}"
+                vault_secret = SECRETS_VAULT_BLUESKY_SECRET_PATH.replace('_SECRET_PATH', f'_{lookup_key.upper()}_SECRET_PATH')
+                doppler_secret = f"{SECRETS_DOPPLER_BLUESKY_SECRET_NAME.replace('_SECRET_NAME', '')}{secret_suffix}"
+                
                 app_password = get_secret('Bluesky', f'app_password_{lookup_key}',
-                                         secret_name_env=f'SECRETS_AWS_BLUESKY_{lookup_key.upper()}_SECRET_NAME',
-                                         secret_path_env=f'SECRETS_VAULT_BLUESKY_{lookup_key.upper()}_SECRET_PATH',
-                                         doppler_secret_env=f'SECRETS_DOPPLER_BLUESKY_{lookup_key.upper()}_SECRET_NAME')
+                                         secret_name_env=aws_secret,
+                                         secret_path_env=vault_secret,
+                                         doppler_secret_env=doppler_secret)
                 
                 if handle and app_password:
                     try:

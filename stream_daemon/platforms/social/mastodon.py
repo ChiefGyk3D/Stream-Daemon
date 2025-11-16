@@ -6,6 +6,11 @@ import logging
 from typing import Optional
 from mastodon import Mastodon
 from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.config.constants import (
+    SECRETS_AWS_MASTODON_SECRET_NAME,
+    SECRETS_VAULT_MASTODON_SECRET_PATH,
+    SECRETS_DOPPLER_MASTODON_SECRET_NAME
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,17 +59,17 @@ class MastodonPlatform(SocialPlatform):
             return False
             
         client_id = get_secret('Mastodon', 'client_id',
-                              secret_name_env='SECRETS_AWS_MASTODON_SECRET_NAME',
-                              secret_path_env='SECRETS_VAULT_MASTODON_SECRET_PATH',
-                              doppler_secret_env='SECRETS_DOPPLER_MASTODON_SECRET_NAME')
+                              secret_name_env=SECRETS_AWS_MASTODON_SECRET_NAME,
+                              secret_path_env=SECRETS_VAULT_MASTODON_SECRET_PATH,
+                              doppler_secret_env=SECRETS_DOPPLER_MASTODON_SECRET_NAME)
         client_secret = get_secret('Mastodon', 'client_secret',
-                                   secret_name_env='SECRETS_AWS_MASTODON_SECRET_NAME',
-                                   secret_path_env='SECRETS_VAULT_MASTODON_SECRET_PATH',
-                                   doppler_secret_env='SECRETS_DOPPLER_MASTODON_SECRET_NAME')
+                                   secret_name_env=SECRETS_AWS_MASTODON_SECRET_NAME,
+                                   secret_path_env=SECRETS_VAULT_MASTODON_SECRET_PATH,
+                                   doppler_secret_env=SECRETS_DOPPLER_MASTODON_SECRET_NAME)
         access_token = get_secret('Mastodon', 'access_token',
-                                  secret_name_env='SECRETS_AWS_MASTODON_SECRET_NAME',
-                                  secret_path_env='SECRETS_VAULT_MASTODON_SECRET_PATH',
-                                  doppler_secret_env='SECRETS_DOPPLER_MASTODON_SECRET_NAME')
+                                  secret_name_env=SECRETS_AWS_MASTODON_SECRET_NAME,
+                                  secret_path_env=SECRETS_VAULT_MASTODON_SECRET_PATH,
+                                  doppler_secret_env=SECRETS_DOPPLER_MASTODON_SECRET_NAME)
         api_base_url = get_config('Mastodon', 'api_base_url')
         
         if not all([client_id, client_secret, access_token, api_base_url]):
@@ -103,18 +108,24 @@ class MastodonPlatform(SocialPlatform):
                 logger.debug(f"Using cached per-user Mastodon client for {platform_name}/{username}")
             else:
                 # Try to dynamically load per-username credentials
+                # Build dynamic secret env names from base constants
+                secret_suffix = f"_{lookup_key.upper()}_SECRET_NAME"
+                aws_secret = f"{SECRETS_AWS_MASTODON_SECRET_NAME.replace('_SECRET_NAME', '')}{secret_suffix}"
+                vault_secret = SECRETS_VAULT_MASTODON_SECRET_PATH.replace('_SECRET_PATH', f'_{lookup_key.upper()}_SECRET_PATH')
+                doppler_secret = f"{SECRETS_DOPPLER_MASTODON_SECRET_NAME.replace('_SECRET_NAME', '')}{secret_suffix}"
+                
                 client_id = get_secret('Mastodon', f'client_id_{lookup_key}',
-                                      secret_name_env=f'SECRETS_AWS_MASTODON_{lookup_key.upper()}_SECRET_NAME',
-                                      secret_path_env=f'SECRETS_VAULT_MASTODON_{lookup_key.upper()}_SECRET_PATH',
-                                      doppler_secret_env=f'SECRETS_DOPPLER_MASTODON_{lookup_key.upper()}_SECRET_NAME')
+                                      secret_name_env=aws_secret,
+                                      secret_path_env=vault_secret,
+                                      doppler_secret_env=doppler_secret)
                 client_secret = get_secret('Mastodon', f'client_secret_{lookup_key}',
-                                          secret_name_env=f'SECRETS_AWS_MASTODON_{lookup_key.upper()}_SECRET_NAME',
-                                          secret_path_env=f'SECRETS_VAULT_MASTODON_{lookup_key.upper()}_SECRET_PATH',
-                                          doppler_secret_env=f'SECRETS_DOPPLER_MASTODON_{lookup_key.upper()}_SECRET_NAME')
+                                          secret_name_env=aws_secret,
+                                          secret_path_env=vault_secret,
+                                          doppler_secret_env=doppler_secret)
                 access_token = get_secret('Mastodon', f'access_token_{lookup_key}',
-                                         secret_name_env=f'SECRETS_AWS_MASTODON_{lookup_key.upper()}_SECRET_NAME',
-                                         secret_path_env=f'SECRETS_VAULT_MASTODON_{lookup_key.upper()}_SECRET_PATH',
-                                         doppler_secret_env=f'SECRETS_DOPPLER_MASTODON_{lookup_key.upper()}_SECRET_NAME')
+                                         secret_name_env=aws_secret,
+                                         secret_path_env=vault_secret,
+                                         doppler_secret_env=doppler_secret)
                 api_base_url = get_config('Mastodon', f'api_base_url_{lookup_key}')
                 
                 if all([client_id, client_secret, access_token, api_base_url]):
