@@ -3,6 +3,7 @@ Discord webhook platform implementation with rich embeds and live updates.
 """
 
 import logging
+import os
 import re
 import time
 from typing import Optional
@@ -14,15 +15,6 @@ from stream_daemon.config.constants import (
     SECRETS_VAULT_DISCORD_SECRET_PATH,
     SECRETS_DOPPLER_DISCORD_SECRET_NAME
 )
-
-import logging
-import os
-import re
-import time
-from typing import Optional
-from urllib.parse import urlparse
-import requests
-from stream_daemon.config import get_config, get_bool_config, get_secret
 
 logger = logging.getLogger(__name__)
 
