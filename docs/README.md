@@ -80,6 +80,12 @@ Enhance your stream announcements with powerful features:
   - Handle platform failures gracefully
   - Examples and scenarios
 
+- **[Multiple Streams Per Platform](features/multiple-streams-per-platform.md)** 🆕 **NEW!** - Monitor multiple streamers per platform
+  - Track 3-5 streamers per platform
+  - Comma-separated username lists
+  - Independent state tracking for each stream
+  - 100% backward compatible
+
 ---
 
 ## 🔄 Migration
