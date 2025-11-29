@@ -33,7 +33,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
 
     - name: Set up Snyk CLI
       uses: snyk/actions/setup@9adf32b1121593767fc3c057af55b55db032dc04
