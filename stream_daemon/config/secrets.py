@@ -204,3 +204,46 @@ def get_secret(platform, key, secret_name_env=None, secret_path_env=None, dopple
     except Exception as e:
         logger.error(f"Error getting secret for {platform}.{key}: {type(e).__name__}")
         return None
+
+
+def get_secret_with_account(platform, key, account_id='default', 
+                            secret_name_env=None, secret_path_env=None, doppler_secret_env=None):
+    """
+    Get a secret value with multi-account support.
+    
+    Priority:
+    1. Account-specific environment variable (e.g., DISCORD_GAMING_WEBHOOK_URL)
+    2. Default environment variable (e.g., DISCORD_WEBHOOK_URL)
+    3. Secrets manager (AWS/Vault/Doppler) with account suffix
+    4. None if not found
+    
+    Args:
+        platform: Platform name (e.g., 'Discord', 'Mastodon')
+        key: Secret key (e.g., 'webhook_url', 'access_token')
+        account_id: Account identifier (e.g., 'gaming', 'personal', 'default')
+        secret_name_env: AWS Secrets Manager env var name
+        secret_path_env: HashiCorp Vault env var name
+        doppler_secret_env: Doppler secret name env var
+        
+    Returns:
+        Secret value or None if not found
+        
+    Examples:
+        get_secret_with_account('Discord', 'webhook_url', 'gaming')
+            → Tries DISCORD_GAMING_WEBHOOK_URL, then DISCORD_WEBHOOK_URL
+    """
+    try:
+        # Try account-specific env var first (unless account_id is 'default')
+        if account_id and account_id != 'default':
+            account_env_key = f"{platform.upper()}_{account_id.upper()}_{key.upper()}"
+            env_value = os.getenv(account_env_key)
+            if env_value:
+                return env_value
+        
+        # Fall back to regular get_secret (checks default env var and secrets managers)
+        return get_secret(platform, key, secret_name_env, secret_path_env, doppler_secret_env)
+        
+    except Exception as e:
+        logger.error(f"Error getting secret for {platform}.{key} (account: {account_id}): {type(e).__name__}")
+        return None
+

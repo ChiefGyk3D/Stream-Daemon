@@ -5,61 +5,36 @@ Mastodon social platform implementation with threading support.
 import logging
 from typing import Optional
 from mastodon import Mastodon
-from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.platforms.base import SocialPlatform
+from stream_daemon.config import get_config_with_account, get_bool_config_with_account, get_secret_with_account
 
 logger = logging.getLogger(__name__)
 
 
-class SocialPlatform:
-    """Base class for social platforms."""
-    
-    def __init__(self, name):
-        self.name = name
-        self.enabled = False
-    
-    def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None) -> Optional[str]:
-        """
-        Post message to platform.
-        
-        Args:
-            message: The message to post
-            reply_to_id: Optional post ID to reply to (for threading)
-            platform_name: Optional streaming platform name (for role mentions in Discord/Matrix)
-            
-        Returns:
-            Post ID if successful, None otherwise
-        """
-        raise NotImplementedError
-    
-    def authenticate(self):
-        """Authenticate with the platform."""
-        raise NotImplementedError
-
-
 class MastodonPlatform(SocialPlatform):
-    """Mastodon social platform with threading support."""
+    """Mastodon social platform with threading support and multi-account capability."""
     
-    def __init__(self):
-        super().__init__("Mastodon")
+    def __init__(self, account_id='default'):
+        super().__init__("Mastodon", account_id)
         self.client = None
         
     def authenticate(self):
-        if not get_bool_config('Mastodon', 'enable_posting', default=False):
+        if not get_bool_config_with_account('Mastodon', 'enable_posting', self.account_id, default=False):
             return False
             
-        client_id = get_secret('Mastodon', 'client_id',
+        client_id = get_secret_with_account('Mastodon', 'client_id', self.account_id,
                               secret_name_env='SECRETS_AWS_MASTODON_SECRET_NAME',
                               secret_path_env='SECRETS_VAULT_MASTODON_SECRET_PATH',
                               doppler_secret_env='SECRETS_DOPPLER_MASTODON_SECRET_NAME')
-        client_secret = get_secret('Mastodon', 'client_secret',
+        client_secret = get_secret_with_account('Mastodon', 'client_secret', self.account_id,
                                    secret_name_env='SECRETS_AWS_MASTODON_SECRET_NAME',
                                    secret_path_env='SECRETS_VAULT_MASTODON_SECRET_PATH',
                                    doppler_secret_env='SECRETS_DOPPLER_MASTODON_SECRET_NAME')
-        access_token = get_secret('Mastodon', 'access_token',
+        access_token = get_secret_with_account('Mastodon', 'access_token', self.account_id,
                                   secret_name_env='SECRETS_AWS_MASTODON_SECRET_NAME',
                                   secret_path_env='SECRETS_VAULT_MASTODON_SECRET_PATH',
                                   doppler_secret_env='SECRETS_DOPPLER_MASTODON_SECRET_NAME')
-        api_base_url = get_config('Mastodon', 'api_base_url')
+        api_base_url = get_config_with_account('Mastodon', 'api_base_url', self.account_id)
         
         if not all([client_id, client_secret, access_token, api_base_url]):
             return False
@@ -72,10 +47,10 @@ class MastodonPlatform(SocialPlatform):
                 api_base_url=api_base_url
             )
             self.enabled = True
-            logger.info("✓ Mastodon authenticated")
+            logger.info(f"✓ {self.full_name} authenticated")
             return True
         except Exception as e:
-            logger.warning(f"✗ Mastodon authentication failed: {e}")
+            logger.warning(f"✗ {self.full_name} authentication failed: {e}")
             return False
     
     def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:

@@ -72,6 +72,79 @@ def get_int_config(section, key, default=0):
         return default
 
 
+def get_config_with_account(section, key, account_id='default', default=None):
+    """
+    Get config from environment variables with multi-account support.
+    
+    Tries account-specific variable first, falls back to default.
+    Pattern: SECTION_ACCOUNTID_KEY or SECTION_KEY
+    
+    Args:
+        section: Config section name (e.g., 'Discord', 'Mastodon')
+        key: Config key name (e.g., 'webhook_url', 'api_base_url')
+        account_id: Account identifier (e.g., 'gaming', 'personal', 'default')
+        default: Default value if not found
+        
+    Returns:
+        Config value or default
+        
+    Examples:
+        get_config_with_account('Discord', 'webhook_url', 'gaming')
+            → Tries DISCORD_GAMING_WEBHOOK_URL, then DISCORD_WEBHOOK_URL
+        get_config_with_account('Mastodon', 'api_base_url', 'personal')
+            → Tries MASTODON_PERSONAL_API_BASE_URL, then MASTODON_API_BASE_URL
+    """
+    try:
+        # Try account-specific env var first (unless account_id is 'default')
+        if account_id and account_id != 'default':
+            account_key = f'{section.upper()}_{account_id.upper()}_{key.upper()}'
+            value = os.getenv(account_key)
+            if value:
+                return value if value else default
+        
+        # Fall back to default env var (without account_id)
+        default_key = f'{section.upper()}_{key.upper()}'
+        value = os.getenv(default_key, default)
+        return value if value else default
+        
+    except Exception as e:
+        logger.error(f"Error getting config {section}.{key} for account {account_id}: {e}")
+        return default
+
+
+def get_bool_config_with_account(section, key, account_id='default', default=False):
+    """
+    Get boolean config with multi-account support.
+    
+    Args:
+        section: Config section name
+        key: Config key name
+        account_id: Account identifier
+        default: Default boolean value
+        
+    Returns:
+        Boolean config value
+    """
+    try:
+        # Try account-specific env var first
+        if account_id and account_id != 'default':
+            account_key = f'{section.upper()}_{account_id.upper()}_{key.upper()}'
+            env_var = os.getenv(account_key)
+            if env_var is not None:
+                return env_var.lower() in ['true', '1', 't', 'y', 'yes']
+        
+        # Fall back to default
+        default_key = f'{section.upper()}_{key.upper()}'
+        env_var = os.getenv(default_key)
+        if env_var is not None:
+            return env_var.lower() in ['true', '1', 't', 'y', 'yes']
+        
+        return default
+    except Exception as e:
+        logger.error(f"Error getting boolean config {section}.{key} for account {account_id}: {e}")
+        return default
+
+
 def get_usernames(section, default=None):
     """
     Get list of usernames from environment variables.
