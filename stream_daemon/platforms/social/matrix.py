@@ -10,7 +10,8 @@ import re
 from typing import Optional
 from urllib.parse import quote, urlparse
 import requests
-from stream_daemon.config import get_bool_config, get_secret
+from stream_daemon.platforms.base import SocialPlatform
+from stream_daemon.config import get_bool_config_with_account, get_secret_with_account
 
 logger = logging.getLogger(__name__)
 
@@ -52,17 +53,16 @@ def _is_url_for_domain(url: str, domain: str) -> bool:
         return False
 
 
-class MatrixPlatform:
+class MatrixPlatform(SocialPlatform):
     """
-    Matrix platform with rich message support.
+    Matrix platform with rich message support and multi-account capability.
     
     NOTE: Matrix does NOT support editing messages like Discord.
     Messages are posted once and cannot be updated with live viewer counts.
     """
     
-    def __init__(self):
-        self.name = "Matrix"
-        self.enabled = False
+    def __init__(self, account_id='default'):
+        super().__init__("Matrix", account_id)
         self.homeserver = None
         self.access_token = None
         self.room_id = None
@@ -70,17 +70,17 @@ class MatrixPlatform:
         self.password = None
         
     def authenticate(self):
-        if not get_bool_config('Matrix', 'enable_posting', default=False):
+        if not get_bool_config_with_account('Matrix', 'enable_posting', self.account_id, default=False):
             return False
         
         # Get homeserver (required)
-        self.homeserver = get_secret('Matrix', 'homeserver',
+        self.homeserver = get_secret_with_account('Matrix', 'homeserver', self.account_id,
                                      secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                      secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                      doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
         
         # Get room ID (required)
-        self.room_id = get_secret('Matrix', 'room_id',
+        self.room_id = get_secret_with_account('Matrix', 'room_id', self.account_id,
                                   secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                   secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                   doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
@@ -93,12 +93,12 @@ class MatrixPlatform:
             self.homeserver = f"https://{self.homeserver}"
         
         # Check for username/password first (preferred for bot accounts with auto-rotation)
-        self.username = get_secret('Matrix', 'username',
+        self.username = get_secret_with_account('Matrix', 'username', self.account_id,
                                    secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                    secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                    doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
         
-        self.password = get_secret('Matrix', 'password',
+        self.password = get_secret_with_account('Matrix', 'password', self.account_id,
                                    secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                    secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                    doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
@@ -107,26 +107,26 @@ class MatrixPlatform:
         # If both are set, username/password takes precedence for automatic token rotation
         if self.username and self.password:
             # Login to get fresh access token
-            logger.info("Using username/password authentication (auto-rotation enabled)")
+            logger.info(f"{self.full_name} using username/password authentication (auto-rotation enabled)")
             self.access_token = self._login_and_get_token()
             if not self.access_token:
-                logger.error("✗ Matrix login failed - check username/password")
+                logger.error(f"✗ {self.full_name} login failed - check username/password")
                 return False
-            logger.info(f"✓ Matrix logged in and obtained access token")
+            logger.info(f"✓ {self.full_name} logged in and obtained access token")
         else:
             # Fall back to static access token
-            logger.info("Using static access token authentication")
-            self.access_token = get_secret('Matrix', 'access_token',
+            logger.info(f"{self.full_name} using static access token authentication")
+            self.access_token = get_secret_with_account('Matrix', 'access_token', self.account_id,
                                            secret_name_env='SECRETS_AWS_MATRIX_SECRET_NAME',
                                            secret_path_env='SECRETS_VAULT_MATRIX_SECRET_PATH',
                                            doppler_secret_env='SECRETS_DOPPLER_MATRIX_SECRET_NAME')
             
             if not self.access_token:
-                logger.error("✗ Matrix authentication failed - need either access_token OR username+password")
+                logger.error(f"✗ {self.full_name} authentication failed - need either access_token OR username+password")
                 return False
         
         self.enabled = True
-        logger.info(f"✓ Matrix authenticated ({self.room_id})")
+        logger.info(f"✓ {self.full_name} authenticated ({self.room_id})")
         return True
     
     def _login_and_get_token(self):

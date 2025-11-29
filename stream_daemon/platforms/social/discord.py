@@ -9,7 +9,8 @@ import time
 from typing import Optional
 from urllib.parse import urlparse
 import requests
-from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.platforms.base import SocialPlatform
+from stream_daemon.config import get_bool_config_with_account, get_secret_with_account
 
 logger = logging.getLogger(__name__)
 
@@ -36,12 +37,11 @@ def _is_url_for_domain(url: str, domain: str) -> bool:
         return False
 
 
-class DiscordPlatform:
+class DiscordPlatform(SocialPlatform):
     """Discord webhook platform with flexible per-platform webhook and role support."""
     
-    def __init__(self):
-        self.name = "Discord"
-        self.enabled = False
+    def __init__(self, account_id='default'):
+        super().__init__("Discord", account_id)
         self.webhook_url = None  # Default webhook
         self.webhook_urls = {}  # platform_name -> webhook_url mapping
         self.role_id = None  # Default role
@@ -49,50 +49,50 @@ class DiscordPlatform:
         self.active_messages = {}  # platform_name -> {message_id, webhook_url, last_update} tracking
         
     def authenticate(self):
-        if not get_bool_config('Discord', 'enable_posting', default=False):
+        if not get_bool_config_with_account('Discord', 'enable_posting', self.account_id, default=False):
             return False
         
         # Get default webhook URL
-        self.webhook_url = get_secret('Discord', 'webhook_url',
+        self.webhook_url = get_secret_with_account('Discord', 'webhook_url', self.account_id,
                                       secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                       secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                       doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
         
         # Get per-platform webhook URLs (optional - overrides default)
         for platform in ['twitch', 'youtube', 'kick']:
-            platform_webhook = get_secret('Discord', f'webhook_{platform}',
+            platform_webhook = get_secret_with_account('Discord', f'webhook_{platform}', self.account_id,
                                          secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                          secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                          doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
             if platform_webhook:
                 self.webhook_urls[platform] = platform_webhook
-                logger.info(f"  • Discord webhook configured for {platform.upper()}")
+                logger.info(f"  • {self.full_name} webhook configured for {platform.upper()}")
         
         # Need at least one webhook (default or per-platform)
         if not self.webhook_url and not self.webhook_urls:
             return False
         
         # Get default role ID (optional)
-        self.role_id = get_secret('Discord', 'role',
+        self.role_id = get_secret_with_account('Discord', 'role', self.account_id,
                                  secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                  secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                  doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
         
         # Get per-platform role IDs (optional - overrides default)
         for platform in ['twitch', 'youtube', 'kick']:
-            platform_role = get_secret('Discord', f'role_{platform}',
+            platform_role = get_secret_with_account('Discord', f'role_{platform}', self.account_id,
                                       secret_name_env='SECRETS_AWS_DISCORD_SECRET_NAME',
                                       secret_path_env='SECRETS_VAULT_DISCORD_SECRET_PATH',
                                       doppler_secret_env='SECRETS_DOPPLER_DISCORD_SECRET_NAME')
             if platform_role:
                 self.role_mentions[platform] = platform_role
-                logger.info(f"  • Discord role configured for {platform.upper()}")
+                logger.info(f"  • {self.full_name} role configured for {platform.upper()}")
         
         self.enabled = True
         if self.webhook_url:
-            logger.info("✓ Discord webhook configured (default)")
+            logger.info(f"✓ {self.full_name} webhook configured (default)")
         if self.webhook_urls:
-            logger.info(f"✓ Discord webhooks configured ({len(self.webhook_urls)} platform-specific)")
+            logger.info(f"✓ {self.full_name} webhooks configured ({len(self.webhook_urls)} platform-specific)")
         return True
     
     def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:

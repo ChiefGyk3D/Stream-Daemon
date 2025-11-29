@@ -7,7 +7,8 @@ import re
 from typing import Optional
 from urllib.parse import urlparse
 from atproto import Client, models, client_utils
-from stream_daemon.config import get_config, get_bool_config, get_secret
+from stream_daemon.platforms.base import SocialPlatform
+from stream_daemon.config import get_config_with_account, get_bool_config_with_account, get_secret_with_account
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +35,19 @@ def _is_url_for_domain(url: str, domain: str) -> bool:
         return False
 
 
-class BlueskyPlatform:
-    """Bluesky social platform with threading support."""
+class BlueskyPlatform(SocialPlatform):
+    """Bluesky social platform with threading support and multi-account capability."""
     
-    def __init__(self):
-        self.name = "Bluesky"
-        self.enabled = False
+    def __init__(self, account_id='default'):
+        super().__init__("Bluesky", account_id)
         self.client = None
         
     def authenticate(self):
-        if not get_bool_config('Bluesky', 'enable_posting', default=False):
+        if not get_bool_config_with_account('Bluesky', 'enable_posting', self.account_id, default=False):
             return False
             
-        handle = get_config('Bluesky', 'handle')
-        app_password = get_secret('Bluesky', 'app_password',
+        handle = get_config_with_account('Bluesky', 'handle', self.account_id)
+        app_password = get_secret_with_account('Bluesky', 'app_password', self.account_id,
                                   secret_name_env='SECRETS_AWS_BLUESKY_SECRET_NAME',
                                   secret_path_env='SECRETS_VAULT_BLUESKY_SECRET_PATH',
                                   doppler_secret_env='SECRETS_DOPPLER_BLUESKY_SECRET_NAME')
@@ -59,10 +59,10 @@ class BlueskyPlatform:
             self.client = Client()
             self.client.login(handle, app_password)
             self.enabled = True
-            logger.info("✓ Bluesky authenticated")
+            logger.info(f"✓ {self.full_name} authenticated")
             return True
         except Exception as e:
-            logger.warning(f"✗ Bluesky authentication failed: {e}")
+            logger.warning(f"✗ {self.full_name} authentication failed: {e}")
             return False
     
     def post(self, message: str, reply_to_id: Optional[str] = None, platform_name: Optional[str] = None, stream_data: Optional[dict] = None) -> Optional[str]:
