@@ -139,9 +139,36 @@ class TwitchPlatform(StreamingPlatform):
             
         except asyncio.TimeoutError:
             self.consecutive_errors += 1
-            logger.error(f"⚠ Twitch API timeout for {username} (consecutive errors: {self.consecutive_errors})")
+            logger.error(f"⚠ Twitch API timeout for {username}")
+            logger.error(f"   Consecutive errors: {self.consecutive_errors}/{self.max_consecutive_errors}")
+            logger.error(f"   → Network timeout: Check internet connection and firewall settings")
+            logger.error(f"   → Consider increasing timeout or check Twitch API status")
+            if self.consecutive_errors >= self.max_consecutive_errors:
+                logger.error(f"   ⏰ Twitch will enter cooldown to prevent API abuse")
             return False, None
         except Exception as e:
             self.consecutive_errors += 1
-            logger.error(f"⚠ Error checking Twitch/{username}: {e} (consecutive errors: {self.consecutive_errors})")
+            error_str = str(e)
+            error_type = type(e).__name__
+            
+            logger.error(f"⚠ Error checking Twitch/{username} ({error_type}): {e}")
+            logger.error(f"   Consecutive errors: {self.consecutive_errors}/{self.max_consecutive_errors}")
+            
+            # Provide specific guidance based on error type
+            if '401' in error_str or 'unauthorized' in error_str.lower():
+                logger.error(f"   → 401 Unauthorized: OAuth token invalid or expired")
+                logger.error(f"   → Re-authenticate or check TWITCH_CLIENT_ID/CLIENT_SECRET")
+            elif '403' in error_str or 'forbidden' in error_str.lower():
+                logger.error(f"   → 403 Forbidden: Check OAuth scopes or API permissions")
+            elif '404' in error_str or 'not found' in error_str.lower():
+                logger.error(f"   → 404 Not Found: User '{username}' may not exist")
+            elif 'rate limit' in error_str.lower() or '429' in error_str:
+                logger.error(f"   → Rate Limited: Too many API requests, will retry with backoff")
+            elif 'connection' in error_str.lower():
+                logger.error(f"   → Connection error: Check network connectivity to twitch.tv")
+            else:
+                logger.error(f"   → Check Twitch credentials and network configuration")
+            
+            if self.consecutive_errors >= self.max_consecutive_errors:
+                logger.error(f"   ⏰ Twitch will enter cooldown to prevent API abuse")
             return False, None
