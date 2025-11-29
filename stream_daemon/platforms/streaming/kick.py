@@ -19,6 +19,9 @@ class KickPlatform(StreamingPlatform):
         # Note: self.enabled is set to False in parent class
         self.access_token = None
         self.use_auth = False
+        self.consecutive_errors = 0
+        self.max_consecutive_errors = 5
+        self.error_cooldown_time = None  # Track when error cooldown started
         
     def authenticate(self) -> bool:
         """Authenticate with Kick API (optional - falls back to public API)."""
@@ -81,6 +84,28 @@ class KickPlatform(StreamingPlatform):
         if not self.enabled:
             return False, None
         
+        # Check if we're in error cooldown period (10 minutes after hitting max errors)
+        if self.consecutive_errors >= self.max_consecutive_errors:
+            if self.error_cooldown_time:
+                from datetime import datetime, timedelta
+                time_since_error = datetime.now() - self.error_cooldown_time
+                if time_since_error < timedelta(minutes=10):
+                    # Still in cooldown period
+                    remaining_min = 10 - (time_since_error.seconds // 60)
+                    logger.debug(f"Kick in error cooldown (cooldown: {remaining_min} min remaining)")
+                    return False, None
+                else:
+                    # Cooldown expired, reset and try again
+                    logger.info(f"Kick error cooldown expired, resetting error count and resuming checks")
+                    self.consecutive_errors = 0
+                    self.error_cooldown_time = None
+            else:
+                # First time hitting max errors - start cooldown
+                from datetime import datetime
+                self.error_cooldown_time = datetime.now()
+                logger.warning(f"⚠ Kick disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
+                return False, None
+        
         try:
             if self.use_auth and self.access_token:
                 # Use official authenticated API
@@ -89,7 +114,34 @@ class KickPlatform(StreamingPlatform):
                 # Fall back to public scraping API
                 return self._check_public(username)
         except Exception as e:
-            logger.error(f"Error checking Kick: {e}")
+            self.consecutive_errors += 1
+            error_str = str(e)
+            error_type = type(e).__name__
+            
+            logger.error(f"⚠ Error checking Kick/{username} ({error_type}): {e}")
+            logger.error(f"   Consecutive errors: {self.consecutive_errors}/{self.max_consecutive_errors}")
+            
+            # Provide specific guidance based on error type
+            if '401' in error_str or 'unauthorized' in error_str.lower():
+                logger.error(f"   → 401 Unauthorized: OAuth token invalid or expired")
+                logger.error(f"   → Re-authenticate or check KICK_CLIENT_ID/CLIENT_SECRET")
+            elif '403' in error_str or 'forbidden' in error_str.lower():
+                logger.error(f"   → 403 Forbidden: Check OAuth permissions")
+            elif '404' in error_str or 'not found' in error_str.lower():
+                logger.error(f"   → 404 Not Found: Channel '{username}' may not exist")
+            elif 'timeout' in error_str.lower() or 'timed out' in error_str.lower():
+                logger.error(f"   → Network timeout: Check internet connection and firewall settings")
+            elif 'connection' in error_str.lower():
+                logger.error(f"   → Connection error: Check network connectivity to kick.com")
+            elif 'cloudflare' in error_str.lower() or 'captcha' in error_str.lower():
+                logger.error(f"   → Cloudflare protection: May need OAuth authentication")
+                logger.error(f"   → Set KICK_ENABLE_AUTH=True and configure OAuth")
+            else:
+                logger.error(f"   → Check Kick credentials and network configuration")
+            
+            if self.consecutive_errors >= self.max_consecutive_errors:
+                logger.error(f"   ⏰ Kick will enter cooldown to prevent API abuse")
+            
             return False, None
     
     def _check_authenticated(self, username: str) -> Tuple[bool, Optional[dict]]:
@@ -141,11 +193,24 @@ class KickPlatform(StreamingPlatform):
                 'game_name': game_name
             }
             
+            # Reset error counter on success
+            self.consecutive_errors = 0
             return True, stream_data
 
             
         except Exception as e:
-            logger.warning(f"Authenticated Kick check failed: {e}, trying public API")
+            error_str = str(e)
+            error_type = type(e).__name__
+            logger.warning(f"Authenticated Kick check failed ({error_type}): {e}")
+            
+            # Provide specific guidance
+            if '401' in error_str or 'unauthorized' in error_str.lower():
+                logger.warning(f"   → OAuth token may be expired, falling back to public API")
+            elif '403' in error_str or 'forbidden' in error_str.lower():
+                logger.warning(f"   → API access forbidden, falling back to public API")
+            else:
+                logger.warning(f"   → Falling back to public API")
+            
             return self._check_public(username)
     
     def _check_public(self, username: str) -> Tuple[bool, Optional[dict]]:
@@ -178,8 +243,12 @@ class KickPlatform(StreamingPlatform):
                             'thumbnail_url': thumbnail_url,
                             'game_name': game_name
                         }
+                        # Reset error counter on success
+                        self.consecutive_errors = 0
                         return True, stream_data
             
+            # Reset error counter even if offline (successful API call)
+            self.consecutive_errors = 0
             return False, None
             
         except Exception as e:

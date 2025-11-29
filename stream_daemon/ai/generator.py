@@ -3,11 +3,18 @@
 import os
 import logging
 import time
+import threading
 import google.genai
 from typing import Optional
 from ..config import get_config, get_bool_config, get_secret
 
 logger = logging.getLogger(__name__)
+
+# Global rate limiting: max 4 concurrent requests, 2-second minimum delay between calls
+_api_semaphore = threading.Semaphore(4)
+_last_api_call_time = 0
+_api_call_lock = threading.Lock()
+_min_delay_between_calls = 2.0  # seconds (30 requests/min = one every 2 seconds)
 
 
 class AIMessageGenerator:
@@ -21,6 +28,7 @@ class AIMessageGenerator:
     - URL preservation
     - Fallback to standard messages if API fails
     - Error handling and retry logic
+    - Rate limiting: max 4 concurrent calls, 2-second delay between requests
     """
     
     def __init__(self):
@@ -43,8 +51,9 @@ class AIMessageGenerator:
         - 429 Rate Limit Exceeded
         - Network timeouts
         
-        Uses a global semaphore to limit concurrent API calls and prevent
-        quota exhaustion when multiple platforms go live simultaneously.
+        Uses a global semaphore to limit concurrent API calls (max 4) and enforces
+        minimum 2-second delay between requests to prevent quota exhaustion when
+        multiple platforms go live simultaneously.
         
         Args:
             prompt: The prompt to send to the model
@@ -53,6 +62,8 @@ class AIMessageGenerator:
         Returns:
             Generated text or None if all retries fail
         """
+        global _last_api_call_time
+        
         if max_retries is None:
             max_retries = self.max_retries
         
@@ -60,10 +71,22 @@ class AIMessageGenerator:
         
         for attempt in range(max_retries + 1):  # +1 for initial attempt
             try:
-                response = self.client.models.generate_content(
-                    model=self.model,
-                    contents=prompt
-                )
+                # Rate limiting: wait for semaphore slot (max 4 concurrent)
+                with _api_semaphore:
+                    # Enforce minimum delay between API calls
+                    with _api_call_lock:
+                        time_since_last_call = time.time() - _last_api_call_time
+                        if time_since_last_call < _min_delay_between_calls:
+                            sleep_time = _min_delay_between_calls - time_since_last_call
+                            logger.debug(f"Rate limiting: waiting {sleep_time:.2f}s before API call")
+                            time.sleep(sleep_time)
+                        _last_api_call_time = time.time()
+                    
+                    # Make the API call
+                    response = self.client.models.generate_content(
+                        model=self.model,
+                        contents=prompt
+                    )
                 return response.text.strip()
                 
             except Exception as e:

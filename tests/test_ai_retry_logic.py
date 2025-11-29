@@ -113,10 +113,20 @@ class TestAIRetryLogic:
         with patch('time.sleep') as mock_sleep:
             generator._generate_with_retry("Test prompt")
         
-        # Should have delays of 2^0=1, 2^1=2, 2^2=4 seconds
-        expected_delays = [1, 2, 4]
+        # With rate limiting, we get:
+        # - Rate limit delay (~2s) + exponential backoff (1s) = attempt 1
+        # - Rate limit delay (~2s) + exponential backoff (2s) = attempt 2
+        # - Rate limit delay (~2s) + exponential backoff (4s) = attempt 3
+        # - Rate limit delay (~2s) = final attempt
         actual_delays = [call[0][0] for call in mock_sleep.call_args_list]
-        assert actual_delays == expected_delays
+        
+        # Filter delays: rate limiting delays are ~2s, exponential backoff are exact integers
+        # We should see pattern: [~2, 1, ~2, 2, ~2, 4, ~2]
+        assert len(actual_delays) == 7  # 4 attempts = 4 rate limit + 3 backoff delays
+        
+        # Extract exponential backoff delays (the integer ones after rate limit delays)
+        backoff_delays = [actual_delays[1], actual_delays[3], actual_delays[5]]
+        assert backoff_delays == [1, 2, 4]  # Verify exponential backoff: 2^0, 2^1, 2^2
     
     def test_timeout_error_is_retryable(self, generator):
         """Test that timeout errors are retried."""

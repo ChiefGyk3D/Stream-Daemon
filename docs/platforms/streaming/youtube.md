@@ -379,6 +379,41 @@ doppler run -- python3 tests/test_doppler_youtube.py
 
 ---
 
+## Error Recovery
+
+### Automatic Consecutive Error Recovery
+
+Stream Daemon includes automatic recovery from consecutive YouTube API errors:
+
+**How It Works:**
+- After 5 consecutive API errors, YouTube monitoring enters a 10-minute cooldown
+- During cooldown, the platform remains enabled but checks are skipped
+- After 10 minutes, the error counter automatically resets and monitoring resumes
+- No manual intervention required
+
+**Why This Helps:**
+- Handles temporary YouTube API outages gracefully
+- Prevents permanent disable from transient network issues
+- Automatically recovers when API is healthy again
+- Reduces need for manual daemon restarts
+
+**Log Messages:**
+```
+WARNING: YouTube: Maximum consecutive errors (5) reached. Entering 10-minute cooldown.
+DEBUG: YouTube: In error cooldown. 7 minutes remaining.
+INFO: YouTube: Error cooldown period ended. Resetting consecutive errors and resuming checks.
+```
+
+**Configuration:**
+- Cooldown duration: 10 minutes (hardcoded, matches error severity)
+- Max consecutive errors: 5 (configurable via code)
+- Automatic reset: Yes, after cooldown expires
+
+**Similar to Quota Cooldown:**
+This follows the same pattern as YouTube's quota exhaustion recovery (1-hour cooldown), but with a shorter duration appropriate for general API errors.
+
+---
+
 ## Troubleshooting
 
 ### "API Key Invalid"

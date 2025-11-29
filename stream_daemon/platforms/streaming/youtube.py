@@ -24,6 +24,7 @@ class YouTubePlatform(StreamingPlatform):
         self.quota_exceeded_time = None
         self.consecutive_errors = 0
         self.max_consecutive_errors = 5
+        self.error_cooldown_time = None  # Track when error cooldown started
         
     def authenticate(self) -> bool:
         """Authenticate with YouTube API with error handling."""
@@ -120,10 +121,25 @@ class YouTubePlatform(StreamingPlatform):
         if not self.enabled or not self.client:
             return False, None
         
-        # Disable platform temporarily if too many consecutive errors
+        # Check if we're in error cooldown period (10 minutes after hitting max errors)
         if self.consecutive_errors >= self.max_consecutive_errors:
-            logger.warning(f"⚠ YouTube disabled temporarily due to {self.consecutive_errors} consecutive errors")
-            return False, None
+            if self.error_cooldown_time:
+                time_since_error = datetime.now() - self.error_cooldown_time
+                if time_since_error < timedelta(minutes=10):
+                    # Still in cooldown period
+                    remaining_min = 10 - (time_since_error.seconds // 60)
+                    logger.debug(f"YouTube in error cooldown (cooldown: {remaining_min} min remaining)")
+                    return False, None
+                else:
+                    # Cooldown expired, reset and try again
+                    logger.info(f"YouTube error cooldown expired, resetting error count and resuming checks")
+                    self.consecutive_errors = 0
+                    self.error_cooldown_time = None
+            else:
+                # First time hitting max errors - start cooldown
+                self.error_cooldown_time = datetime.now()
+                logger.warning(f"⚠ YouTube disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
+                return False, None
         
         # Check if quota was exceeded recently (skip checks for 1 hour to avoid spam)
         if self.quota_exceeded:
@@ -266,6 +282,8 @@ class YouTubePlatform(StreamingPlatform):
             # Check if it's a quota exceeded error
             self.consecutive_errors += 1
             error_str = str(e)
+            error_type = type(e).__name__
+            
             if 'quotaExceeded' in error_str or 'quota' in error_str.lower():
                 if not self.quota_exceeded:
                     # First time hitting quota limit
@@ -279,7 +297,26 @@ class YouTubePlatform(StreamingPlatform):
                 else:
                     logger.debug(f"YouTube quota still exceeded (cooldown active)")
             else:
-                logger.error(f"⚠ Error checking YouTube: {e} (consecutive errors: {self.consecutive_errors})")
+                # Enhanced error logging with error type and details
+                logger.error(f"⚠ Error checking YouTube ({error_type}): {e}")
+                logger.error(f"   Consecutive errors: {self.consecutive_errors}/{self.max_consecutive_errors}")
+                
+                # Provide specific guidance based on error type
+                if '403' in error_str or 'forbidden' in error_str.lower():
+                    logger.error(f"   → 403 Forbidden: Check API key is valid and YouTube Data API v3 is enabled")
+                elif '401' in error_str or 'unauthorized' in error_str.lower():
+                    logger.error(f"   → 401 Unauthorized: Verify API key is correct (should start with 'AIza')")
+                elif '404' in error_str or 'not found' in error_str.lower():
+                    logger.error(f"   → 404 Not Found: Channel '{self.username}' may not exist or username is incorrect")
+                elif 'timeout' in error_str.lower() or 'timed out' in error_str.lower():
+                    logger.error(f"   → Network timeout: Check internet connection and firewall settings")
+                elif 'connection' in error_str.lower():
+                    logger.error(f"   → Connection error: Check network connectivity to googleapis.com")
+                else:
+                    logger.error(f"   → Check YouTube credentials and API configuration")
+                
+                if self.consecutive_errors >= self.max_consecutive_errors:
+                    logger.error(f"   ⏰ YouTube will enter 10-minute cooldown to prevent API abuse")
             return False, None
     
     def _resolve_channel_id(self, username: str) -> Optional[str]:
