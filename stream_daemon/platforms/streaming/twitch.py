@@ -22,6 +22,7 @@ class TwitchPlatform(StreamingPlatform):
         self.client_secret = None
         self.consecutive_errors = 0
         self.max_consecutive_errors = 5
+        self.error_cooldown_time = None  # Track when error cooldown started
         
     def authenticate(self) -> bool:
         """Authenticate with Twitch API with error handling."""
@@ -76,10 +77,27 @@ class TwitchPlatform(StreamingPlatform):
         if not self.enabled or not self.client_id:
             return False, None
         
-        # Disable platform temporarily if too many consecutive errors
+        # Check if we're in error cooldown period (10 minutes after hitting max errors)
         if self.consecutive_errors >= self.max_consecutive_errors:
-            logger.warning(f"⚠ Twitch disabled temporarily due to {self.consecutive_errors} consecutive errors")
-            return False, None
+            if self.error_cooldown_time:
+                from datetime import datetime, timedelta
+                time_since_error = datetime.now() - self.error_cooldown_time
+                if time_since_error < timedelta(minutes=10):
+                    # Still in cooldown period
+                    remaining_min = 10 - (time_since_error.seconds // 60)
+                    logger.debug(f"Twitch in error cooldown (cooldown: {remaining_min} min remaining)")
+                    return False, None
+                else:
+                    # Cooldown expired, reset and try again
+                    logger.info(f"Twitch error cooldown expired, resetting error count and resuming checks")
+                    self.consecutive_errors = 0
+                    self.error_cooldown_time = None
+            else:
+                # First time hitting max errors - start cooldown
+                from datetime import datetime
+                self.error_cooldown_time = datetime.now()
+                logger.warning(f"⚠ Twitch disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
+                return False, None
             
         try:
             # Run async check synchronously
