@@ -143,6 +143,58 @@ else:
 
 ---
 
+## Rate Limiting
+
+### Built-in API Rate Limiting
+
+Stream Daemon includes proactive rate limiting to prevent hitting Gemini API quota limits:
+
+**Rate Limiting Strategy:**
+- **Maximum Concurrent Calls:** 4 simultaneous API requests
+- **Minimum Delay:** 2 seconds between requests (stays under 30 requests/minute limit)
+- **Thread-Safe:** Global semaphore coordinates across all platforms
+
+**How It Works:**
+```python
+# Semaphore limits concurrent requests
+with _api_semaphore:  # Max 4 concurrent
+    # Enforce minimum delay
+    with _api_call_lock:
+        if time_since_last_call < 2.0:
+            sleep(2.0 - time_since_last_call)
+        # Make API call
+```
+
+**Example Scenario:**
+```
+Twitch goes live → 4 social platforms request AI messages
+  ├─ Request 1: Bluesky  (0s)       ✓ Immediate
+  ├─ Request 2: Mastodon (2s delay) ✓ Queued
+  ├─ Request 3: Discord  (4s delay) ✓ Queued
+  └─ Request 4: Matrix   (6s delay) ✓ Queued
+
+YouTube goes live → waits for available slots
+  ├─ Request 5: Bluesky  (8s)       ✓ After slot opens
+  └─ ...continues with 2s spacing
+```
+
+**Benefits:**
+- ✅ Prevents 429 rate limit errors from Gemini API
+- ✅ Handles burst traffic when multiple streams go live
+- ✅ No configuration needed - works automatically
+- ✅ Maintains existing retry logic for transient errors
+- ✅ Stays well under Gemini's 30 requests/minute limit
+
+**Gemini API Limits:**
+- Free tier: 30 requests/minute, 4M tokens/minute, 1,500 requests/day
+- With rate limiting: ~24 seconds for 12 requests (3 platforms × 4 social networks)
+- Typical usage: 2-8 requests per stream event (start/end × platforms)
+
+**No Configuration Required:**
+Rate limiting is automatically enabled when using AI-powered messages. The 4 concurrent / 2-second delay defaults are optimal for most use cases.
+
+---
+
 ## Configuration Reference
 
 ### Required Settings
