@@ -63,14 +63,23 @@ if [[ ! $REPLY =~ ^[Nn]$ ]]; then
     echo ""
 fi
 
-# Build new Docker image
-echo -e "${YELLOW}Building Docker image...${NC}"
+# Ask about cache
+echo ""
+read -p "Force rebuild without cache? (Y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+    BUILD_ARGS="--no-cache --pull"
+    echo -e "${YELLOW}Building from scratch (no cache)...${NC}"
+else
+    BUILD_ARGS=""
+    echo -e "${YELLOW}Building with cache...${NC}"
+fi
 echo ""
 
 IMAGE_NAME="stream-daemon"
 BUILD_TAG="${IMAGE_NAME}:latest"
 
-if docker build -t "$BUILD_TAG" -f Docker/Dockerfile . ; then
+if docker build $BUILD_ARGS -t "$BUILD_TAG" -f Docker/Dockerfile . ; then
     echo ""
     echo -e "${GREEN}✓${NC} Docker image built successfully!"
     
@@ -102,10 +111,23 @@ if docker ps -a --format "{{.Names}}" | grep -q "^${CONTAINER_NAME}$"; then
     echo ""
 fi
 
-# Check if docker-compose.yml exists
-if [ -f "Docker/docker-compose.yml" ]; then
+# Try to start container
+STARTED=false
+
+# Check if docker-compose.yml exists in project root or Docker directory
+if [ -f "docker-compose.yml" ]; then
+    COMPOSE_FILE="docker-compose.yml"
+    COMPOSE_DIR="$PROJECT_DIR"
+elif [ -f "Docker/docker-compose.yml" ]; then
+    COMPOSE_FILE="Docker/docker-compose.yml"
+    COMPOSE_DIR="$PROJECT_DIR/Docker"
+else
+    COMPOSE_FILE=""
+fi
+
+if [ -n "$COMPOSE_FILE" ]; then
     echo "Using docker-compose to start container..."
-    cd Docker
+    echo "Compose file: $COMPOSE_FILE"
     
     # Detect docker compose command
     if command -v docker-compose &> /dev/null; then
@@ -113,34 +135,46 @@ if [ -f "Docker/docker-compose.yml" ]; then
     elif docker compose version &> /dev/null; then
         COMPOSE_CMD="docker compose"
     else
-        echo -e "${RED}ERROR: docker-compose not found!${NC}"
-        exit 1
+        echo -e "${YELLOW}WARNING: docker-compose not found, using docker run${NC}"
+        COMPOSE_CMD=""
     fi
     
-    # Start container
-    $COMPOSE_CMD up -d stream-daemon
+    if [ -n "$COMPOSE_CMD" ]; then
+        cd "$COMPOSE_DIR"
+        if $COMPOSE_CMD up -d stream-daemon 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} Container started with docker-compose!"
+            STARTED=true
+        else
+            echo -e "${YELLOW}WARNING: docker-compose failed, falling back to docker run${NC}"
+        fi
+        cd "$PROJECT_DIR"
+    fi
+fi
+
+# Fallback to docker run if compose didn't work
+if [ "$STARTED" = false ]; then
+    echo "Starting container with docker run..."
     
-    if [ $? -eq 0 ]; then
-        echo ""
-        echo -e "${GREEN}✓${NC} Container started successfully!"
+    # Check if .env file exists
+    if [ -f ".env" ]; then
+        ENV_ARG="--env-file .env"
     else
-        echo ""
+        echo -e "${YELLOW}WARNING: .env file not found${NC}"
+        ENV_ARG=""
+    fi
+    
+    # Start container with docker run
+    if docker run -d \
+        --name "$CONTAINER_NAME" \
+        --restart unless-stopped \
+        $ENV_ARG \
+        "$BUILD_TAG"; then
+        echo -e "${GREEN}✓${NC} Container started with docker run!"
+        STARTED=true
+    else
         echo -e "${RED}✗${NC} Failed to start container"
         exit 1
     fi
-    
-    cd "$PROJECT_DIR"
-else
-    echo -e "${YELLOW}WARNING: docker-compose.yml not found${NC}"
-    echo "You'll need to manually start the container:"
-    echo ""
-    echo "  docker run -d \\"
-    echo "    --name $CONTAINER_NAME \\"
-    echo "    --restart unless-stopped \\"
-    echo "    --env-file .env \\"
-    echo "    $BUILD_TAG"
-    echo ""
-    exit 0
 fi
 
 echo ""
