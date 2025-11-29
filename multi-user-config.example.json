@@ -1,0 +1,118 @@
+{
+  "_comment": "Multi-User Stream Daemon Configuration",
+  "_description": "This file enables monitoring multiple streamers with per-user social account routing",
+  "_usage": "Set MULTI_USER_CONFIG=/path/to/this/file or MULTI_USER_CONFIG='<json_string>' in your .env",
+  
+  "streamers": [
+    {
+      "_comment": "Example: Streamer 1 posts to Discord (shared) and personal Mastodon",
+      "platform": "Twitch",
+      "username": "gamer1",
+      "social_accounts": [
+        {
+          "platform": "discord",
+          "account_id": "gaming_server"
+        },
+        {
+          "platform": "mastodon",
+          "account_id": "personal"
+        }
+      ]
+    },
+    {
+      "_comment": "Example: Streamer 2 posts to Discord (shared) and tech Bluesky",
+      "platform": "Twitch",
+      "username": "gamer2",
+      "social_accounts": [
+        {
+          "platform": "discord",
+          "account_id": "gaming_server"
+        },
+        {
+          "platform": "bluesky",
+          "account_id": "tech"
+        }
+      ]
+    },
+    {
+      "_comment": "Example: YouTube streamer with different social accounts",
+      "platform": "YouTube",
+      "username": "@YouTubeChannel",
+      "social_accounts": [
+        {
+          "platform": "discord",
+          "account_id": "youtube_fans"
+        },
+        {
+          "platform": "mastodon",
+          "account_id": "content_creator"
+        },
+        {
+          "platform": "matrix",
+          "account_id": "default"
+        }
+      ]
+    },
+    {
+      "_comment": "Example: Kick streamer posting to all configured platforms",
+      "platform": "Kick",
+      "username": "kickstreamer",
+      "social_accounts": [
+        {
+          "platform": "discord",
+          "account_id": "default"
+        },
+        {
+          "platform": "bluesky",
+          "account_id": "default"
+        },
+        {
+          "platform": "mastodon",
+          "account_id": "default"
+        }
+      ]
+    }
+  ],
+  
+  "_configuration_notes": {
+    "account_id": "Unique identifier for each account on a platform. Use 'default' for single account. Examples: 'personal', 'gaming', 'work', 'tech'",
+    "platform": "Streaming platform name: 'Twitch', 'YouTube', or 'Kick'",
+    "social_accounts": "List of social media accounts to post to when this streamer goes live/offline",
+    "shared_accounts": "Multiple streamers can post to the same account (e.g., shared Discord server)",
+    "environment_variables": "Each account_id requires corresponding env vars with _ACCOUNTID suffix (see below)"
+  },
+  
+  "_environment_variable_examples": {
+    "_comment": "For each social account, configure env vars with account_id suffix",
+    "discord": {
+      "single_account": "DISCORD_WEBHOOK_URL=https://...",
+      "multiple_accounts": [
+        "DISCORD_GAMING_SERVER_WEBHOOK_URL=https://...",
+        "DISCORD_YOUTUBE_FANS_WEBHOOK_URL=https://..."
+      ]
+    },
+    "mastodon": {
+      "single_account": [
+        "MASTODON_API_BASE_URL=https://mastodon.social",
+        "MASTODON_CLIENT_ID=...",
+        "MASTODON_CLIENT_SECRET=...",
+        "MASTODON_ACCESS_TOKEN=..."
+      ],
+      "multiple_accounts": [
+        "MASTODON_PERSONAL_API_BASE_URL=https://mastodon.social",
+        "MASTODON_PERSONAL_CLIENT_ID=...",
+        "MASTODON_CONTENT_CREATOR_API_BASE_URL=https://other.instance"
+      ]
+    },
+    "bluesky": {
+      "single_account": [
+        "BLUESKY_HANDLE=user.bsky.social",
+        "BLUESKY_APP_PASSWORD=..."
+      ],
+      "multiple_accounts": [
+        "BLUESKY_TECH_HANDLE=tech.bsky.social",
+        "BLUESKY_TECH_APP_PASSWORD=..."
+      ]
+    }
+  }
+}

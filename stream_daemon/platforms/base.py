@@ -48,15 +48,24 @@ class StreamingPlatform:
 class SocialPlatform:
     """Base class for social media platforms like Mastodon, Bluesky, Discord."""
     
-    def __init__(self, name: str):
+    def __init__(self, name: str, account_id: str = 'default'):
         """
         Initialize social platform.
         
         Args:
             name: Platform name (e.g., 'Mastodon', 'Bluesky')
+            account_id: Unique identifier for this account (e.g., 'personal', 'gaming', 'work')
         """
         self.name = name
+        self.account_id = account_id
         self.enabled = False
+    
+    @property
+    def full_name(self) -> str:
+        """Get full name including account ID."""
+        if self.account_id == 'default':
+            return self.name
+        return f"{self.name}:{self.account_id}"
     
     def post(self, message: str, reply_to_id: Optional[str] = None, 
              platform_name: Optional[str] = None, 

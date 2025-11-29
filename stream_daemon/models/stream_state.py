@@ -27,12 +27,41 @@ class StreamStatus:
     last_check_live: bool = False
     consecutive_live_checks: int = 0
     consecutive_offline_checks: int = 0
-    last_post_ids: Dict[str, str] = None  # social_platform_name -> post_id for threading
+    last_post_ids: Dict[str, str] = None  # social_account_key (e.g. "mastodon:personal") -> post_id for threading
+    social_account_filter: list = None  # List of SocialAccountConfig objects this streamer should post to
     
     def __post_init__(self):
         """Initialize mutable default values."""
         if self.last_post_ids is None:
             self.last_post_ids = {}
+        if self.social_account_filter is None:
+            self.social_account_filter = []
+    
+    def should_post_to_account(self, social_platform: str, account_id: str = 'default') -> bool:
+        """
+        Check if this streamer should post to the given social account.
+        
+        Args:
+            social_platform: Platform name (e.g., 'mastodon', 'discord')
+            account_id: Account identifier (e.g., 'personal', 'gaming', 'default')
+            
+        Returns:
+            bool: True if posts should be sent to this account
+        """
+        # If no filter is set, post to all accounts (backward compatible)
+        if not self.social_account_filter:
+            return True
+        
+        # Check if this account is in the filter
+        from stream_daemon.models.user_config import SocialAccountConfig
+        target_account = SocialAccountConfig(platform=social_platform.lower(), account_id=account_id)
+        return target_account in self.social_account_filter
+    
+    def get_social_account_key(self, social_platform: str, account_id: str = 'default') -> str:
+        """Generate key for tracking post IDs per social account."""
+        if account_id == 'default':
+            return social_platform.lower()
+        return f"{social_platform.lower()}:{account_id}"
     
     @property
     def url(self) -> str:
