@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 from dotenv import load_dotenv
+import pytest
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -12,50 +13,52 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 # Load environment variables from main .env file
 load_dotenv()  # Loads from .env file
 
-print("="*60)
-print("🧪 Stream Daemon Ollama Integration Test")
-print("="*60)
-
 # Import Stream Daemon modules
-try:
-    from stream_daemon.ai.generator import AIMessageGenerator
-    print("✓ Successfully imported AIMessageGenerator")
-except ImportError as e:
-    print(f"✗ Failed to import: {e}")
-    print("  Make sure you're in the correct directory and dependencies are installed")
-    sys.exit(1)
+from stream_daemon.ai.generator import AIMessageGenerator
 
-# Check configuration
-print("\n📋 Configuration:")
-print(f"  LLM_ENABLE: {os.getenv('LLM_ENABLE')}")
-print(f"  LLM_PROVIDER: {os.getenv('LLM_PROVIDER')}")
-print(f"  LLM_OLLAMA_HOST: {os.getenv('LLM_OLLAMA_HOST')}")
-print(f"  LLM_OLLAMA_PORT: {os.getenv('LLM_OLLAMA_PORT')}")
-print(f"  LLM_MODEL: {os.getenv('LLM_MODEL')}")
+# Check if Ollama is configured
+def is_ollama_configured():
+    """Check if Ollama is properly configured"""
+    return (
+        os.getenv('LLM_ENABLE', '').lower() == 'true' and
+        os.getenv('LLM_PROVIDER', '').lower() == 'ollama' and
+        os.getenv('LLM_OLLAMA_HOST') and
+        os.getenv('LLM_MODEL')
+    )
 
-# Test 1: Initialize AI Generator
-print("\n" + "="*60)
-print("Test 1: Initialize Ollama Connection")
-print("="*60)
+# Skip all tests if Ollama is not configured
+pytestmark = pytest.mark.skipif(
+    not is_ollama_configured(),
+    reason="Ollama not configured (LLM_ENABLE=True, LLM_PROVIDER=ollama required)"
+)
 
-gen = AIMessageGenerator()
-if gen.authenticate():
+@pytest.fixture(scope="module")
+def ai_generator():
+    """Create AI generator instance for tests"""
+    gen = AIMessageGenerator()
+    return gen
+
+def test_ollama_authentication(ai_generator):
+    """Test 1: Initialize and authenticate Ollama connection"""
+    print("\n" + "="*60)
+    print("Test 1: Initialize Ollama Connection")
+    print("="*60)
+    
+    assert ai_generator.authenticate(), "Failed to authenticate with Ollama server"
+    
     print("✅ SUCCESS: Ollama connection initialized!")
-    print(f"  Provider: {gen.provider}")
-    print(f"  Model: {gen.model}")
-    print(f"  Host: {gen.ollama_host}")
-else:
-    print("❌ FAILED: Could not initialize Ollama connection")
-    print("  Check your configuration and server accessibility")
-    sys.exit(1)
+    print(f"  Provider: {ai_generator.provider}")
+    print(f"  Model: {ai_generator.model}")
+    if hasattr(ai_generator, 'ollama_host'):
+        print(f"  Host: {ai_generator.ollama_host}")
 
-# Test 2: Generate Stream Start Message
-print("\n" + "="*60)
-print("Test 2: Generate Stream Start Message (Bluesky)")
-print("="*60)
+def test_generate_bluesky_message(ai_generator):
+    """Test 2: Generate Stream Start Message (Bluesky)"""
+    print("\n" + "="*60)
+    print("Test 2: Generate Stream Start Message (Bluesky)")
+    print("="*60)
 
-try:
-    message = gen.generate_stream_start_message(
+    message = ai_generator.generate_stream_start_message(
         platform_name='Twitch',
         username='testuser',
         title='Testing Ollama Integration - Building Cool Stuff',
@@ -63,27 +66,23 @@ try:
         social_platform='bluesky'
     )
     
-    if message:
-        print("✅ SUCCESS: Generated stream start message!")
-        print(f"\n📝 Generated Message ({len(message)} chars):")
-        print("-" * 60)
-        print(message)
-        print("-" * 60)
-    else:
-        print("❌ FAILED: Message generation returned None")
-except Exception as e:
-    print(f"❌ FAILED: Exception during generation: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
+    assert message is not None, "Message generation returned None"
+    assert len(message) > 0, "Message is empty"
+    assert len(message) <= 300, f"Message too long for Bluesky ({len(message)} > 300)"
+    
+    print("✅ SUCCESS: Generated stream start message!")
+    print(f"\n📝 Generated Message ({len(message)} chars):")
+    print("-" * 60)
+    print(message)
+    print("-" * 60)
 
-# Test 3: Generate Stream Start Message (Mastodon - longer)
-print("\n" + "="*60)
-print("Test 3: Generate Stream Start Message (Mastodon)")
-print("="*60)
+def test_generate_mastodon_message(ai_generator):
+    """Test 3: Generate Stream Start Message (Mastodon)"""
+    print("\n" + "="*60)
+    print("Test 3: Generate Stream Start Message (Mastodon)")
+    print("="*60)
 
-try:
-    message = gen.generate_stream_start_message(
+    message = ai_generator.generate_stream_start_message(
         platform_name='YouTube',
         username='testuser',
         title='Live: Building an AI-Powered Stream Bot with Python',
@@ -91,48 +90,56 @@ try:
         social_platform='mastodon'
     )
     
-    if message:
-        print("✅ SUCCESS: Generated Mastodon message!")
-        print(f"\n📝 Generated Message ({len(message)} chars):")
-        print("-" * 60)
-        print(message)
-        print("-" * 60)
-    else:
-        print("❌ FAILED: Message generation returned None")
-except Exception as e:
-    print(f"❌ FAILED: Exception during generation: {e}")
-    import traceback
-    traceback.print_exc()
+    assert message is not None, "Message generation returned None"
+    assert len(message) > 0, "Message is empty"
+    assert len(message) <= 500, f"Message too long for Mastodon ({len(message)} > 500)"
+    
+    print("✅ SUCCESS: Generated Mastodon message!")
+    print(f"\n📝 Generated Message ({len(message)} chars):")
+    print("-" * 60)
+    print(message)
+    print("-" * 60)
 
-# Test 4: Generate Stream End Message
-print("\n" + "="*60)
-print("Test 4: Generate Stream End Message")
-print("="*60)
+def test_generate_end_message(ai_generator):
+    """Test 4: Generate Stream End Message"""
+    print("\n" + "="*60)
+    print("Test 4: Generate Stream End Message")
+    print("="*60)
 
-try:
-    message = gen.generate_stream_end_message(
+    message = ai_generator.generate_stream_end_message(
         platform_name='Twitch',
         username='testuser',
         title='Testing Ollama Integration - Building Cool Stuff',
         social_platform='bluesky'
     )
     
-    if message:
-        print("✅ SUCCESS: Generated stream end message!")
-        print(f"\n📝 Generated Message ({len(message)} chars):")
-        print("-" * 60)
-        print(message)
-        print("-" * 60)
-    else:
-        print("❌ FAILED: Message generation returned None")
-except Exception as e:
-    print(f"❌ FAILED: Exception during generation: {e}")
-    import traceback
-    traceback.print_exc()
+    assert message is not None, "Message generation returned None"
+    assert len(message) > 0, "Message is empty"
+    assert len(message) <= 300, f"Message too long for Bluesky ({len(message)} > 300)"
+    
+    print("✅ SUCCESS: Generated stream end message!")
+    print(f"\n📝 Generated Message ({len(message)} chars):")
+    print("-" * 60)
+    print(message)
+    print("-" * 60)
 
-# Summary
-print("\n" + "="*60)
-print("✅ All Tests Completed Successfully!")
-print("="*60)
-print("\nYour Ollama integration is working correctly!")
-print("You can now use Ollama for AI-powered stream messages.")
+# Allow running as standalone script
+if __name__ == '__main__':
+    print("="*60)
+    print("🧪 Stream Daemon Ollama Integration Test")
+    print("="*60)
+    
+    if not is_ollama_configured():
+        print("\n❌ Ollama is not configured!")
+        print("  Set LLM_ENABLE=True, LLM_PROVIDER=ollama in your .env file")
+        sys.exit(1)
+    
+    print("\n📋 Configuration:")
+    print(f"  LLM_ENABLE: {os.getenv('LLM_ENABLE')}")
+    print(f"  LLM_PROVIDER: {os.getenv('LLM_PROVIDER')}")
+    print(f"  LLM_OLLAMA_HOST: {os.getenv('LLM_OLLAMA_HOST')}")
+    print(f"  LLM_OLLAMA_PORT: {os.getenv('LLM_OLLAMA_PORT')}")
+    print(f"  LLM_MODEL: {os.getenv('LLM_MODEL')}")
+    
+    # Run tests
+    pytest.main([__file__, '-v', '-s'])
