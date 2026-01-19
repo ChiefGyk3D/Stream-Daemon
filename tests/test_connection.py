@@ -99,6 +99,11 @@ def test_streaming_platforms():
     
     return enabled_streaming, results, live_streams
 
+@pytest.fixture
+def enabled_streaming():
+    """Fixture that returns enabled streaming platforms."""
+    return test_streaming_platforms()[0]
+
 def test_social_platforms(enabled_streaming):
     """Test authentication and posting to social platforms."""
     logger.info("\n" + "="*60)
