@@ -62,13 +62,30 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
   - Message retry with exponential backoff
 
 ### 🤖 AI-Powered Messaging (NEW!)
-- **Google Gemini LLM Integration** - Generate unique announcements for every stream
-  - Platform-aware character limits (Bluesky: 300, Mastodon: 500, Discord: 2000)
-  - Automatic hashtag generation from stream titles and game names
-  - Dynamic, personalized messages that never repeat
-  - Graceful fallback to static messages if LLM unavailable
-  - Cost-effective: ~$0.0001 per announcement with Gemini 2.0 Flash Lite
-  - Configurable temperature and creativity controls
+**Two AI Provider Options:**
+
+#### **Option 1: Ollama (Local LLM) - RECOMMENDED** 🌟
+- **100% Private** - Your stream data never leaves your network
+- **Zero API Costs** - Unlimited usage, no quotas
+- **Fast** - Sub-second response times with proper hardware
+- **Offline Capable** - Works without internet connection
+- **Multiple Models** - gemma2, llama3.2, qwen2.5, mistral, phi3, and more
+- **Multi-GPU Support** - Mix different GPU models with [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM)
+- **Easy Setup** - `curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma2:2b`
+
+#### **Option 2: Google Gemini (Cloud API)**
+- **No Local Resources** - Runs entirely in the cloud
+- **Easy Setup** - Just get an API key from Google AI Studio
+- **High Quality** - Advanced language models with excellent output
+- **Pay Per Use** - ~$0.0001 per announcement with Gemini 2.0 Flash Lite
+- **Rate Limits** - 10-30 RPM depending on model tier
+
+**Common Features (Both Providers):**
+- Platform-aware character limits (Bluesky: 300, Mastodon: 500, Discord: 2000)
+- Automatic hashtag generation from stream titles and game names
+- Dynamic, personalized messages that never repeat
+- Graceful fallback to static messages if AI unavailable
+- Configurable retry logic for reliability
 
 ### 🔐 Enterprise-Grade Secrets Management
 - **Doppler** - Modern secrets platform with environment-specific tokens (dev/staging/prod)
@@ -117,7 +134,7 @@ When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Ki
 - API credentials for at least one streaming platform (Twitch, YouTube, or Kick)
 - Credentials for at least one social platform (Mastodon, Bluesky, Discord, or Matrix)
 - (Optional) [Doppler account](https://doppler.com) for enterprise secrets management
-- (Optional) [Google AI Studio API key](https://aistudio.google.com) for AI-generated messages
+- (Optional) AI provider: [Ollama](https://ollama.com) (local, free) or [Google AI Studio](https://aistudio.google.com) (cloud)
 
 ### 5-Minute Setup
 
@@ -152,7 +169,28 @@ When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Ki
 
 That's it! Stream Daemon will now monitor your streams and post announcements automatically.
 
-📖 **[Secrets Wizard Documentation](docs/configuration/secrets-wizard.md)** - Full guide to the interactive setup tool
+4. **(Optional) Setup Ollama for AI-Generated Messages** 🤖
+   ```bash
+   # On your LLM server (can be same machine or remote):
+   curl -fsSL https://ollama.com/install.sh | sh
+   ollama pull gemma2:2b  # Or gemma3:4b for better quality
+   ollama serve
+   
+   # In your .env file:
+   LLM_ENABLE=True
+   LLM_PROVIDER=ollama
+   LLM_OLLAMA_HOST=http://localhost  # Or your server IP
+   LLM_OLLAMA_PORT=11434
+   LLM_MODEL=gemma2:2b
+   
+   # Test it:
+   python3 tests/test_ollama.py
+   ```
+
+📖 **Documentation:**
+- **[Secrets Wizard Guide](docs/configuration/secrets-wizard.md)** - Full setup tool documentation
+- **[AI Messages Guide](docs/features/ai-messages.md)** - Complete Ollama & Gemini setup
+- **[Ollama Migration](docs/features/ollama-migration.md)** - Switching from Gemini to Ollama
 
 ### Docker Quick Start
 

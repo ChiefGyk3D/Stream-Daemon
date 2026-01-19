@@ -1,103 +1,218 @@
-# Hotfix: YouTube Error Recovery & Gemini API Rate Limiting
+# Add Ollama LLM Support for Privacy-First AI Messages
 
 ## 🎯 Overview
 
-This hotfix addresses two critical issues in production:
+This PR adds **Ollama support** to Stream Daemon, enabling users to run AI-generated messages completely locally with full privacy and zero API costs. Users can now choose between **Google Gemini** (cloud) or **Ollama** (local) for AI message generation.
 
-1. **YouTube Platform Permanent Disable**: After 5 consecutive API errors, YouTube monitoring would permanently disable until daemon restart
-2. **Gemini API Rate Limiting**: Missing proactive rate limiting could cause quota exhaustion when multiple streams go live simultaneously
+## ✨ What's New
 
-## 🐛 Problems Fixed
+### 🤖 Ollama Provider Support
 
-### 1. YouTube Consecutive Error Recovery
+**New Features:**
+- **Local LLM Execution** - Run AI models on your own hardware
+- **100% Privacy** - Stream data never leaves your network
+- **Zero API Costs** - Unlimited message generation
+- **Offline Capable** - Works without internet connection
+- **Multiple Models** - Support for gemma2, llama3.2, qwen2.5, mistral, phi3, and more
+- **Provider Selection** - Easy switching between Ollama and Gemini via `LLM_PROVIDER` config
 
-**Issue:**
-- YouTube platform would disable permanently after reaching `max_consecutive_errors` (5)
-- Required manual daemon restart to resume monitoring
-- No automatic recovery mechanism
+### 📝 Documentation Updates
 
-**Impact:**
-- Lost stream announcements if YouTube API had temporary issues
-- Required manual intervention during off-hours
-- Production logs showed repeated "5 consecutive errors" warnings
+- **Consolidated .env.example** - Merged Ollama configuration into main example file
+- **Updated README** - Added Ollama as recommended AI provider option
+- **AI Messages Guide** - Enhanced with detailed Ollama setup instructions
+- **Migration Guide** - Help existing Gemini users understand Ollama option
 
-**Root Cause:**
-- Error counter incremented but never reset automatically
-- No cooldown mechanism to allow temporary recovery
+### 🧪 Enhanced Testing
 
-### 2. Gemini API Rate Limiting
+- **Moved all tests to tests/ folder** - Better organization
+- **test_connection.py** - Comprehensive integration test using real .env data
+  - Tests streaming platform authentication (Twitch, YouTube, Kick)
+  - Tests social platform authentication (Mastodon, Bluesky, Discord, Matrix)
+  - Tests LLM generation with actual live stream data
+  - Tests AI message posting to all social platforms
+  - Production readiness validation
+- **test_ollama.py** - Dedicated Ollama integration testing
+- **test_local_install.py** - Dependency validation
 
-**Issue:**
-- Code comments claimed "Uses a global semaphore" but no implementation existed
-- Only reactive error handling (retry after 429 errors occur)
-- No proactive rate limiting to prevent hitting API limits
+All tests can now run from the tests/ folder with proper import paths.
 
-**Impact:**
-- Risk of hitting Gemini's 30 requests/minute limit
-- Multiple simultaneous streams could create burst of 12+ requests (3 platforms × 4 social networks)
-- 429 rate limit errors would cause announcement failures
+## 🔧 Technical Implementation
 
-**Root Cause:**
-- Semaphore mentioned in docstring but never imported or implemented
-- No minimum delay enforcement between API calls
-
-## ✅ Solutions Implemented
-
-### YouTube Error Recovery (commit `e483316`)
-
-**Added 10-minute cooldown with automatic recovery:**
+### New Configuration Options
 
 ```python
-# Track when error cooldown started
-self.error_cooldown_time = None
+# Choose your AI provider
+LLM_PROVIDER=ollama  # or 'gemini'
 
-# When max errors reached, enter cooldown
-if self.consecutive_errors >= self.max_consecutive_errors:
-    if self.error_cooldown_time is None:
-        self.error_cooldown_time = time.time()
-        logger.warning("YouTube: Entering 10-minute cooldown")
-    
-    # Check if cooldown expired
-    cooldown_elapsed = time.time() - self.error_cooldown_time
-    if cooldown_elapsed >= 600:  # 10 minutes
-        logger.info("YouTube: Cooldown ended. Resetting errors and resuming.")
-        self.consecutive_errors = 0
-        self.error_cooldown_time = None
+# Ollama-specific settings
+LLM_OLLAMA_HOST=http://192.168.1.100
+LLM_OLLAMA_PORT=11434
+LLM_MODEL=gemma2:2b  # or gemma3:4b, llama3.2:3b, etc.
 ```
 
-**Benefits:**
-- ✅ Automatic recovery after 10 minutes without manual intervention
-- ✅ Clear logging with countdown timer
-- ✅ Matches existing quota cooldown pattern (1 hour)
-- ✅ Gracefully handles temporary API outages
-- ✅ Production-tested pattern from quota management
+### Code Changes
 
-### Gemini API Rate Limiting (commit `0e17562`)
+**New Files:**
+- `tests/test_connection.py` - Production-ready integration testing
+- `tests/test_ollama.py` - Ollama-specific testing (moved from root)
+- `tests/test_local_install.py` - Dependency validation (moved from root)
 
-**Added proactive rate limiting with semaphore + minimum delay:**
+**Modified Files:**
+- `stream_daemon/ai/generator.py` - Added Ollama provider support
+- `.env.example` - Consolidated Ollama and Gemini configuration
+- `README.md` - Updated to highlight Ollama as recommended option
+- `docs/features/ai-messages.md` - Enhanced with Ollama setup guide
+
+**Removed Files:**
+- `.env.ollama.example` - Consolidated into main .env.example
+
+### Architecture
 
 ```python
-# Global rate limiting: max 4 concurrent requests, 2-second minimum delay
-_api_semaphore = threading.Semaphore(4)
-_last_api_call_time = 0
-_api_call_lock = threading.Lock()
-_min_delay_between_calls = 2.0  # 30 requests/min = one every 2 seconds
-
-# In _generate_with_retry():
-with _api_semaphore:  # Limit to 4 concurrent
-    with _api_call_lock:  # Coordinate timing
-        time_since_last_call = time.time() - _last_api_call_time
-        if time_since_last_call < _min_delay_between_calls:
-            sleep_time = _min_delay_between_calls - time_since_last_call
-            time.sleep(sleep_time)
-        _last_api_call_time = time.time()
+class AIMessageGenerator:
+    def __init__(self):
+        self.provider = os.getenv('LLM_PROVIDER', 'gemini').lower()
+        
+        if self.provider == 'ollama':
+            self.client = ollama.Client(
+                host=f"{ollama_host}:{ollama_port}"
+            )
+        elif self.provider == 'gemini':
+            self.client = genai.Client(api_key=api_key)
     
-    # Make the API call
-    response = self.client.models.generate_content(...)
+    def authenticate(self) -> bool:
+        """Verify connection to selected provider"""
+        if self.provider == 'ollama':
+            return self._authenticate_ollama()
+        elif self.provider == 'gemini':
+            return self._authenticate_gemini()
 ```
 
-**Benefits:**
-- ✅ Maximum 4 concurrent API calls (prevents burst overload)
+## 🧪 Testing
+
+### Manual Testing Performed
+
+1. **Ollama Provider Tests:**
+   ```bash
+   # Test Ollama connection and message generation
+   python3 tests/test_ollama.py
+   
+   # Output:
+   # ✅ SUCCESS: Ollama connection initialized!
+   # ✅ SUCCESS: Generated stream start message!
+   # ✅ SUCCESS: Generated Mastodon message!
+   # ✅ SUCCESS: Generated stream end message!
+   ```
+
+2. **Production Integration Test:**
+   ```bash
+   # Test with real .env data and live streams
+   python3 tests/test_connection.py
+   
+   # Results:
+   # ✅ Twitch - LIVE - 110 viewers
+   # ✅ YouTube - LIVE - 245 viewers  
+   # ✅ Kick - LIVE - 11,002 viewers
+   # ✅ AI generated message posted to all 4 social platforms
+   # ✅ Stream Daemon is PRODUCTION READY!
+   ```
+
+3. **Dependency Validation:**
+   ```bash
+   python3 tests/test_local_install.py
+   
+   # ✅ SUCCESS - All dependencies installed correctly!
+   ```
+
+### Test Coverage
+
+- ✅ Ollama server connectivity
+- ✅ Model availability verification
+- ✅ Message generation for all social platforms (Bluesky, Mastodon, Discord, Matrix)
+- ✅ Character limit enforcement (300 for Bluesky, 500 for Mastodon)
+- ✅ Stream start and end message generation
+- ✅ Error handling and retry logic
+- ✅ Fallback to static messages when AI unavailable
+- ✅ Real production environment testing with live streams
+
+## 🔄 Migration Path
+
+### For Existing Users (Using Gemini)
+
+**No changes required!** Your current setup continues to work:
+
+```bash
+# Current setup - still works perfectly
+LLM_ENABLE=True
+GEMINI_API_KEY=AIzaSyA_your_key_here
+LLM_MODEL=gemini-2.0-flash-lite
+```
+
+Default provider is `gemini`, so existing deployments are unaffected.
+
+### For New Users or Migration to Ollama
+
+```bash
+# 1. Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# 2. Pull a model
+ollama pull gemma2:2b
+
+# 3. Start server
+ollama serve
+
+# 4. Update .env
+LLM_ENABLE=True
+LLM_PROVIDER=ollama  # ← New setting
+LLM_OLLAMA_HOST=http://localhost
+LLM_OLLAMA_PORT=11434
+LLM_MODEL=gemma2:2b
+```
+
+See [docs/features/ollama-migration.md](docs/features/ollama-migration.md) for complete guide.
+
+## 📊 Performance & Resource Usage
+
+### Ollama (Local)
+- **Latency**: 0.5-2 seconds (hardware dependent)
+- **Cost**: $0 per message
+- **Rate Limit**: None (unlimited)
+- **Privacy**: 100% local
+- **Hardware**: 
+  - Minimum: 4GB RAM, CPU-only (slower)
+  - Recommended: 8GB+ RAM, NVIDIA/AMD/Apple GPU
+  - Optimal: 16GB+ RAM, dedicated GPU
+
+### Gemini (Cloud) 
+- **Latency**: 1-2 seconds
+- **Cost**: ~$0.0001 per message (Gemini 2.0 Flash Lite)
+- **Rate Limit**: 10-30 requests/minute (model dependent)
+- **Privacy**: Data sent to Google Cloud
+- **Hardware**: None required
+
+## 🔗 Related Documentation
+
+- [AI Messages Guide](docs/features/ai-messages.md) - Complete setup for both providers
+- [Ollama Migration Guide](docs/features/ollama-migration.md) - Switching from Gemini
+- [Ollama Library](https://ollama.com/library) - Browse available models
+- [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM) - Multi-GPU Ollama setup
+
+## ✅ Checklist
+
+- [x] Code changes tested locally
+- [x] Documentation updated
+- [x] Tests pass (`test_ollama.py`, `test_connection.py`)
+- [x] Backward compatibility maintained
+- [x] Example configuration provided
+- [x] Migration guide created
+- [x] Tests organized in tests/ folder
+- [x] .env.example consolidated
+
+## 🎉 Impact
+
+This PR enables privacy-conscious users to run AI-generated messages completely locally while maintaining full compatibility with existing Gemini users. No breaking changes, zero configuration changes required for existing deployments.
 - ✅ Minimum 2-second delay between requests (stays under 30 RPM limit)
 - ✅ Thread-safe coordination across all platforms
 - ✅ Maintains existing retry logic with exponential backoff

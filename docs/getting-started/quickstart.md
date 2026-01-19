@@ -13,6 +13,7 @@ Before starting, make sure you have:
 - **Python 3.10+** installed ([python.org/downloads](https://www.python.org/downloads/))
 - API credentials for **at least one** streaming platform (Twitch, YouTube, or Kick)
 - Account on **at least one** social platform (Mastodon, Bluesky, Discord, or Matrix)
+- (Optional) **AI Provider:** [Ollama](https://ollama.com) for local AI messages (recommended) or [Google Gemini API](https://aistudio.google.com/app/apikey) for cloud AI
 - (Optional) [Doppler account](https://doppler.com) for secure credential storage
 
 **Don't have credentials yet?** See [Platform Setup Guides](../platforms/) for detailed instructions.
@@ -65,6 +66,15 @@ MASTODON_INSTANCE_URL=https://mastodon.social
 MASTODON_ACCESS_TOKEN=your_mastodon_token_here
 
 # =====================================
+# AI-POWERED MESSAGES (optional but recommended)
+# =====================================
+LLM_ENABLE=True
+LLM_PROVIDER=ollama  # Use 'ollama' for local AI or 'gemini' for cloud
+LLM_OLLAMA_HOST=http://localhost
+LLM_OLLAMA_PORT=11434
+LLM_MODEL=gemma2:2b
+
+# =====================================
 # INTERVALS (optional)
 # =====================================
 SETTINGS_CHECK_INTERVAL=5  # Check every 5 minutes
@@ -73,6 +83,7 @@ SETTINGS_CHECK_INTERVAL=5  # Check every 5 minutes
 **Where to get credentials:**
 - **Twitch:** [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)
 - **Mastodon:** Your instance → Settings → Development → New Application
+- **Ollama:** [ollama.com](https://ollama.com) - Install with `curl -fsSL https://ollama.com/install.sh | sh`, then `ollama pull gemma2:2b`
 
 **Want more platforms?** See [configuration examples](#configuration-examples) below.
 
@@ -81,11 +92,12 @@ SETTINGS_CHECK_INTERVAL=5  # Check every 5 minutes
 Verify your configuration works:
 
 ```bash
-# Test Twitch connection
-python3 tests/test_doppler_twitch.py
+# Test comprehensive production setup
+python3 tests/test_connection.py
 
-# Test Mastodon connection
-python3 tests/test_mastodon.py
+# Or test individual components:
+python3 tests/test_local_install.py  # Test dependencies
+python3 tests/test_ollama.py         # Test Ollama AI
 ```
 
 **Expected output:**

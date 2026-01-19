@@ -6,19 +6,36 @@ Quick reference for all testing scripts in the Stream Daemon project.
 
 | Script | Purpose | Environment | Run Time |
 |--------|---------|-------------|----------|
-| `test_local_install.py` | Validate local Python installation | Local | 5-10s |
-| `test_docker_build.sh` | Build and test Docker image | Docker | 2-5min |
-| `test_ollama.py` | Test Ollama AI integration | Local/Docker | 30s |
+| `tests/test_connection.py` | Full production integration test | Local | 30s-1min |
+| `tests/test_local_install.py` | Validate local Python installation | Local | 5-10s |
+| `tests/test_ollama.py` | Test Ollama AI integration | Local/Docker | 30s |
 | `test_ollama_quick.sh` | Quick Ollama connectivity check | Local | 5s |
+| `test_docker_build.sh` | Build and test Docker image | Docker | 2-5min |
 | `tests/run_all_tests.py` | Full test suite | Local | 1-2min |
 
 ## Quick Start
+
+### Test Production Integration (Recommended)
+
+```bash
+# Run comprehensive production test with real .env data
+python3 tests/test_connection.py
+```
+
+**Tests:**
+- ✅ Streaming platform authentication (Twitch, YouTube, Kick)
+- ✅ Social platform authentication (Mastodon, Bluesky, Discord, Matrix)
+- ✅ LLM provider authentication (Ollama or Gemini)
+- ✅ Live stream detection
+- ✅ AI message generation with real stream data
+- ✅ Optional: Post AI message to all social platforms
+- ✅ Production readiness validation
 
 ### Test Local Installation
 
 ```bash
 # Run comprehensive local environment test
-python3 test_local_install.py
+python3 tests/test_local_install.py
 ```
 
 **Tests:**
@@ -51,7 +68,7 @@ python3 test_local_install.py
 ./test_ollama_quick.sh
 
 # Full AI generation test
-python3 test_ollama.py
+python3 tests/test_ollama.py
 ```
 
 **Requirements:**
@@ -67,13 +84,63 @@ python3 tests/run_all_tests.py
 
 ## Test Script Details
 
+### test_connection.py ⭐
+
+**Purpose:** Comprehensive production integration test that validates your entire setup using real .env configuration and live stream data.
+
+**Usage:**
+```bash
+python3 tests/test_connection.py
+```
+
+**What it tests:**
+1. **Streaming Platforms** - Authenticates and checks live status for all enabled platforms (Twitch, YouTube, Kick)
+2. **Social Platforms** - Authenticates all enabled social media platforms (Mastodon, Bluesky, Discord, Matrix)
+3. **LLM Provider** - Tests AI message generation using real live stream data
+4. **End-to-End Flow** - Optionally posts AI-generated messages to all social platforms
+
+**Exit Codes:**
+- `0` - All tests passed, production ready
+- `1` - One or more tests failed
+
+**Output Example:**
+```
+🔬 Stream Daemon - Production Integration Test
+================================================
+
+📡 Testing Streaming Platforms...
+  ✅ Twitch - LIVE - 110 viewers
+  ✅ YouTube - LIVE - 245 viewers
+  ✅ Kick - LIVE - 11,002 viewers
+
+💬 Testing Social Platforms...
+  ✅ Mastodon - Authenticated
+  ✅ Bluesky - Authenticated
+  ✅ Discord - Authenticated
+  ✅ Matrix - Authenticated
+
+🤖 Testing LLM Generation...
+  ✅ Generated AI message (258 chars)
+  
+  Would you like to post this to all social platforms? (yes/no): yes
+  
+  ✅ Mastodon - Posted (ID: 115923811563045709)
+  ✅ Bluesky - Posted (ID: 3mcskic5row2b)
+  ✅ Discord - Posted (ID: 1462916988945825874)
+  ✅ Matrix - Posted (ID: $rpa3cON...)
+
+================================================
+✅ PRODUCTION READY - All systems operational!
+================================================
+```
+
 ### test_local_install.py
 
 **Purpose:** Validates that your local Python environment has all required dependencies and meets security requirements.
 
 **Usage:**
 ```bash
-python3 test_local_install.py
+python3 tests/test_local_install.py
 ```
 
 **Exit Codes:**
@@ -172,13 +239,13 @@ LLM_ENABLE=True
 LLM_PROVIDER=ollama
 LLM_OLLAMA_HOST=http://192.168.1.100
 LLM_OLLAMA_PORT=11434
-LLM_MODEL=gemma3:4b
+LLM_MODEL=gemma2:2b
 ```
 
 **Usage:**
 ```bash
 # Local testing
-python3 test_ollama.py
+python3 tests/test_ollama.py
 
 # Docker testing
 docker run --rm --env-file .env stream-daemon:test python3 test_ollama.py

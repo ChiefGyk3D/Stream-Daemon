@@ -324,13 +324,35 @@ MATRIX_ROOM_ID: '!roomid:matrix.org'
 
 #### AI / LLM (Optional)
 
-**Google Gemini (Free API):**
+**Option 1: Ollama (Local AI - Recommended)**
+```yaml
+LLM_ENABLE: 'True'
+LLM_PROVIDER: 'ollama'
+LLM_OLLAMA_HOST: 'http://192.168.1.100'  # Your Ollama server IP
+LLM_OLLAMA_PORT: '11434'
+LLM_MODEL: 'gemma2:2b'  # or gemma2:4b, llama3.2:3b, etc.
+```
+
+**Benefits:**
+- ✅ 100% privacy - data never leaves your network
+- ✅ Zero API costs
+- ✅ Works offline
+- ✅ No rate limits
+
+**Option 2: Google Gemini (Cloud API)**
 ```yaml
 LLM_ENABLE: 'True'
 LLM_PROVIDER: 'gemini'
-LLM_GEMINI_API_KEY: 'your_api_key'
-LLM_GEMINI_MODEL: 'gemini-2.0-flash-lite'
+GEMINI_API_KEY: 'your_api_key'
+LLM_MODEL: 'gemini-2.0-flash-lite'
 ```
+
+**Benefits:**
+- ✅ No local hardware needed
+- ✅ Quick setup
+- ✅ Low cost (~$0.0001 per message)
+
+See [AI Messages Guide](../docs/features/ai-messages.md) for complete setup instructions.
 
 #### Settings
 
