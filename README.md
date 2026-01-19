@@ -10,7 +10,7 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Monitor **Twitch, YouTube, and Kick** streams • Post to **Mastodon, Bluesky, Discord, and Matrix** • AI-powered messages with **Google Gemini**
+Monitor **Twitch, YouTube, and Kick** streams • Post to **Mastodon, Bluesky, Discord, and Matrix** • AI-powered messages with **Gemini or Ollama**
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing) • [Author](#-author--socials) • [Support](#-donations-and-tips)
 
@@ -24,7 +24,7 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
 
 ### Why Stream Daemon?
 
-- 🤖 **AI-Powered Messages** - Google Gemini generates unique, engaging announcements for every stream
+- 🤖 **AI-Powered Messages** - Gemini or Ollama generates unique, engaging announcements for every stream
 - � **Enterprise Security** - Doppler, AWS Secrets Manager, HashiCorp Vault integration
 - 🌐 **7 Platform Support** - Streaming: Twitch, YouTube, Kick | Social: Mastodon, Bluesky, Discord, Matrix
 - 📊 **Discord Rich Embeds** - Real-time viewer counts, live thumbnails, in-place updates
@@ -38,7 +38,7 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
 
 ### 🎥 Streaming Platform Monitoring
 - **Twitch** - OAuth 2.0 with async API support, rate limiting, comprehensive error handling
-- **YouTube Live** - Auto-resolves channel from @handle or channel ID, quota-aware with retry logic, automatic error recovery
+- **YouTube Live** - Auto-resolves channel from @handle or channel ID, quota-aware with retry logic
 - **Kick** - OAuth 2.0 authentication required, 2FA-enabled developer portal access
 - **Multiple Streams Per Platform** (NEW!) - Monitor multiple streamers simultaneously
   - Track 3-5 streamers per platform (e.g., `TWITCH_USERNAME=user1,user2,user3`)
@@ -69,7 +69,6 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
   - Graceful fallback to static messages if LLM unavailable
   - Cost-effective: ~$0.0001 per announcement with Gemini 2.0 Flash Lite
   - Configurable temperature and creativity controls
-  - Built-in rate limiting (max 4 concurrent calls, 2-second delay) prevents quota exhaustion
 
 ### 🔐 Enterprise-Grade Secrets Management
 - **Doppler** - Modern secrets platform with environment-specific tokens (dev/staging/prod)
