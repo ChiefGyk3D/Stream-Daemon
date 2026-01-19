@@ -13,7 +13,7 @@ from typing import Dict
 
 # Import from modularized package
 from stream_daemon.config import get_config, get_bool_config, get_int_config, get_usernames
-from stream_daemon.models import StreamState, StreamStatus
+from stream_daemon.models import StreamState, StreamStatus, MultiUserConfig
 from stream_daemon.ai import AIMessageGenerator
 from stream_daemon.utils import parse_sectioned_message_file
 from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, DiscordPlatform, MatrixPlatform
@@ -63,22 +63,52 @@ def main():
         logger.error("   Enable at least one: Twitch, YouTube, or Kick")
         sys.exit(1)
     
-    # Initialize social platforms
-    social_platforms = [
-        MastodonPlatform(),
-        BlueskyPlatform(),
-        DiscordPlatform(),
-        MatrixPlatform()
-    ]
-    
-    enabled_social = []
-    for platform in social_platforms:
-        if platform.authenticate():
-            enabled_social.append(platform)
-    
-    if not enabled_social:
-        logger.error("✗ No social platforms configured!")
-        logger.error("   Enable at least one: Mastodon, Bluesky, Discord, or Matrix")
+    # Load multi-user configuration (tries advanced mode, falls back to simple mode)
+    try:
+        user_config = MultiUserConfig.load(enabled_streaming, [])  # Pass empty social list initially
+        
+        # Get all unique social accounts needed
+        social_accounts_needed = user_config.get_all_social_accounts()
+        
+        # Initialize social platforms based on what's actually needed
+        platform_classes = {
+            'mastodon': MastodonPlatform,
+            'bluesky': BlueskyPlatform,
+            'discord': DiscordPlatform,
+            'matrix': MatrixPlatform
+        }
+        
+        enabled_social = []
+        for social_account in social_accounts_needed:
+            platform_class = platform_classes.get(social_account.platform.lower())
+            if platform_class:
+                platform_instance = platform_class(account_id=social_account.account_id)
+                if platform_instance.authenticate():
+                    enabled_social.append(platform_instance)
+        
+        # If no advanced config was loaded, fall back to simple mode with all platforms
+        if not social_accounts_needed:
+            logger.info("📋 Using simple mode - initializing all social platforms")
+            social_platforms = [
+                MastodonPlatform(),
+                BlueskyPlatform(),
+                DiscordPlatform(),
+                MatrixPlatform()
+            ]
+            
+            for platform in social_platforms:
+                if platform.authenticate():
+                    enabled_social.append(platform)
+        
+        if not enabled_social:
+            logger.error("✗ No social platforms configured!")
+            logger.error("   Enable at least one: Mastodon, Bluesky, Discord, or Matrix")
+            sys.exit(1)
+            
+    except Exception as e:
+        logger.error(f"✗ Failed to load multi-user configuration: {e}")
+        import traceback
+        traceback.print_exc()
         sys.exit(1)
     
     # Initialize AI message generator (optional)
@@ -157,26 +187,25 @@ def main():
             end_messages[platform.name] = []
             logger.debug(f"  • No end messages for {platform.name} (optional)")
     
-    # Get usernames for each platform and create StreamStatus trackers
+    # Create StreamStatus trackers from MultiUserConfig
     # Key format: "PlatformName/username" for unique identification
     stream_statuses: Dict[str, StreamStatus] = {}
-    for platform in enabled_streaming:
-        usernames = get_usernames(platform.name)
-        if usernames:
-            for username in usernames:
-                # Create unique key for each stream
-                status_key = f"{platform.name}/{username}"
-                status = StreamStatus(
-                    platform_name=platform.name,
-                    username=username
-                )
-                stream_statuses[status_key] = status
-                logger.info(f"  • Monitoring {platform.name}/{username}")
-        else:
-            logger.warning(f"⚠ No username(s) configured for {platform.name}, skipping")
+    
+    for streamer in user_config.streamers:
+        status_key = streamer.key  # "PlatformName/username"
+        status = StreamStatus(
+            platform_name=streamer.platform,
+            username=streamer.username,
+            social_account_filter=streamer.social_accounts  # Filter which social accounts get posts
+        )
+        stream_statuses[status_key] = status
+        
+        # Log which social accounts will receive posts for this streamer
+        accounts_str = ', '.join([str(acc) for acc in streamer.social_accounts]) if streamer.social_accounts else 'ALL enabled platforms'
+        logger.info(f"  • Monitoring {streamer.key} → [{accounts_str}]")
     
     if not stream_statuses:
-        logger.error("✗ No usernames configured for any streaming platforms!")
+        logger.error("✗ No streamers configured in multi-user config!")
         sys.exit(1)
     
     # Settings

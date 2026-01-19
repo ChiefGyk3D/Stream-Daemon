@@ -10,7 +10,7 @@
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-Monitor **Twitch, YouTube, and Kick** streams • Post to **Mastodon, Bluesky, Discord, and Matrix** • AI-powered messages with **Google Gemini**
+Monitor **Twitch, YouTube, and Kick** streams • Post to **Mastodon, Bluesky, Discord, and Matrix** • AI-powered messages with **Gemini or Ollama**
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Documentation](#-documentation) • [Contributing](#-contributing) • [Author](#-author--socials) • [Support](#-donations-and-tips)
 
@@ -24,7 +24,7 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
 
 ### Why Stream Daemon?
 
-- 🤖 **AI-Powered Messages** - Google Gemini generates unique, engaging announcements for every stream
+- 🤖 **AI-Powered Messages** - Gemini or Ollama generates unique, engaging announcements for every stream
 - � **Enterprise Security** - Doppler, AWS Secrets Manager, HashiCorp Vault integration
 - 🌐 **7 Platform Support** - Streaming: Twitch, YouTube, Kick | Social: Mastodon, Bluesky, Discord, Matrix
 - 📊 **Discord Rich Embeds** - Real-time viewer counts, live thumbnails, in-place updates
@@ -62,13 +62,17 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
   - Message retry with exponential backoff
 
 ### 🤖 AI-Powered Messaging (NEW!)
-- **Google Gemini LLM Integration** - Generate unique announcements for every stream
+- **Multi-Provider LLM Support** - Choose between cloud and local AI
+  - **Google Gemini** - Cloud-based, high-quality output with free tier (30 requests/min)
+  - **Ollama** - Run local LLMs on your own hardware (privacy-focused, offline-capable)
+- **Smart Message Generation** - Unique announcements for every stream
   - Platform-aware character limits (Bluesky: 300, Mastodon: 500, Discord: 2000)
   - Automatic hashtag generation from stream titles and game names
   - Dynamic, personalized messages that never repeat
   - Graceful fallback to static messages if LLM unavailable
-  - Cost-effective: ~$0.0001 per announcement with Gemini 2.0 Flash Lite
-  - Configurable temperature and creativity controls
+- **Flexible Deployment Options**
+  - Cloud: Gemini 2.0 Flash Lite (~$0.0001 per announcement)
+  - Local: Ollama with models like gemma2:2b, llama3.2:3b, qwen2.5:3b, mistral:7b
   - Built-in rate limiting (max 4 concurrent calls, 2-second delay) prevents quota exhaustion
 
 ### 🔐 Enterprise-Grade Secrets Management
@@ -118,7 +122,7 @@ When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Ki
 - API credentials for at least one streaming platform (Twitch, YouTube, or Kick)
 - Credentials for at least one social platform (Mastodon, Bluesky, Discord, or Matrix)
 - (Optional) [Doppler account](https://doppler.com) for enterprise secrets management
-- (Optional) [Google AI Studio API key](https://aistudio.google.com) for AI-generated messages
+- (Optional) [Google AI Studio API key](https://aistudio.google.com) for AI-generated messages, or [Ollama](https://ollama.com) for local LLM
 
 ### 5-Minute Setup
 

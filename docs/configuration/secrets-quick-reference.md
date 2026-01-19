@@ -6,15 +6,17 @@
 
 | Item | Location | Example |
 |------|----------|---------|
-| API Keys | Doppler | `TWITCH_CLIENT_ID`, `YOUTUBE_API_KEY` |
-| Tokens | Doppler | `MASTODON_ACCESS_TOKEN`, `LLM_GEMINI_API_KEY` |
+| API Keys | Doppler | `TWITCH_CLIENT_ID`, `YOUTUBE_API_KEY`, `GEMINI_API_KEY` |
+| Tokens | Doppler | `MASTODON_ACCESS_TOKEN` |
 | Webhooks | Doppler | `DISCORD_WEBHOOK_URL` |
 | Passwords | Doppler | `BLUESKY_APP_PASSWORD`, `MATRIX_PASSWORD` |
 | **Connection** | .env | `DOPPLER_TOKEN=dp.st.xxx` |
 | Usernames | .env | `TWITCH_USERNAME=yourname` |
 | URLs | .env | `MASTODON_API_BASE_URL=https://mastodon.social` |
+| LLM Provider | .env | `LLM_PROVIDER=gemini` or `LLM_PROVIDER=ollama` |
+| LLM Settings | .env | `LLM_MODEL=gemini-2.0-flash-lite`, `LLM_OLLAMA_HOST=http://192.168.1.100` |
 | Settings | .env | `SETTINGS_CHECK_INTERVAL=5` |
-| Enable Flags | .env | `TWITCH_ENABLE=True` |
+| Enable Flags | .env | `TWITCH_ENABLE=True`, `LLM_ENABLE=True` |
 
 **Run with:**
 ```bash
@@ -70,11 +72,12 @@ python3 stream-daemon.py
 
 | Item | Location | Example |
 |------|----------|---------|
-| **EVERYTHING** | .env | All configs + all secrets |
-| API Keys | .env | `TWITCH_CLIENT_ID=abc123` |
+| API Keys | .env | `TWITCH_CLIENT_ID=abc123`, `GEMINI_API_KEY=AIza...` |
 | Tokens | .env | `MASTODON_ACCESS_TOKEN=token123` |
 | Webhooks | .env | `DISCORD_WEBHOOK_URL=https://...` |
 | Usernames | .env | `TWITCH_USERNAME=yourname` |
+| LLM Provider | .env | `LLM_PROVIDER=gemini` or `LLM_PROVIDER=ollama` |
+| LLM Settings | .env | `LLM_MODEL=gemma2:2b`, `LLM_OLLAMA_HOST=http://192.168.1.100` |
 | Settings | .env | `SETTINGS_CHECK_INTERVAL=5` |
 
 **Run with:**
@@ -100,6 +103,7 @@ Choose based on your needs:
 | Team collaboration | Doppler or Vault | Centralized secrets, access control |
 | CI/CD pipelines | Doppler or AWS | Easy integration, service tokens |
 | Learning/testing | .env file | Get started fast |
+| AI with privacy/offline | Ollama + .env | Local LLM, no cloud API keys needed |
 
 ---
 

@@ -19,7 +19,8 @@ def post_to_social_async(enabled_social: list,
                          url: str,
                          fallback_messages: List[str],
                          stream_data: Optional[dict] = None,
-                         reply_to_ids: Optional[Dict[str, str]] = None) -> Dict[str, Optional[str]]:
+                         reply_to_ids: Optional[Dict[str, str]] = None,
+                         stream_status=None) -> Dict[str, Optional[str]]:
     """
     Post to all social platforms asynchronously using ThreadPoolExecutor.
     
@@ -33,14 +34,20 @@ def post_to_social_async(enabled_social: list,
         url: Stream URL
         fallback_messages: Fallback messages if AI fails
         stream_data: Optional stream metadata for embeds
-        reply_to_ids: Optional dict of {social_name: post_id} for threading
+        reply_to_ids: Optional dict of {social_account_key: post_id} for threading
+        stream_status: Optional StreamStatus object for social account filtering
         
     Returns:
-        Dict mapping social platform names to post IDs (or None if failed)
+        Dict mapping social account keys to post IDs (or None if failed)
     """
     def post_to_single_platform(social):
         """Helper function to post to a single platform."""
         try:
+            # Check if this streamer should post to this social account
+            if stream_status and not stream_status.should_post_to_account(social.name, social.account_id):
+                logger.debug(f"  ⊘ Skipping {social.full_name} (not configured for {platform_name}/{username})")
+                return (stream_status.get_social_account_key(social.name, social.account_id), None)
+            
             # Generate message with AI or fallback
             message = get_message_for_stream(
                 ai_generator=ai_generator,
@@ -53,10 +60,11 @@ def post_to_social_async(enabled_social: list,
                 fallback_messages=fallback_messages
             )
             
-            # Get reply_to_id if threading
+            # Get reply_to_id if threading (using account-specific key)
             reply_to_id = None
             if reply_to_ids:
-                reply_to_id = reply_to_ids.get(social.name)
+                account_key = stream_status.get_social_account_key(social.name, social.account_id) if stream_status else social.name
+                reply_to_id = reply_to_ids.get(account_key)
             
             # Post to platform
             post_id = social.post(
@@ -67,21 +75,24 @@ def post_to_social_async(enabled_social: list,
             )
             
             if post_id:
-                logger.debug(f"  ✓ Posted to {social.name} (ID: {post_id})")
+                logger.debug(f"  ✓ Posted to {social.full_name} (ID: {post_id})")
             else:
-                logger.debug(f"  ✗ Failed to post to {social.name}")
-                
-            return (social.name, post_id)
+                logger.debug(f"  ✗ Failed to post to {social.full_name}")
+            
+            # Return account-specific key for proper post ID tracking
+            account_key = stream_status.get_social_account_key(social.name, social.account_id) if stream_status else social.name
+            return (account_key, post_id)
         except Exception as e:
-            logger.error(f"✗ Error posting to {social.name}: {e}")
-            return (social.name, None)
+            logger.error(f"✗ Error posting to {social.full_name}: {e}")
+            account_key = stream_status.get_social_account_key(social.name, social.account_id) if stream_status else social.name
+            return (account_key, None)
     
     # Post to all platforms in parallel
     results = {}
     with ThreadPoolExecutor(max_workers=len(enabled_social)) as executor:
         futures = [executor.submit(post_to_single_platform, social) for social in enabled_social]
         for future in as_completed(futures):
-            social_name, post_id = future.result()
-            results[social_name] = post_id
+            account_key, post_id = future.result()
+            results[account_key] = post_id
     
     return results

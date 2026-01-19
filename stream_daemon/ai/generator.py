@@ -1,12 +1,24 @@
-"""Google Gemini AI message generator."""
+"""AI message generator supporting Google Gemini and Ollama."""
 
 import os
 import logging
 import time
 import threading
-import google.genai
 from typing import Optional
 from ..config import get_config, get_bool_config, get_secret
+
+# Import providers - may not be available if not configured
+try:
+    import google.genai
+    GEMINI_AVAILABLE = True
+except ImportError:
+    GEMINI_AVAILABLE = False
+
+try:
+    import ollama
+    OLLAMA_AVAILABLE = True
+except ImportError:
+    OLLAMA_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +31,10 @@ _min_delay_between_calls = 2.0  # seconds (30 requests/min = one every 2 seconds
 
 class AIMessageGenerator:
     """
-    Generate personalized stream messages using Google Gemini LLM.
+    Generate personalized stream messages using AI (Google Gemini or Ollama).
     
     Features:
+    - Support for multiple LLM providers (Gemini, Ollama)
     - Platform-specific character limits (Bluesky: 300, Mastodon: 500)
     - Automatic hashtag generation based on stream title
     - Customizable tone for start vs. end messages
@@ -33,9 +46,12 @@ class AIMessageGenerator:
     
     def __init__(self):
         self.enabled = False
+        self.provider = None  # 'gemini' or 'ollama'
         self.api_key = None
         self.model = None
         self.client = None
+        self.ollama_host = None
+        self.ollama_client = None  # Separate Ollama client instance
         self.bluesky_max_chars = 300
         self.mastodon_max_chars = 500
         # Retry configuration for handling transient API errors (503, 429, etc.)
@@ -82,12 +98,24 @@ class AIMessageGenerator:
                             time.sleep(sleep_time)
                         _last_api_call_time = time.time()
                     
-                    # Make the API call
-                    response = self.client.models.generate_content(
-                        model=self.model,
-                        contents=prompt
-                    )
-                return response.text.strip()
+                    # Make the API call based on provider
+                    if self.provider == 'gemini':
+                        response = self.client.models.generate_content(
+                            model=self.model,
+                            contents=prompt
+                        )
+                        return response.text.strip()
+                    
+                    elif self.provider == 'ollama':
+                        response = self.ollama_client.chat(
+                            model=self.model,
+                            messages=[{'role': 'user', 'content': prompt}]
+                        )
+                        return response['message']['content'].strip()
+                    
+                    else:
+                        logger.error(f"✗ Unknown provider: {self.provider}")
+                        return None
                 
             except Exception as e:
                 last_error = e
@@ -121,7 +149,7 @@ class AIMessageGenerator:
         
     def authenticate(self):
         """
-        Initialize Gemini API connection.
+        Initialize AI provider connection (Gemini or Ollama).
         
         Returns:
             bool: True if authentication successful, False otherwise
@@ -129,6 +157,98 @@ class AIMessageGenerator:
         try:
             if not get_bool_config('LLM', 'enable', default=False):
                 logger.info("LLM message generation disabled")
+                return False
+            
+            # Determine which provider to use
+            provider = get_config('LLM', 'provider', default='gemini').lower()
+            self.provider = provider
+            
+            if provider == 'ollama':
+                return self._authenticate_ollama()
+            elif provider == 'gemini':
+                return self._authenticate_gemini()
+            else:
+                logger.error(f"✗ Unknown LLM provider: {provider}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"✗ Failed to initialize LLM: {e}")
+            self.enabled = False
+            return False
+    
+    def _authenticate_ollama(self):
+        """
+        Initialize Ollama connection for local LLM.
+        
+        Returns:
+            bool: True if connection successful, False otherwise
+        """
+        try:
+            if not OLLAMA_AVAILABLE:
+                logger.error("✗ Ollama Python client not installed. Run: pip install ollama")
+                return False
+            
+            # Get Ollama configuration
+            ollama_host = get_config('LLM', 'ollama_host', default='http://localhost')
+            ollama_port = get_config('LLM', 'ollama_port', default='11434')
+            model_name = get_config('LLM', 'model', default='gemma2:2b')
+            
+            # Build full host URL if port is specified separately
+            if not ollama_host.startswith('http'):
+                ollama_host = f"http://{ollama_host}"
+            
+            # Add port if not already in host URL
+            if ':' not in ollama_host.split('//')[-1]:
+                self.ollama_host = f"{ollama_host}:{ollama_port}"
+            else:
+                self.ollama_host = ollama_host
+            
+            self.model = model_name
+            
+            # Test connection by listing models
+            try:
+                self.ollama_client = ollama.Client(host=self.ollama_host)
+                models_response = self.ollama_client.list()
+                logger.debug(f"Connected to Ollama at {self.ollama_host}")
+                
+                # Check if requested model exists
+                # Handle different response formats from ollama library
+                available_models = []
+                if hasattr(models_response, 'models'):
+                    available_models = [m.get('name') or m.get('model') for m in models_response.models if m.get('name') or m.get('model')]
+                elif isinstance(models_response, dict) and 'models' in models_response:
+                    available_models = [m.get('name') or m.get('model') for m in models_response['models'] if m.get('name') or m.get('model')]
+                
+                if available_models and model_name not in available_models:
+                    logger.warning(
+                        f"⚠ Model '{model_name}' not found on Ollama server. "
+                        f"Available models: {', '.join(available_models)}. "
+                        f"To pull the model, run: ollama pull {model_name}"
+                    )
+                    # Don't fail - Ollama will auto-pull on first use
+                
+            except Exception as e:
+                logger.error(f"✗ Failed to connect to Ollama at {self.ollama_host}: {e}")
+                return False
+            
+            self.enabled = True
+            logger.info(f"✓ Ollama LLM initialized (host: {self.ollama_host}, model: {model_name})")
+            return True
+            
+        except Exception as e:
+            logger.error(f"✗ Failed to initialize Ollama: {e}")
+            return False
+    
+    def _authenticate_gemini(self):
+        """
+        Initialize Gemini API connection.
+        
+        Returns:
+            bool: True if authentication successful, False otherwise
+        """
+        try:
+            if not GEMINI_AVAILABLE:
+                logger.error("✗ Google Gemini client not installed. Run: pip install google-genai")
                 return False
             
             # Get API key from secrets or env

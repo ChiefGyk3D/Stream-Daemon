@@ -62,7 +62,7 @@ Configure where Stream Daemon posts your announcements:
 
 Enhance your stream announcements with powerful features:
 
-- **[AI-Powered Messages](features/ai-messages.md)** 🤖 **NEW!** - Google Gemini LLM integration
+- **[AI-Powered Messages](features/ai-messages.md)** 🤖 **NEW!** - Gemini & Ollama LLM integration
   - Generate unique announcements for every stream
   - Platform-aware character limits
   - Cost-effective (~ $0.0001 per message)
@@ -125,7 +125,7 @@ Upgrading from an older version?
 
 ### Advanced Configuration
 
-- **[Set up AI Messages](features/ai-messages.md)** - Use Gemini for dynamic announcements
+- **[Set up AI Messages](features/ai-messages.md)** - Use Gemini or Ollama for dynamic announcements
 - **[Multi-Platform Streaming](features/multi-platform.md)** - Configure for simultaneous streaming
 - **[Discord Live Updates](platforms/social/discord.md#live-embed-updates)** - Real-time viewer counts
 - **[Production Deployment](getting-started/installation.md#systemd-service-linux)** - Systemd service, Docker, cloud
