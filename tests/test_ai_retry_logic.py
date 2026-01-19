@@ -11,10 +11,17 @@ class TestAIRetryLogic:
     """Test suite for AI message generator retry logic."""
     
     @pytest.fixture
-    def generator(self):
+    def generator(self, monkeypatch):
         """Create an AI message generator instance."""
+        # Mock environment to configure Gemini provider
+        monkeypatch.setenv('LLM_ENABLE', 'True')
+        monkeypatch.setenv('LLM_PROVIDER', 'gemini')
+        monkeypatch.setenv('GEMINI_API_KEY', 'test_key')
+        monkeypatch.setenv('LLM_MODEL', 'gemini-2.0-flash-lite')
+        
         gen = AIMessageGenerator()
         gen.enabled = True
+        gen.provider = 'gemini'
         gen.client = Mock()
         gen.model = 'gemini-2.0-flash-lite'
         gen.max_retries = 3

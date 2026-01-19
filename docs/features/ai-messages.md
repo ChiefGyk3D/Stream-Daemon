@@ -1,10 +1,14 @@
 # AI-Powered Stream Messages
 
-🤖 **Optional Feature**: Use Google's Gemini AI to generate personalized, engaging stream announcements instead of static messages.
+🤖 **Optional Feature**: Use AI to generate personalized, engaging stream announcements instead of static messages.
 
 ## Overview
 
-Stream Daemon can use Google's Gemini LLM to automatically generate unique, engaging messages for every stream announcement. Instead of repeating the same messages, each post is dynamically crafted with relevant hashtags, inviting language, and platform-appropriate formatting.
+Stream Daemon supports multiple AI providers to automatically generate unique, engaging messages for every stream announcement. Instead of repeating the same messages, each post is dynamically crafted with relevant hashtags, inviting language, and platform-appropriate formatting.
+
+**Supported Providers:**
+- **Google Gemini** - Cloud-based AI with high-quality output (requires API key)
+- **Ollama** - Local LLM server for privacy and offline use (requires local installation)
 
 **Traditional Approach:**
 ```
@@ -66,7 +70,122 @@ If AI generation fails (network issue, API error, quota exceeded):
 
 ## Quick Start
 
-### Step 1: Get Gemini API Key
+Choose your preferred AI provider:
+
+### Option 1: Ollama (Local LLM Server)
+
+**Best for:** Privacy, offline use, no API costs, full control
+
+#### Step 1: Install and Configure Ollama
+
+1. **Install Ollama on your LLM server:**
+   ```bash
+   # Linux
+   curl -fsSL https://ollama.com/install.sh | sh
+   
+   # macOS
+   brew install ollama
+   
+   # Windows - download from https://ollama.com/download
+   ```
+   
+   **Multi-GPU Setup:** For mixed/multiple GPU configurations (different vendors/models), see [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM) for advanced setup guides.
+
+2. **Browse available models:**
+   ```bash
+   # View all available models at https://ollama.com/library
+   # Or search from command line:
+   ollama list          # Show locally installed models
+   ollama search llama  # Search for models (requires ollama >= 0.1.26)
+   ```
+
+3. **Pull a model (recommended: gemma2:2b for balance of quality and speed):**
+   ```bash
+   ollama pull gemma2:2b
+   
+   # Other good options:
+   # ollama pull llama3.2:3b  # Faster, smaller
+   # ollama pull qwen2.5:3b   # Good for technical content
+   # ollama pull mistral:7b   # Higher quality, slower
+   ```
+
+4. **Start Ollama server:**
+   ```bash
+   ollama serve
+   # By default runs on http://localhost:11434
+   ```
+
+#### Step 2: Configure Stream Daemon
+
+**In your `.env` file:**
+```bash
+# Enable AI message generation
+LLM_ENABLE=True
+
+# Use Ollama provider
+LLM_PROVIDER=ollama
+
+# Ollama server configuration
+LLM_OLLAMA_HOST=http://192.168.1.100  # Your LLM server IP
+LLM_OLLAMA_PORT=11434                  # Default Ollama port
+LLM_MODEL=gemma2:2b                    # Model to use
+
+# Optional: Retry configuration
+LLM_MAX_RETRIES=3
+LLM_RETRY_DELAY_BASE=2
+
+# NOTE: You can keep both Gemini and Ollama settings in the same .env file!
+# Only the active provider (set by LLM_PROVIDER) will be used.
+# Example - both configs coexist:
+# GEMINI_API_KEY=AIza...           # Used when LLM_PROVIDER=gemini
+# LLM_OLLAMA_HOST=http://...       # Used when LLM_PROVIDER=ollama
+# Just change LLM_PROVIDER to switch between them!
+```
+
+**Remote Ollama Server:**
+If Ollama is on a different machine, ensure it's accessible:
+```bash
+# On the Ollama server, allow remote connections:
+OLLAMA_HOST=0.0.0.0 ollama serve
+
+# Or set in systemd/environment
+export OLLAMA_HOST=0.0.0.0
+```
+
+#### Step 3: Test It!
+
+```bash
+# Verify Ollama connection
+curl http://192.168.1.100:11434/api/tags
+
+# Test AI generation
+python3 -c "
+from stream_daemon.ai.generator import AIMessageGenerator
+from dotenv import load_dotenv
+load_dotenv()
+
+gen = AIMessageGenerator()
+if gen.authenticate():
+    print('✅ Ollama LLM is ready!')
+    msg = gen.generate_stream_start_message(
+        'Twitch', 'chiefgyk3d', 
+        'Testing AI Messages', 
+        'https://twitch.tv/test',
+        'bluesky'
+    )
+    print(f'Sample message:\n{msg}')
+else:
+    print('❌ Ollama not initialized - check configuration')
+"
+```
+
+---
+
+### Option 2: Google Gemini (Cloud API)
+
+**Best for:** Highest quality, no local resources needed, easy setup
+
+#### Step 1: Get Gemini API Key
 
 1. **Go to Google AI Studio:**
    - Visit [https://aistudio.google.com/app/apikey](https://aistudio.google.com/app/apikey)
@@ -78,13 +197,16 @@ If AI generation fails (network issue, API error, quota exceeded):
    - Copy your API key (starts with `AIza...`)
    - **Keep it secure!**
 
-### Step 2: Configure Stream Daemon
+#### Step 2: Configure Stream Daemon
 
 **Option A: Using Environment Variables (.env)**
 
 ```bash
 # Enable AI message generation
 LLM_ENABLE=True
+
+# Use Gemini provider (default)
+LLM_PROVIDER=gemini
 
 # Your Gemini API key
 GEMINI_API_KEY=AIzaSyA_your_actual_api_key_here
@@ -99,6 +221,9 @@ LLM_MODEL=gemini-2.0-flash-lite
 ```bash
 # Enable AI messages
 LLM_ENABLE=True
+
+# Use Gemini provider
+LLM_PROVIDER=gemini
 
 # Model selection (not sensitive, OK in .env)
 LLM_MODEL=gemini-2.0-flash-lite
@@ -118,7 +243,7 @@ doppler secrets set LLM_ENABLE="True"
 doppler secrets set LLM_MODEL="gemini-2.0-flash-lite"
 ```
 
-### Step 3: Test It!
+#### Step 3: Test It!
 
 Start streaming and watch the AI-generated announcements!
 
@@ -132,10 +257,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 gen = AIMessageGenerator()
-if gen.is_initialized:
+if gen.authenticate():
     print('✅ AI message generation is ready!')
-    msg = gen.generate_start_message('Twitch', 'chiefgyk3d', 'Testing Stream', 'bluesky')
-    print(f'Sample message: {msg}')
+    msg = gen.generate_stream_start_message(
+        'Twitch', 'chiefgyk3d', 
+        'Testing Stream', 
+        'https://twitch.tv/test',
+        'bluesky'
+    )
+    print(f'Sample message:\n{msg}')
 else:
     print('❌ AI not initialized - check configuration')
 "
@@ -202,15 +332,31 @@ Rate limiting is automatically enabled when using AI-powered messages. The 4 con
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `LLM_ENABLE` | Enable AI message generation | `True` |
-| `GEMINI_API_KEY` | Google Gemini API key | `AIzaSyA...` |
+| `LLM_PROVIDER` | AI provider (`gemini` or `ollama`) | `gemini` or `ollama` |
 
-### Optional Settings
+### Gemini-Specific Settings
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `GEMINI_API_KEY` | Google Gemini API key (required for Gemini) | `AIzaSyA...` |
+| `LLM_MODEL` | Gemini model to use | `gemini-2.0-flash-lite` |
+
+### Ollama-Specific Settings
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `LLM_MODEL` | Gemini model to use | `gemini-2.0-flash-lite` |
+| `LLM_OLLAMA_HOST` | Ollama server IP/hostname | `http://localhost` |
+| `LLM_OLLAMA_PORT` | Ollama server port | `11434` |
+| `LLM_MODEL` | Ollama model to use | `gemma2:2b` |
 
-### Model Options
+### Optional Settings (Both Providers)
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `LLM_MAX_RETRIES` | Maximum retry attempts on errors | `3` |
+| `LLM_RETRY_DELAY_BASE` | Base delay for exponential backoff (seconds) | `2` |
+
+### Gemini Model Options
 
 **gemini-2.0-flash-lite** (Recommended - Default):
 - ✅ Very fast response time (~1-2 seconds)
@@ -238,6 +384,55 @@ Rate limiting is automatically enabled when using AI-powered messages. The 4 con
 
 **Recommendation:** Stick with `gemini-2.0-flash-lite` (the default) unless you have specific needs.
 
+### Ollama Model Options
+
+**gemma2:2b** (Recommended - Default for 4B variant):
+- ✅ Fast inference on modest hardware
+- ✅ Good quality for social media posts
+- ✅ Low memory usage (~2GB VRAM)
+- ✅ Based on Google's Gemma 2 architecture
+- ✅ Best balance of speed and quality
+
+**llama3.2:3b**:
+- ✅ Very fast inference
+- ✅ Good quality
+- ✅ Low memory usage (~2GB VRAM)
+- ✅ Meta's latest small model
+
+**qwen2.5:3b**:
+- ✅ Excellent for technical content
+- ✅ Fast inference
+- ✅ Low memory usage (~2GB VRAM)
+- ✅ Strong at following instructions
+
+**mistral:7b**:
+- ✅ Higher quality output
+- ⚠️ Slower inference
+- ⚠️ Higher memory usage (~5GB VRAM)
+- ✅ Good for detailed, creative content
+
+**phi3:3b**:
+- ✅ Very fast
+- ✅ Low memory (~2GB VRAM)
+- ✅ Good at concise content
+- ✅ Microsoft's efficient model
+
+**To pull a model:**
+```bash
+# On your Ollama server
+ollama pull gemma2:2b
+ollama pull llama3.2:3b
+ollama pull qwen2.5:3b
+ollama pull mistral:7b
+```
+
+**Model Performance Tips:**
+- For GPU: Any 3B-7B model works well
+- For CPU only: Use 2B-3B models (gemma2:2b, llama3.2:3b)
+- For fastest: llama3.2:3b or phi3:3b
+- For quality: mistral:7b or qwen2.5:3b
+- For balance: gemma2:2b (default)
+
 ---
 
 ## How It Works
@@ -256,34 +451,48 @@ Rate limiting is automatically enabled when using AI-powered messages. The 4 con
      │ YES                      │ NO
      ▼                          ▼
 ┌──────────────────┐   ┌─────────────────┐
-│ Call Gemini API  │   │ Use static      │
-│ with:            │   │ message from    │
-│ - Platform       │   │ messages.txt    │
-│ - Username       │   └─────────────────┘
-│ - Stream Title   │
-│ - Social Target  │
-│ - Char Limit     │
-└────┬─────────────┘
+│ Which provider?  │   │ Use static      │
+│ - gemini         │   │ message from    │
+│ - ollama         │   │ messages.txt    │
+└────┬─────────────┘   └─────────────────┘
      │
-     ▼
-┌──────────────────┐
-│ AI generates     │
-│ personalized     │
-│ message with     │
-│ hashtags         │
-└────┬─────────────┘
-     │
-     ▼
-┌──────────────────┐
-│ Append URL       │
-│ (for start msgs) │
-└────┬─────────────┘
-     │
-     ▼
-┌──────────────────┐
-│ Post to social   │
-│ platforms        │
-└──────────────────┘
+     ├─ gemini ──────────┐
+     │                   ▼
+     │         ┌──────────────────┐
+     │         │ Call Gemini API  │
+     │         │ with API key     │
+     │         └────┬─────────────┘
+     │              │
+     └─ ollama ─────┤
+                    ▼
+           ┌──────────────────┐
+           │ Call LLM with:   │
+           │ - Platform       │
+           │ - Username       │
+           │ - Stream Title   │
+           │ - Social Target  │
+           │ - Char Limit     │
+           └────┬─────────────┘
+                │
+                ▼
+           ┌──────────────────┐
+           │ AI generates     │
+           │ personalized     │
+           │ message with     │
+           │ hashtags         │
+           └────┬─────────────┘
+                │
+                ▼
+           ┌──────────────────┐
+           │ Append URL       │
+           │ (for start msgs) │
+           └────┬─────────────┘
+                │
+                ▼
+           ┌──────────────────┐
+           │ Post to social   │
+           │ platforms        │
+           └──────────────────┘
 ```
 
 ### Context Provided to AI

@@ -62,11 +62,12 @@ Configure where Stream Daemon posts your announcements:
 
 Enhance your stream announcements with powerful features:
 
-- **[AI-Powered Messages](features/ai-messages.md)** 🤖 **NEW!** - Google Gemini LLM integration
+- **[AI-Powered Messages](features/ai-messages.md)** 🤖 - Local or cloud AI generation
+  - **Ollama** (local, private, free) or **Google Gemini** (cloud, easy setup)
   - Generate unique announcements for every stream
   - Platform-aware character limits
-  - Cost-effective (~ $0.0001 per message)
   - Automatic fallback to static messages
+  - See [Ollama Migration Guide](features/ollama-migration.md) to switch providers
   
 - **[Custom Messages](features/custom-messages.md)** - Personalize announcements
   - Platform-specific templates (Twitch, YouTube, Kick)
