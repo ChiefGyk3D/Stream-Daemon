@@ -7,16 +7,16 @@
 ######################################################################
 twitchAPI==4.5.0
 Mastodon.py==2.1.4
-boto3==1.41.2
+boto3==1.42.30
 hvac==2.4.0
-atproto==0.0.63
+atproto==0.0.65
 doppler-sdk==1.3.0
 python-dotenv==1.2.1
-google-api-python-client==2.187.0
-google-genai==1.52.0
+google-api-python-client==2.188.0
+google-genai==1.59.0
 # CVE-2025-4565 fix: Requires protobuf >= 4.25.8 (v4), >= 5.29.5 (v5), or >= 6.31.1 (v6)
 # Using v4 for compatibility; upgrade to v5/v6 requires testing
-protobuf==6.33.1
+protobuf==6.33.4
 # Ollama Python client for local LLM support
 ollama==0.6.1
 # CVE-2024-45590, CVE-2024-42473: Fixed in requests >= 2.32.2
@@ -25,17 +25,17 @@ ollama==0.6.1
 requests==2.32.5
 discord.py==2.6.4
 matrix-nio==0.25.2
-beautifulsoup4==4.14.2
+beautifulsoup4==4.14.3
 # CVE-2024-5569: Infinite loop in zipp, fixed in >= 3.19.1
 zipp==3.23.0
 # CVE-2024-37891, CVE-2024-37080: Fixed in urllib3 >= 2.2.2
 # CVE-2025-78866: Open redirect fixed in urllib3 >= 2.5.0
 # Using latest stable v2.x (v1.26.19 is legacy Python 2.7 support)
-urllib3==2.5.0
+urllib3==2.6.3
 # pip symbolic link extraction vulnerability fix
 # Ensures pip >= 24.2 for CVE fixes
 pip==25.3
 # Testing framework
-pytest==8.4.2
+pytest==9.0.2
 pytest-asyncio==1.3.0
 pytest-cov==7.0.0
