@@ -58,6 +58,126 @@ class AIMessageGenerator:
         self.max_retries = int(get_config('LLM', 'max_retries', default='3'))
         self.retry_delay_base = int(get_config('LLM', 'retry_delay_base', default='2'))
     
+    @staticmethod
+    def _safe_trim(message: str, limit: int) -> str:
+        """
+        Safely trim message to character limit without cutting words/hashtags mid-token.
+        
+        Args:
+            message: The message to trim
+            limit: Maximum character limit
+        
+        Returns:
+            Trimmed message at word boundary, or hard cut if unavoidable
+        """
+        message = message.strip()
+        if len(message) <= limit:
+            return message
+        
+        # Try to trim at a word boundary to avoid cutting hashtags in half
+        trimmed = message[:limit].rsplit(' ', 1)[0].rstrip()
+        
+        # If we trimmed too aggressively (e.g., single long token), hard cut
+        return trimmed if trimmed else message[:limit]
+    
+    @staticmethod
+    def _prompt_stream_start(platform_name: str, username: str, title: str, content_max: int) -> str:
+        """
+        Build optimized prompt for stream start messages.
+        
+        Designed for small LLMs (4B params) with explicit constraints to prevent hallucinations.
+        
+        Args:
+            platform_name: Streaming platform (Twitch, YouTube, Kick)
+            username: Streamer username
+            title: Stream title
+            content_max: Maximum character count for generated content
+        
+        Returns:
+            Formatted prompt string
+        """
+        return f"""You write short go-live announcements for a streaming community.
+
+Stream details:
+- Platform: {platform_name}
+- Streamer: {username}
+- Title: {title}
+
+Hard rules:
+- Output ONLY the post text (no quotes, no labels, no extra lines)
+- MUST be <= {content_max} characters
+- DO NOT include the URL (it will be appended automatically)
+- DO NOT invent details not in the title (no giveaways, drops enabled, ranked grind, "new video", special guest, start times, or "tonight at X")
+- Avoid cringe/clickbait words (smash that, unmissable, INSANE, crazy, epic, etc.)
+- 1 emoji MAX (optional)
+
+Style:
+- Sound like a real person: short, punchy, slightly witty
+- Include 1 clear call-to-action (e.g., "come hang out", "join me", "pull up")
+
+Hashtags:
+- Include EXACTLY 3 hashtags at the end (no more, no less)
+- COUNT CAREFULLY: You must output exactly 3 hashtags, not 2, not 4, not 5
+- Hashtags MUST be derived directly from words in the stream title only
+- DO NOT use the streamer's username as a hashtag
+- DO NOT add generic tags like #Gaming, #Live, #Stream, #Community unless they appear in the title
+- DO NOT add suffixes like #LiveStream or #TwitchLive
+- If the title has no clear hashtag words, use: #{platform_name} #LiveStream #Community
+- Format: Space before first hashtag, spaces between hashtags
+- Example for "Minecraft Building": #Minecraft #Building #Creative (3 hashtags)
+- Example for "Valorant Ranked": #Valorant #Ranked #Gaming (3 hashtags)
+
+Now write the post."""
+    
+    @staticmethod
+    def _prompt_stream_end(platform_name: str, username: str, title: str, prompt_max: int) -> str:
+        """
+        Build optimized prompt for stream end messages.
+        
+        Designed for small LLMs (4B params) with explicit constraints.
+        
+        Args:
+            platform_name: Streaming platform (Twitch, YouTube, Kick)
+            username: Streamer username  
+            title: Stream title from when it started
+            prompt_max: Maximum character count
+        
+        Returns:
+            Formatted prompt string
+        """
+        return f"""You write short stream-ended thank-you posts for a streaming community.
+
+Stream details:
+- Platform: {platform_name}
+- Streamer: {username}
+- Title: {title}
+
+Hard rules:
+- Output ONLY the post text (no quotes, no labels, no extra lines)
+- MUST be <= {prompt_max} characters
+- DO NOT invent details (no viewer counts, raid targets, highlights, "VOD coming soon", next stream times)
+- Avoid cringe/clickbait words (amazing, incredible, INSANE, smashed it, etc.)
+- 1 emoji MAX (optional)
+
+Style:
+- Sound genuine and grateful
+- Keep it short and warm
+- Simple thank you for joining
+
+Hashtags:
+- Include EXACTLY 2 hashtags at the end (no more, no less)
+- COUNT CAREFULLY: You must output exactly 2 hashtags, not 1, not 3, not 4
+- Hashtags MUST be derived directly from words in the stream title only
+- DO NOT use the streamer's username as a hashtag
+- DO NOT add generic tags unless they appear in the title
+- DO NOT add platform names unless necessary
+- If the title has no clear hashtag words, use: #{platform_name} #GG
+- Format: Space before first hashtag, space between hashtags
+- Example for "Minecraft Building": #Minecraft #Building (2 hashtags)
+- Example for "Valorant Ranked": #Valorant #Ranked (2 hashtags)
+
+Now write the post."""
+    
     def _generate_with_retry(self, prompt: str, max_retries: int = None) -> Optional[str]:
         """
         Generate content with exponential backoff retry logic.
@@ -330,23 +450,8 @@ class AIMessageGenerator:
                 # Other platforms are more forgiving
                 content_max = max_chars - url_formatting_space
             
-            prompt = f"""Generate an exciting, engaging social media post announcing a livestream has just started.
-
-Stream Details:
-- Platform: {platform_name}
-- Streamer: {username}
-- Title: {title}
-- URL: {url}
-
-Requirements:
-- Maximum {content_max} characters (excluding the URL which will be appended)
-- Include 2-4 relevant hashtags based on the stream title
-- Enthusiastic and inviting tone
-- Make people want to join the stream NOW
-- DO NOT include the URL in your response (it will be added automatically)
-- Keep it concise and punchy
-
-Generate ONLY the message text with hashtags, nothing else."""
+            # Build optimized prompt for small LLMs
+            prompt = self._prompt_stream_start(platform_name, username, title, content_max)
 
             # Use retry logic for API call
             message = self._generate_with_retry(prompt)
@@ -355,10 +460,10 @@ Generate ONLY the message text with hashtags, nothing else."""
                 # Retry failed
                 return None
             
-            # Verify content length (without URL yet)
+            # Verify content length (without URL yet) - use safe trimming to avoid cutting hashtags
             if len(message) > content_max:
-                logger.warning(f"⚠ AI generated message too long ({len(message)} > {content_max}), truncating to fit")
-                message = message[:content_max]
+                logger.warning(f"⚠ AI generated message too long ({len(message)} > {content_max}), trimming to fit")
+                message = self._safe_trim(message, content_max)
             
             # Add URL to the message
             full_message = f"{message}\n\n{url}"
@@ -366,10 +471,10 @@ Generate ONLY the message text with hashtags, nothing else."""
             # Final validation: ensure total length doesn't exceed limit
             if len(full_message) > max_chars:
                 # This should rarely happen with our conservative limits, but handle it
-                logger.warning(f"⚠ Final message exceeds {max_chars} chars ({len(full_message)}), truncating content")
-                # Recalculate to fit exactly
+                logger.warning(f"⚠ Final message exceeds {max_chars} chars ({len(full_message)}), trimming content")
+                # Recalculate to fit exactly using safe trimming
                 allowed_content = max_chars - url_formatting_space
-                message = message[:allowed_content]
+                message = self._safe_trim(message, allowed_content)
                 full_message = f"{message}\n\n{url}"
             
             logger.info(f"✨ Generated stream start message ({len(message)} chars content + URL = {len(full_message)}/{max_chars} total)")
@@ -413,22 +518,8 @@ Generate ONLY the message text with hashtags, nothing else."""
                 max_chars = 500  # Default for Discord/Matrix
                 prompt_max = max_chars
             
-            prompt = f"""Generate a warm, thankful social media post announcing a livestream has ended.
-
-Stream Details:
-- Platform: {platform_name}
-- Streamer: {username}
-- Title: {title}
-
-Requirements:
-- Maximum {prompt_max} characters
-- Thank viewers for joining
-- Include 1-3 relevant hashtags based on the stream title
-- Grateful and friendly tone
-- Encourage them to catch the next stream
-- Keep it concise and heartfelt
-
-Generate ONLY the message text with hashtags, nothing else."""
+            # Build optimized prompt for small LLMs
+            prompt = self._prompt_stream_end(platform_name, username, title, prompt_max)
 
             # Use retry logic for API call
             message = self._generate_with_retry(prompt)
@@ -437,10 +528,10 @@ Generate ONLY the message text with hashtags, nothing else."""
                 # Retry failed
                 return None
             
-            # Verify length - truncate if needed
+            # Verify length - use safe trimming to avoid cutting hashtags mid-word
             if len(message) > max_chars:
-                logger.warning(f"⚠ AI generated end message too long ({len(message)} > {max_chars}), truncating to fit")
-                message = message[:max_chars]
+                logger.warning(f"⚠ AI generated end message too long ({len(message)} > {max_chars}), trimming to fit")
+                message = self._safe_trim(message, max_chars)
             
             logger.info(f"✨ Generated stream end message ({len(message)}/{max_chars} chars)")
             return message
