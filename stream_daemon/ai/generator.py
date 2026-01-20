@@ -4,7 +4,8 @@ import os
 import logging
 import time
 import threading
-from typing import Optional
+import re
+from typing import Optional, List, Set
 from ..config import get_config, get_bool_config, get_secret
 
 # Import providers - may not be available if not configured
@@ -57,6 +58,136 @@ class AIMessageGenerator:
         # Retry configuration for handling transient API errors (503, 429, etc.)
         self.max_retries = int(get_config('LLM', 'max_retries', default='3'))
         self.retry_delay_base = int(get_config('LLM', 'retry_delay_base', default='2'))
+    
+    @staticmethod
+    def _tokenize_username(username: str) -> Set[str]:
+        """
+        Tokenize username into parts that should not appear in hashtags.
+        
+        Handles various username formats:
+        - CamelCase: ChiefGyk3D -> ['chief', 'gyk', '3d', 'chiefgyk3d']
+        - Underscores: Chief_Gyk3D -> ['chief', 'gyk', '3d', 'chief_gyk3d']
+        - Numbers: Gamer123 -> ['gamer', '123', 'gamer123']
+        - Prefixes: @username, #username -> removes prefix
+        
+        Args:
+            username: The streamer's username
+            
+        Returns:
+            Set of lowercase username parts (min 3 chars to avoid false positives)
+        """
+        if not username:
+            return set()
+        
+        # Remove common prefixes (@, #)
+        clean_username = username.lstrip('@#').strip()
+        
+        # Add the full username (lowercased) to the set
+        parts = {clean_username.lower()}
+        
+        # Split on underscores, hyphens, dots
+        for separator in ['_', '-', '.']:
+            if separator in clean_username:
+                parts.update(p.lower() for p in clean_username.split(separator) if len(p) >= 3)
+        
+        # Split CamelCase: ChiefGyk3D -> Chief, Gyk, 3D
+        # Use regex to find transitions: lowercase->uppercase, letter->number, number->letter
+        camel_parts = re.findall(r'[A-Z][a-z]+|[a-z]+|[0-9]+', clean_username)
+        parts.update(p.lower() for p in camel_parts if len(p) >= 3)
+        
+        # Also add consecutive parts for partial matches
+        # ChiefGyk3D -> Chief, ChiefGyk, Gyk, Gyk3D, 3D
+        for i in range(len(camel_parts)):
+            for j in range(i + 1, min(i + 3, len(camel_parts) + 1)):  # Max 2 consecutive parts
+                combined = ''.join(camel_parts[i:j]).lower()
+                if len(combined) >= 3:
+                    parts.add(combined)
+        
+        return parts
+    
+    @staticmethod
+    def _extract_hashtags(message: str) -> List[str]:
+        """
+        Extract all hashtags from a message.
+        
+        Args:
+            message: The generated message
+            
+        Returns:
+            List of hashtags (without # prefix, lowercase)
+        """
+        # Match hashtags: # followed by alphanumeric characters
+        hashtags = re.findall(r'#(\w+)', message)
+        return [tag.lower() for tag in hashtags]
+    
+    @staticmethod
+    def _remove_hashtag_from_message(message: str, hashtag: str) -> str:
+        """
+        Remove a specific hashtag from the message.
+        
+        Args:
+            message: The message to modify
+            hashtag: The hashtag to remove (without #)
+            
+        Returns:
+            Message with the hashtag removed, cleaned up
+        """
+        # Remove the hashtag (case insensitive)
+        pattern = r'#' + re.escape(hashtag) + r'\b'
+        message = re.sub(pattern, '', message, flags=re.IGNORECASE)
+        
+        # Clean up extra spaces
+        message = re.sub(r'\s+', ' ', message).strip()
+        
+        return message
+    
+    @staticmethod
+    def _validate_hashtags_against_username(message: str, username: str) -> str:
+        """
+        Remove hashtags that are derived from the username.
+        
+        This is a post-generation guardrail to filter out username-derived hashtags
+        that the LLM may have incorrectly generated despite prompt instructions.
+        
+        Args:
+            message: The generated message
+            username: The streamer's username
+            
+        Returns:
+            Message with username-derived hashtags removed
+        """
+        # Get username parts
+        username_parts = AIMessageGenerator._tokenize_username(username)
+        
+        if not username_parts:
+            return message
+        
+        # Extract hashtags from message
+        hashtags = AIMessageGenerator._extract_hashtags(message)
+        
+        # Check each hashtag against username parts
+        for hashtag in hashtags:
+            # Check if hashtag matches or contains any username part
+            should_remove = False
+            
+            # Direct match
+            if hashtag in username_parts:
+                should_remove = True
+                logger.debug(f"Removing hashtag #{hashtag} - direct match with username part")
+            else:
+                # Check if hashtag contains username parts (but avoid common words)
+                for part in username_parts:
+                    # Avoid removing common short words that might coincidentally match
+                    if len(part) >= 4 and part in hashtag:
+                        should_remove = True
+                        logger.debug(f"Removing hashtag #{hashtag} - contains username part '{part}'")
+                        break
+            
+            if should_remove:
+                message = AIMessageGenerator._remove_hashtag_from_message(message, hashtag)
+                logger.warning(f"⚠ Removed username-derived hashtag: #{hashtag}")
+        
+        return message
     
     @staticmethod
     def _safe_trim(message: str, limit: int) -> str:
@@ -119,7 +250,8 @@ Hashtags:
 - Include EXACTLY 3 hashtags at the end (no more, no less)
 - COUNT CAREFULLY: You must output exactly 3 hashtags, not 2, not 4, not 5
 - Hashtags MUST be derived directly from words in the stream title only
-- DO NOT use the streamer's username as a hashtag
+- CRITICAL: DO NOT use the streamer's username "{username}" or ANY PART of it as a hashtag
+- FORBIDDEN: Do not extract parts like words, numbers, or segments from "{username}" for hashtags
 - DO NOT add generic tags like #Gaming, #Live, #Stream, #Community unless they appear in the title
 - DO NOT add suffixes like #LiveStream or #TwitchLive
 - If the title has no clear hashtag words, use: #{platform_name} #LiveStream #Community
@@ -168,7 +300,8 @@ Hashtags:
 - Include EXACTLY 2 hashtags at the end (no more, no less)
 - COUNT CAREFULLY: You must output exactly 2 hashtags, not 1, not 3, not 4
 - Hashtags MUST be derived directly from words in the stream title only
-- DO NOT use the streamer's username as a hashtag
+- CRITICAL: DO NOT use the streamer's username "{username}" or ANY PART of it as a hashtag
+- FORBIDDEN: Do not extract parts like words, numbers, or segments from "{username}" for hashtags
 - DO NOT add generic tags unless they appear in the title
 - DO NOT add platform names unless necessary
 - If the title has no clear hashtag words, use: #{platform_name} #GG
@@ -465,6 +598,9 @@ Now write the post."""
                 logger.warning(f"⚠ AI generated message too long ({len(message)} > {content_max}), trimming to fit")
                 message = self._safe_trim(message, content_max)
             
+            # Apply guardrail: Remove username-derived hashtags
+            message = self._validate_hashtags_against_username(message, username)
+            
             # Add URL to the message
             full_message = f"{message}\n\n{url}"
             
@@ -532,6 +668,9 @@ Now write the post."""
             if len(message) > max_chars:
                 logger.warning(f"⚠ AI generated end message too long ({len(message)} > {max_chars}), trimming to fit")
                 message = self._safe_trim(message, max_chars)
+            
+            # Apply guardrail: Remove username-derived hashtags
+            message = self._validate_hashtags_against_username(message, username)
             
             logger.info(f"✨ Generated stream end message ({len(message)}/{max_chars} chars)")
             return message
