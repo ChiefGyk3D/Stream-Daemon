@@ -92,10 +92,11 @@ class AIMessageGenerator:
         
         # Split CamelCase: ChiefGyk3D -> Chief, Gyk, 3D
         # Use regex to find transitions: lowercase->uppercase, letter->number, number->letter
-        camel_parts = re.findall(r'[A-Z][a-z]+|[a-z]+|[0-9]+', clean_username)
+        # Updated pattern to handle lowercase-before-uppercase (e.g., iPhone -> i, Phone)
+        camel_parts = re.findall(r'[A-Z]*[a-z]+|[A-Z]+(?=[A-Z]|$)|[0-9]+', clean_username)
         parts.update(p.lower() for p in camel_parts if len(p) >= 3)
         
-        # Also add consecutive parts for partial matches
+        # Also add consecutive parts for partial matches (limit to 2 consecutive to avoid O(n²))
         # ChiefGyk3D -> Chief, ChiefGyk, Gyk, Gyk3D, 3D
         for i in range(len(camel_parts)):
             for j in range(i + 1, min(i + 3, len(camel_parts) + 1)):  # Max 2 consecutive parts

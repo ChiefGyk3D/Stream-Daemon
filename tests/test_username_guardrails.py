@@ -49,6 +49,18 @@ class TestUsernameGuardrails(unittest.TestCase):
         
         print(f"✓ @ChiefGyk3D tokens: {sorted(tokens1)}")
     
+    def test_tokenize_username_lowercase_prefix(self):
+        """Test tokenizing usernames with lowercase prefix (e.g., iPhone, eBay)."""
+        tokens = AIMessageGenerator._tokenize_username("iPhoneGamer")
+        
+        # Should capture 'Phone' and 'Gamer' (both >= 3 chars)
+        # 'i' is only 1 char, so it won't be in the final set
+        self.assertIn("iphonegamer", tokens)  # Full username
+        self.assertIn("phone", tokens)
+        self.assertIn("gamer", tokens)
+        
+        print(f"✓ iPhoneGamer tokens: {sorted(tokens)}")
+    
     def test_tokenize_username_short_parts(self):
         """Test that very short parts (< 3 chars) are not included unless they're significant."""
         tokens = AIMessageGenerator._tokenize_username("AI_Bot")
