@@ -44,6 +44,7 @@ COPY Docker/requirements.txt /app/
 
 # Install any needed packages specified in requirements.txt
 # Upgrade pip to 25.3+ to fix CVE-2025-8869 (symbolic link extraction vulnerability)
+# Cache bust: 2026-01-20 - Added ollama==0.6.1 support
 RUN pip install --no-cache-dir --upgrade "pip>=25.3" && \
     pip install --no-cache-dir -r requirements.txt
 
