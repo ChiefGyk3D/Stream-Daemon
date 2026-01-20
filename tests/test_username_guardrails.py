@@ -18,11 +18,10 @@ class TestUsernameGuardrails(unittest.TestCase):
         """Test tokenizing CamelCase usernames."""
         tokens = AIMessageGenerator._tokenize_username("ChiefGyk3D")
         
-        # Should include full username and all parts
+        # Should include full username and all parts >= 3 chars
         self.assertIn("chiefgyk3d", tokens)
         self.assertIn("chief", tokens)
         self.assertIn("gyk", tokens)
-        # Note: "3d" is only 2 chars, but might be included as a special case
         
         print(f"✓ ChiefGyk3D tokens: {sorted(tokens)}")
     
@@ -62,12 +61,12 @@ class TestUsernameGuardrails(unittest.TestCase):
         print(f"✓ iPhoneGamer tokens: {sorted(tokens)}")
     
     def test_tokenize_username_short_parts(self):
-        """Test that very short parts (< 3 chars) are not included unless they're significant."""
+        """Test that very short parts (< 3 chars) are excluded to avoid false positives."""
         tokens = AIMessageGenerator._tokenize_username("AI_Bot")
         
         # Full username should be included
         self.assertIn("ai_bot", tokens)
-        # "ai" is only 2 chars, might not be included to avoid false positives
+        # "ai" is only 2 chars, so it's excluded to avoid false positives
         # "bot" is 3 chars, should be included
         self.assertIn("bot", tokens)
         

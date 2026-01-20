@@ -96,10 +96,11 @@ class AIMessageGenerator:
         camel_parts = re.findall(r'[A-Z]*[a-z]+|[A-Z]+(?=[A-Z]|$)|[0-9]+', clean_username)
         parts.update(p.lower() for p in camel_parts if len(p) >= 3)
         
-        # Also add consecutive parts for partial matches (limit to 2 consecutive to avoid O(n²))
-        # ChiefGyk3D -> Chief, ChiefGyk, Gyk, Gyk3D, 3D
+        # Also add consecutive parts for partial matches
+        # Limit to up to 3 consecutive parts (e.g., for "ChiefGyk3D": Chief+Gyk, Gyk+3D, Chief+Gyk+3D)
+        # This prevents O(n²) complexity while still catching most username variations
         for i in range(len(camel_parts)):
-            for j in range(i + 1, min(i + 3, len(camel_parts) + 1)):  # Max 2 consecutive parts
+            for j in range(i + 1, min(i + 4, len(camel_parts) + 1)):  # i+1 to i+3 means up to 3 consecutive parts
                 combined = ''.join(camel_parts[i:j]).lower()
                 if len(combined) >= 3:
                     parts.add(combined)
@@ -171,18 +172,22 @@ class AIMessageGenerator:
             # Check if hashtag matches or contains any username part
             should_remove = False
             
-            # Direct match
+            # Direct match (exact match with any username part)
             if hashtag in username_parts:
                 should_remove = True
                 logger.debug(f"Removing hashtag #{hashtag} - direct match with username part")
             else:
-                # Check if hashtag contains username parts (but avoid common words)
+                # Check if hashtag contains username parts (substring matching)
+                # For 3-char parts, require exact match to avoid false positives
+                # For 4+ char parts, allow substring matching for broader coverage
                 for part in username_parts:
-                    # Avoid removing common short words that might coincidentally match
                     if len(part) >= 4 and part in hashtag:
                         should_remove = True
                         logger.debug(f"Removing hashtag #{hashtag} - contains username part '{part}'")
                         break
+                    elif len(part) == 3 and part == hashtag:
+                        # 3-char parts only match exactly (already handled by direct match above)
+                        pass
             
             if should_remove:
                 message = AIMessageGenerator._remove_hashtag_from_message(message, hashtag)
