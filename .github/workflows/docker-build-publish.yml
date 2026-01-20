@@ -24,6 +24,15 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      no-cache:
+        description: 'Force rebuild without cache'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 env:
   REGISTRY: ghcr.io
@@ -81,8 +90,9 @@ jobs:
         load: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: ${{ github.event.inputs.no-cache != 'true' && 'type=gha' || '' }}
+        cache-to: ${{ github.event.inputs.no-cache != 'true' && 'type=gha,mode=max' || '' }}
+        no-cache: ${{ github.event.inputs.no-cache == 'true' }}
 
     - name: Test Docker image
       run: |
@@ -117,8 +127,9 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         platforms: linux/amd64,linux/arm64
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: ${{ github.event.inputs.no-cache != 'true' && 'type=gha' || '' }}
+        cache-to: ${{ github.event.inputs.no-cache != 'true' && 'type=gha,mode=max' || '' }}
+        no-cache: ${{ github.event.inputs.no-cache == 'true' }}
 
   docker-hub-publish:
     name: Publish to Docker Hub
