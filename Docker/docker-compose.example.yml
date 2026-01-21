@@ -1,12 +1,17 @@
 version: '3.8'
 
+# Docker Compose configuration for Stream Daemon
+# Because running a Python script wasn't complicated enough.
+# We need containers, orchestration, health checks, and restart policies.
+# To announce Twitch streams. This is perfectly reasonable.
+
 services:
   stream-daemon:
     build:
       context: ..
       dockerfile: Docker/Dockerfile
     container_name: stream-daemon
-    restart: unless-stopped
+    restart: unless-stopped  # It'll keep trying. Like your hopes and dreams.
     
     # Uncomment to use a pre-built image instead of building
     # image: ghcr.io/chiefgyk3d/stream-daemon:latest

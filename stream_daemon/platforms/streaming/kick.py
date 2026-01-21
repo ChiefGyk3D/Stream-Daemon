@@ -1,4 +1,13 @@
-"""Kick streaming platform integration."""
+"""Kick streaming platform integration.
+
+Kick: The platform that looked at Twitch and said "what if we did that, but greener?"
+Then made their API so fucking unstable we have to fall back to scraping their public pages
+like it's 2005 and we're trying to steal MP3s from MySpace.
+
+At least they're honest about it - the OAuth server doesn't always feel like working.
+Sometimes it's tired. Sometimes it's hung over. Sometimes it just says "fuck you" and returns 500.
+This is what cutting-edge streaming infrastructure looks like in 2026, folks.
+"""
 
 import logging
 from typing import Optional, Tuple
@@ -66,6 +75,8 @@ class KickPlatform(StreamingPlatform):
                 logger.warning(f"⚠ Kick authentication error: {e}, falling back to public API")
         
         # Fall back to public API
+        # Translation: Their OAuth is unreliable, so we just... look at their website like a normal person
+        # Sometimes the old ways are the best ways. Or the only ways that actually work.
         self.enabled = True
         self.use_auth = False
         logger.info("✓ Kick enabled (using public API)")

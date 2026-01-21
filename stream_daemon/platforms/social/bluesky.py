@@ -1,5 +1,12 @@
 """
 Bluesky social platform implementation with threading and rich embed support.
+
+Bluesky: Because Twitter wasn't decentralized enough, so we made another fucking Twitter.
+But this one runs on the AT Protocol, which is totally different from ActivityPub,
+which was different from the original Twitter API, which was different from... you get it.
+
+We keep reinventing the wheel because the old wheel was... round? And this one is also round,
+but it's OUR round. It's open source round. It's federated round. It's still a goddamn circle.
 """
 
 import logging
@@ -72,6 +79,9 @@ class BlueskyPlatform:
         try:
             # Bluesky has a strict 300 character limit - final safety check
             # The AI generator should prevent this, but double-check just in case
+            # Because 300 characters is apparently the exact length needed to express
+            # "I'm streaming Valorant" in a way that respects your audience's time.
+            # Twitter had 280. Bluesky said "fuck that, we need 20 more."
             if len(message) > 300:
                 logger.error(f"✗ CRITICAL: Message exceeds Bluesky's 300 char limit ({len(message)} chars)")
                 logger.error(f"   This should not happen - check AI generator logic!")

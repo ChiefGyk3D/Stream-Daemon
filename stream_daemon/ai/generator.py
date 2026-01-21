@@ -58,6 +58,12 @@ class AIMessageGenerator:
         # Retry configuration for handling transient API errors (503, 429, etc.)
         self.max_retries = int(get_config('LLM', 'max_retries', default='3'))
         self.retry_delay_base = int(get_config('LLM', 'retry_delay_base', default='2'))
+        # Generation parameters for better control with small LLMs
+        # Temperature: Because even AI needs a chill pill to stop hallucinating
+        # We set it low so the model doesn't get "creative" and start making shit up
+        self.temperature = float(get_config('LLM', 'temperature', default='0.3'))
+        self.top_p = float(get_config('LLM', 'top_p', default='0.9'))
+        self.max_tokens = int(get_config('LLM', 'max_tokens', default='150'))
     
     @staticmethod
     def _tokenize_username(username: str) -> Set[str]:
@@ -65,8 +71,8 @@ class AIMessageGenerator:
         Tokenize username into parts that should not appear in hashtags.
         
         Handles various username formats:
-        - CamelCase: ChiefGyk3D -> ['chief', 'gyk', '3d', 'chiefgyk3d']
-        - Underscores: Chief_Gyk3D -> ['chief', 'gyk', '3d', 'chief_gyk3d']
+        - CamelCase: CoolStreamer99 -> ['cool', 'streamer', '99', 'coolstreamer99']
+        - Underscores: Cool_Streamer_99 -> ['cool', 'streamer', 'cool_streamer_99']
         - Numbers: Gamer123 -> ['gamer', '123', 'gamer123']
         - Prefixes: @username, #username -> removes prefix
         
@@ -90,14 +96,14 @@ class AIMessageGenerator:
             if separator in clean_username:
                 parts.update(p.lower() for p in clean_username.split(separator) if len(p) >= 3)
         
-        # Split CamelCase: ChiefGyk3D -> Chief, Gyk, 3D
+        # Split CamelCase: CoolStreamer99 -> Cool, Streamer, 99
         # Use regex to find transitions: lowercase->uppercase, letter->number, number->letter
         # Updated pattern to handle lowercase-before-uppercase (e.g., iPhone -> i, Phone)
         camel_parts = re.findall(r'[A-Z]*[a-z]+|[A-Z]+(?=[A-Z]|$)|[0-9]+', clean_username)
         parts.update(p.lower() for p in camel_parts if len(p) >= 3)
         
         # Also add consecutive parts for partial matches
-        # Limit to up to 3 consecutive parts (e.g., for "ChiefGyk3D": Chief+Gyk, Gyk+3D, Chief+Gyk+3D)
+        # Limit to up to 3 consecutive parts (e.g., for "CoolStreamer99": Cool+Streamer, Streamer+99, Cool+Streamer+99)
         # This prevents O(n²) complexity while still catching most username variations
         for i in range(len(camel_parts)):
             for j in range(i + 1, min(i + 4, len(camel_parts) + 1)):  # i+1 to i+3 means up to 3 consecutive parts
@@ -150,6 +156,9 @@ class AIMessageGenerator:
         
         This is a post-generation guardrail to filter out username-derived hashtags
         that the LLM may have incorrectly generated despite prompt instructions.
+        
+        Because apparently teaching a computer "don't use the person's name as a hashtag"
+        is like explaining to your uncle why #MAGA isn't a personality trait.
         
         Args:
             message: The generated message
@@ -223,6 +232,7 @@ class AIMessageGenerator:
         Build optimized prompt for stream start messages.
         
         Designed for small LLMs (4B params) with explicit constraints to prevent hallucinations.
+        Uses step-by-step instructions and examples for better enforcement.
         
         Args:
             platform_name: Streaming platform (Twitch, YouTube, Kick)
@@ -232,40 +242,65 @@ class AIMessageGenerator:
         
         Returns:
             Formatted prompt string
+        
+        George Carlin would've loved this: We spent thousands of years teaching humans
+        to write, and now we're teaching machines to sound like humans who can barely write.
+        The irony is that we have to explicitly tell the AI NOT to sound like a fucking robot.
+        "Don't say EPIC! Don't say INSANE!" - like we're training a puppy not to shit on the rug.
         """
-        return f"""You write short go-live announcements for a streaming community.
+        return f"""You are a social media assistant that writes go-live stream announcements.
 
-Stream details:
-- Platform: {platform_name}
-- Streamer: {username}
-- Title: {title}
+TASK: Write a short, engaging post announcing that {username} is live on {platform_name}.
 
-Hard rules:
-- Output ONLY the post text (no quotes, no labels, no extra lines)
-- MUST be <= {content_max} characters
-- DO NOT include the URL (it will be appended automatically)
-- DO NOT invent details not in the title (no giveaways, drops enabled, ranked grind, "new video", special guest, start times, or "tonight at X")
-- Avoid cringe/clickbait words (smash that, unmissable, INSANE, crazy, epic, etc.)
-- 1 emoji MAX (optional)
+STREAM TITLE: "{title}"
 
-Style:
-- Sound like a real person: short, punchy, slightly witty
-- Include 1 clear call-to-action (e.g., "come hang out", "join me", "pull up")
+STEP 1 - CONTENT RULES (FOLLOW EXACTLY):
+✓ Length: MUST be {content_max} characters or less
+✓ Output: ONLY the post text (no quotes, no meta-commentary, no labels)
+✓ Tone: Casual, friendly, genuine (like a real person, not a bot)
+✓ Call-to-action: Include ONE phrase like "come hang out", "join me", or "let's go"
+✓ Emoji: Use 0-1 emoji maximum (optional)
+✗ DO NOT include the URL (it's added automatically)
+✗ DO NOT invent details not in the title (no "drops enabled", "giveaways", "tonight at 7pm", etc.)
+✗ DO NOT use cringe words: "INSANE", "EPIC", "smash that", "unmissable", "crazy"
 
-Hashtags:
-- Include EXACTLY 3 hashtags at the end (no more, no less)
-- COUNT CAREFULLY: You must output exactly 3 hashtags, not 2, not 4, not 5
-- Hashtags MUST be derived directly from words in the stream title only
-- CRITICAL: DO NOT use the streamer's username "{username}" or ANY PART of it as a hashtag
-- FORBIDDEN: Do not extract parts like words, numbers, or segments from "{username}" for hashtags
-- DO NOT add generic tags like #Gaming, #Live, #Stream, #Community unless they appear in the title
-- DO NOT add suffixes like #LiveStream or #TwitchLive
-- If the title has no clear hashtag words, use: #{platform_name} #LiveStream #Community
-- Format: Space before first hashtag, spaces between hashtags
-- Example for "Minecraft Building": #Minecraft #Building #Creative (3 hashtags)
-- Example for "Valorant Ranked": #Valorant #Ranked #Gaming (3 hashtags)
+STEP 2 - HASHTAG RULES (CRITICAL):
+You MUST include EXACTLY 3 hashtags at the end.
 
-Now write the post."""
+Count: 1, 2, 3 hashtags. Not 2. Not 4. Exactly 3.
+(Yes, we have to teach a computer how to count. Welcome to the future.)
+
+Hashtag source rules:
+- Extract hashtags ONLY from words in the stream title: "{title}"
+- NEVER use the username "{username}" or any part of it as a hashtag
+- NEVER use generic tags (#Gaming, #Live, #Stream) unless in the title
+- Format: space before each hashtag
+
+EXAMPLES:
+
+Example 1:
+Title: "Minecraft Creative Building"
+Good post: "Building something cool in Minecraft! Come hang out and share ideas 🏗️ #Minecraft #Creative #Building"
+(3 hashtags from title words)
+
+Example 2:
+Title: "Valorant Competitive"
+Good post: "Ranked grind time! Let's climb together #Valorant #Competitive #FPS"
+(3 hashtags, last one inferred from game type)
+
+Example 3:
+Title: "Just Chatting"
+Good post: "Hanging out and talking about life. Join me! #JustChatting #{platform_name} #Community"
+(Using platform when title is generic)
+
+Bad examples to AVOID:
+✗ "Epic stream starting NOW! #LIVE #INSANE #HYPE" (cringe words, generic tags)
+✗ "Come watch! #TwitchStream #GamingLife" (generic, not from title)
+✗ Using only 2 hashtags or using 4+ hashtags
+
+NOW: Write the post for "{title}" on {platform_name}. Remember: exactly 3 hashtags, under {content_max} characters.
+
+Post:"""
     
     @staticmethod
     def _prompt_stream_end(platform_name: str, username: str, title: str, prompt_max: int) -> str:
@@ -273,6 +308,7 @@ Now write the post."""
         Build optimized prompt for stream end messages.
         
         Designed for small LLMs (4B params) with explicit constraints.
+        Uses step-by-step instructions and examples for better enforcement.
         
         Args:
             platform_name: Streaming platform (Twitch, YouTube, Kick)
@@ -283,39 +319,58 @@ Now write the post."""
         Returns:
             Formatted prompt string
         """
-        return f"""You write short stream-ended thank-you posts for a streaming community.
+        return f"""You are a social media assistant that writes thank-you posts after streams end.
 
-Stream details:
-- Platform: {platform_name}
-- Streamer: {username}
-- Title: {title}
+TASK: Write a short, grateful post thanking viewers for watching {username}'s stream.
 
-Hard rules:
-- Output ONLY the post text (no quotes, no labels, no extra lines)
-- MUST be <= {prompt_max} characters
-- DO NOT invent details (no viewer counts, raid targets, highlights, "VOD coming soon", next stream times)
-- Avoid cringe/clickbait words (amazing, incredible, INSANE, smashed it, etc.)
-- 1 emoji MAX (optional)
+STREAM TITLE: "{title}"
 
-Style:
-- Sound genuine and grateful
-- Keep it short and warm
-- Simple thank you for joining
+STEP 1 - CONTENT RULES (FOLLOW EXACTLY):
+✓ Length: MUST be {prompt_max} characters or less
+✓ Output: ONLY the post text (no quotes, no meta-commentary)
+✓ Tone: Warm, genuine, grateful (not overly enthusiastic)
+✓ Message: Simple thank you for watching/joining
+✓ Emoji: Use 0-1 emoji maximum (optional)
+✗ DO NOT invent details (no "200 viewers", "raided someone", "highlight was X", "VOD soon")
+✗ DO NOT mention next stream time or schedule
+✗ DO NOT use exaggerated words: "AMAZING", "INCREDIBLE", "INSANE", "smashed it"
 
-Hashtags:
-- Include EXACTLY 2 hashtags at the end (no more, no less)
-- COUNT CAREFULLY: You must output exactly 2 hashtags, not 1, not 3, not 4
-- Hashtags MUST be derived directly from words in the stream title only
-- CRITICAL: DO NOT use the streamer's username "{username}" or ANY PART of it as a hashtag
-- FORBIDDEN: Do not extract parts like words, numbers, or segments from "{username}" for hashtags
-- DO NOT add generic tags unless they appear in the title
-- DO NOT add platform names unless necessary
-- If the title has no clear hashtag words, use: #{platform_name} #GG
-- Format: Space before first hashtag, space between hashtags
-- Example for "Minecraft Building": #Minecraft #Building (2 hashtags)
-- Example for "Valorant Ranked": #Valorant #Ranked (2 hashtags)
+STEP 2 - HASHTAG RULES (CRITICAL):
+You MUST include EXACTLY 2 hashtags at the end.
 
-Now write the post."""
+Count: 1, 2 hashtags. Not 1. Not 3. Exactly 2.
+
+Hashtag source rules:
+- Extract hashtags ONLY from words in the stream title: "{title}"
+- NEVER use the username "{username}" or any part of it as a hashtag
+- NEVER use generic tags unless the title has no clear words
+- Format: space before each hashtag
+
+EXAMPLES:
+
+Example 1:
+Title: "Minecraft Building"
+Good post: "Thanks for hanging out while I built! See you next time 🏗️ #Minecraft #Building"
+(2 hashtags from title)
+
+Example 2:
+Title: "Valorant Ranked"
+Good post: "Stream's over! Thanks for watching the ranked grind gg #Valorant #Ranked"
+(2 hashtags from title)
+
+Example 3:
+Title: "Just Chatting"
+Good post: "Thanks for the great conversation today! #{platform_name} #GG"
+(Using platform when title is generic)
+
+Bad examples to AVOID:
+✗ "AMAZING stream! 150 viewers! Raided someone! #EPIC #HYPE #GG" (invented details, 3 tags)
+✗ "Thanks everyone! Stream again tomorrow at 7pm!" (mentioned next stream time)
+✗ Using only 1 hashtag or using 3+ hashtags
+
+NOW: Write the thank-you post for "{title}" on {platform_name}. Remember: exactly 2 hashtags, under {prompt_max} characters.
+
+Post:"""
     
     def _generate_with_retry(self, prompt: str, max_retries: int = None) -> Optional[str]:
         """
@@ -359,16 +414,30 @@ Now write the post."""
                     
                     # Make the API call based on provider
                     if self.provider == 'gemini':
+                        # Use generation config for better control with small models
+                        config = {
+                            'temperature': self.temperature,
+                            'top_p': self.top_p,
+                            'max_output_tokens': self.max_tokens,
+                        }
                         response = self.client.models.generate_content(
                             model=self.model,
-                            contents=prompt
+                            contents=prompt,
+                            config=config
                         )
                         return response.text.strip()
                     
                     elif self.provider == 'ollama':
+                        # Use generation options for better control
+                        options = {
+                            'temperature': self.temperature,
+                            'top_p': self.top_p,
+                            'num_predict': self.max_tokens,
+                        }
                         response = self.ollama_client.chat(
                             model=self.model,
-                            messages=[{'role': 'user', 'content': prompt}]
+                            messages=[{'role': 'user', 'content': prompt}],
+                            options=options
                         )
                         return response['message']['content'].strip()
                     

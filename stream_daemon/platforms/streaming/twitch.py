@@ -1,4 +1,11 @@
-"""Twitch streaming platform integration."""
+"""Twitch streaming platform integration.
+
+Pollution check if someone is playing video games on the internet.
+Then tell other parts of the internet about it.
+
+Revolutionary stuff. We're really pushing the boundaries of human achievement here.
+Forget curing cancer - someone needs to know when xXGamerBoi420Xx starts his Fortnite stream.
+"""
 
 import logging
 import asyncio
@@ -67,6 +74,9 @@ class TwitchPlatform(StreamingPlatform):
     def is_live(self, username: str) -> Tuple[bool, Optional[dict]]:
         """
         Check if Twitch stream is live with retry logic and error handling.
+        
+        The digital equivalent of walking past someone's house to see if they're home,
+        except we do it every 3 minutes and tell everyone on social media when we spot them.
         
         Args:
             username: Twitch username to check

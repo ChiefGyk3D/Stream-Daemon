@@ -4,6 +4,14 @@
 # See: https://www.cisa.gov/news-events/alerts/2025/09/23/widespread-supply-chain-compromise-impacting-npm-ecosystem
 # You may update versions to newer libraries as desired, but auto-picking versions
 # is NOT allowed for security and stability reasons.
+#
+# Translation: Someone poisoned the npm well, so now we're paranoid about
+# every fucking dependency. We pin every version number because trusting
+# the Python package ecosystem is like trusting a crackhead with your wallet.
+#
+# Welcome to modern software development: where announcing Twitch streams
+# requires 20+ dependencies and constant vigilance against supply chain attacks.
+# The future is here, and it's exhausting.
 ######################################################################
 twitchAPI==4.5.0
 Mastodon.py==2.1.4

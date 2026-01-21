@@ -5,6 +5,10 @@ Stream Daemon is available under a dual-license model:
 - **Open Source License:** Mozilla Public License 2.0 (MPL 2.0)
 - **Commercial License:** Available for organizations that cannot comply with MPL 2.0 terms.
 
+(Because even code that announces Twitch streams needs legal protection.
+Someone might steal your revolutionary "Going live!" posting technology.
+The horror. The absolute horror.)
+
 For commercial licensing inquiries, please contact:
 
 For commercial licensing inquiries, please contact [chief@chiefgyk3d.com](mailto:chief@chiefgyk3d.com?subject=Commercial%20License%20Inquiry).
@@ -12,6 +16,9 @@ For commercial licensing inquiries, please contact [chief@chiefgyk3d.com](mailto
 ---
 
 ## Mozilla Public License Version 2.0
+
+(Here comes 3,000 words of legalese to protect code that posts emojis to social media.
+Because lawyers need to eat too, I guess.)
 
 1. Definitions
 --------------

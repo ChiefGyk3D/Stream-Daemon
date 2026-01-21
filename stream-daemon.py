@@ -2,6 +2,10 @@
 Stream Daemon - Universal streaming-to-social bridge
 Monitors streaming platforms and posts to social media
 Configuration via .env files and environment variables only
+
+Or in plain English: We built a fucking robot to watch other people play video games,
+then tell the entire goddamn internet about it. This is what we do with Computer Science
+degrees now. Your parents are so proud.
 """
 
 import time
@@ -40,7 +44,14 @@ logger.info("Environment variables loaded")
 # ===========================================
 
 def main():
-    """Main application loop with improved state tracking and per-platform posting."""
+    """Main application loop with improved state tracking and per-platform posting.
+    
+    Translation: An infinite loop that checks every few minutes if someone is playing games.
+    Because apparently we need software to do what teenagers have been doing manually
+    since 2011 on Twitter: "streaming rn!"
+    
+    We wrote 3,000 lines of Python for this shit.
+    """
     
     logger.info("="*60)
     logger.info("🚀 Stream Daemon Starting...")

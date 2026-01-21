@@ -1,4 +1,13 @@
-"""YouTube Live streaming platform integration."""
+"""YouTube Live streaming platform integration.
+
+YouTube: Where Google gives you a free API key and 10,000 quota units per day.
+Then you realize that checking if someone is live costs 100 units.
+So you can check... 100 times a day. For free! Such fucking generosity.
+
+Now you understand why we added retry logic and error handling.
+Because Google's idea of "quota management" is about as reliable as
+a drunk walking a tightrope. In the dark. On fire.
+"""
 
 import logging
 from datetime import datetime, timedelta
@@ -20,7 +29,7 @@ class YouTubePlatform(StreamingPlatform):
         self.client = None
         self.channel_id = None
         self.username = None
-        self.quota_exceeded = False
+        self.quota_exceeded = False  # YouTube's way of saying "you checked too many times today"
         self.quota_exceeded_time = None
         self.consecutive_errors = 0
         self.max_consecutive_errors = 5

@@ -1,5 +1,9 @@
 """
 Mastodon social platform implementation with threading support.
+
+Mastodon: For people who wanted Twitter but with more servers and fewer nazis.
+ActivityPub means your server talks to other servers talks to other servers,
+and somewhere in that game of telephone, someone finds out you're playing Minecraft.
 """
 
 import logging

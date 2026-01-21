@@ -1,5 +1,11 @@
 """
 Pytest configuration and fixtures for Stream Daemon tests.
+
+Because we need fixtures, mocks, and test infrastructure to verify that
+our code correctly posts "Going live!" to Twitter. I mean Mastodon. I mean Bluesky.
+Fuck it, to all of them simultaneously.
+
+This is test-driven development. This is professional. This is... testing social media bots.
 """
 
 import pytest

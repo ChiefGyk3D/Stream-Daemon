@@ -2,6 +2,14 @@
 # Format: Use [PLATFORM] sections for platform-specific messages, or [DEFAULT] for all platforms
 # Supported platforms: TWITCH, YOUTUBE, KICK
 # Variables: {stream_title}, {username}
+#
+# These are your fallback messages for when the AI fails or is disabled.
+# The same 5 messages you've been rotating since 2019.
+# "Going live!" "Now streaming!" "Come watch!"
+# Poetry. Fucking poetry.
+#
+# But hey, at least they're organized by platform. That's something.
+# That's... progress? Sure. Let's call it progress.
 
 [DEFAULT]
 🔴 Now LIVE! Come watch: {stream_title}
