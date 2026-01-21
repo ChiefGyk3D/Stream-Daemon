@@ -341,11 +341,11 @@ class AIMessageGenerator:
             "\U0001F1E0-\U0001F1FF"  # flags (iOS)
             "\U00002702-\U000027B0"
             "\U000024C2-\U0001F251"
-            "]+", flags=re.UNICODE
+            "]", flags=re.UNICODE
         )
         
-        matches = emoji_pattern.findall(message)
-        return len(matches)
+        # Count individual emoji characters, not groups
+        return len(emoji_pattern.findall(message))
     
     @staticmethod
     def _contains_profanity(message: str, severity: str = 'moderate') -> tuple[bool, List[str]]:
@@ -365,16 +365,19 @@ class AIMessageGenerator:
         Returns:
             tuple: (has_profanity, list_of_found_words)
         """
-        # Profanity lists by severity
-        severe_words = ['damn', 'hell', 'crap', 'suck', 'sucks', 'piss', 'pissed']
+        # Profanity lists by severity (from mildest to most severe)
+        mild_words = ['damn', 'hell', 'crap', 'suck', 'sucks', 'piss', 'pissed']
         moderate_words = ['ass', 'bastard', 'bitch', 'dick', 'cock', 'pussy', 'slut', 'whore']
-        mild_words = ['fuck', 'fucking', 'shit', 'shitty', 'motherfucker', 'asshole', 'cunt']
+        severe_words = ['fuck', 'fucking', 'shit', 'shitty', 'motherfucker', 'asshole', 'cunt']
         
         # Build word list based on severity
+        # mild: only check mild words
+        # moderate: check mild + moderate
+        # severe: check all three levels
         if severity == 'severe':
-            check_words = severe_words + moderate_words + mild_words
+            check_words = mild_words + moderate_words + severe_words
         elif severity == 'moderate':
-            check_words = moderate_words + mild_words
+            check_words = mild_words + moderate_words
         else:  # mild
             check_words = mild_words
         
@@ -474,7 +477,7 @@ class AIMessageGenerator:
         
         return (score, issues)
     
-    def _validate_platform_specific(self, message: str, platform: str) -> tuple[bool, List[str]]:
+    def _validate_platform_specific(self, message: str, platform: str) -> List[str]:
         """
         Platform-specific validation rules.
         
@@ -493,26 +496,27 @@ class AIMessageGenerator:
             platform: Platform name (bluesky, mastodon, discord, matrix)
             
         Returns:
-            tuple: (is_valid, list_of_issues)
+            list_of_issues (empty if valid)
         """
         if not self.enable_platform_validation:
-            return (True, [])
+            return []
         
         issues = []
         platform_lower = platform.lower()
         
         if platform_lower == 'discord':
-            # Discord: Check for malformed mentions or embeds
-            # Mentions should be <@userid> format (but we don't generate those)
-            # Just make sure we didn't accidentally create something that looks like a broken mention
+            # Discord: Check for @everyone and @here (mass pings)
+            if '@everyone' in message or '@here' in message:
+                issues.append("Contains @everyone or @here mention")
+            
+            # Check for malformed mentions
             if re.search(r'@\d+>', message):
                 issues.append("Malformed Discord mention detected")
             
             # Check for markdown that might break
             unmatched_markdown = (
                 message.count('**') % 2 != 0 or
-                message.count('__') % 2 != 0 or
-                message.count('*') % 2 != 0
+                message.count('__') % 2 != 0
             )
             if unmatched_markdown:
                 issues.append("Unmatched markdown formatting")
@@ -536,7 +540,7 @@ class AIMessageGenerator:
             if re.search(r'&[a-z]+;', message):
                 issues.append("HTML entities detected (should be plain text)")
         
-        return (len(issues) == 0, issues)
+        return issues
     
     @staticmethod
     def _remove_hashtag_from_message(message: str, hashtag: str) -> str:
@@ -1123,8 +1127,8 @@ Post:"""
                     all_issues.extend(quality_issues)
             
             # Check 4: Platform-specific validation
-            platform_valid, platform_issues = self._validate_platform_specific(message, social_platform)
-            if not platform_valid:
+            platform_issues = self._validate_platform_specific(message, social_platform)
+            if len(platform_issues) > 0:
                 all_issues.extend(platform_issues)
             
             # Check 5: Deduplication check
@@ -1162,8 +1166,8 @@ Post:"""
                         retry_score, _ = self._score_message_quality(retry_message, title)
                         if retry_score < self.min_quality_score:
                             retry_issues.append(f"quality({retry_score}/10)")
-                    platform_ok, _ = self._validate_platform_specific(retry_message, social_platform)
-                    if not platform_ok:
+                    platform_retry_issues = self._validate_platform_specific(retry_message, social_platform)
+                    if len(platform_retry_issues) > 0:
                         retry_issues.append("platform")
                     if self._is_duplicate_message(retry_message):
                         retry_issues.append("duplicate")
@@ -1277,8 +1281,8 @@ Post:"""
                     all_issues.extend(quality_issues)
             
             # Check 4: Platform-specific validation
-            platform_valid, platform_issues = self._validate_platform_specific(message, social_platform)
-            if not platform_valid:
+            platform_issues = self._validate_platform_specific(message, social_platform)
+            if len(platform_issues) > 0:
                 all_issues.extend(platform_issues)
             
             # Check 5: Deduplication check
@@ -1316,8 +1320,8 @@ Post:"""
                         retry_score, _ = self._score_message_quality(retry_message, title)
                         if retry_score < self.min_quality_score:
                             retry_issues.append(f"quality({retry_score}/10)")
-                    platform_ok, _ = self._validate_platform_specific(retry_message, social_platform)
-                    if not platform_ok:
+                    platform_retry_issues = self._validate_platform_specific(retry_message, social_platform)
+                    if len(platform_retry_issues) > 0:
                         retry_issues.append("platform")
                     if self._is_duplicate_message(retry_message):
                         retry_issues.append("duplicate")
