@@ -12,7 +12,7 @@ LLM_ENABLE=true
 LLM_PROVIDER=ollama  # or 'gemini'
 
 # Model selection
-LLM_MODEL=gemma2:4b  # Ollama: gemma2:4b, qwen2.5:3b, phi3:mini
+LLM_MODEL=gemma3:4b  # Ollama: gemma3:4b, qwen2.5:3b, phi3:mini
                      # Gemini: gemini-2.0-flash-lite, gemini-1.5-flash
 
 # Ollama connection (if provider=ollama)

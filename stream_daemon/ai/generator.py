@@ -64,6 +64,21 @@ class AIMessageGenerator:
         self.temperature = float(get_config('LLM', 'temperature', default='0.3'))
         self.top_p = float(get_config('LLM', 'top_p', default='0.9'))
         self.max_tokens = int(get_config('LLM', 'max_tokens', default='150'))
+        
+        # Guardrails configuration
+        # Because we need rules to govern the rule-following machine. Meta as fuck.
+        self.enable_deduplication = get_config('LLM', 'enable_deduplication', default='True').lower() == 'true'
+        self.dedup_cache_size = int(get_config('LLM', 'dedup_cache_size', default='20'))
+        self.enable_quality_scoring = get_config('LLM', 'enable_quality_scoring', default='False').lower() == 'true'
+        self.min_quality_score = int(get_config('LLM', 'min_quality_score', default='6'))
+        self.max_emoji_count = int(get_config('LLM', 'max_emoji_count', default='1'))
+        self.enable_profanity_filter = get_config('LLM', 'enable_profanity_filter', default='False').lower() == 'true'
+        self.profanity_severity = get_config('LLM', 'profanity_severity', default='moderate')
+        self.enable_platform_validation = get_config('LLM', 'enable_platform_validation', default='True').lower() == 'true'
+        
+        # Deduplication cache: stores recent messages to prevent repeats
+        # Because variety is the spice of life, even for robot-generated bullshit
+        self._message_cache: List[str] = []
     
     @staticmethod
     def _tokenize_username(username: str) -> Set[str]:
@@ -118,6 +133,9 @@ class AIMessageGenerator:
         """
         Extract all hashtags from a message.
         
+        Because we need to teach a computer to recognize words that start with #.
+        In the history of human civilization, this is where we ended up.
+        
         Args:
             message: The generated message
             
@@ -127,6 +145,397 @@ class AIMessageGenerator:
         # Match hashtags: # followed by alphanumeric characters
         hashtags = re.findall(r'#(\w+)', message)
         return [tag.lower() for tag in hashtags]
+    
+    @staticmethod
+    def _contains_forbidden_words(message: str) -> tuple[bool, List[str]]:
+        """
+        Check if message contains clickbait/forbidden words that we explicitly told the AI not to use.
+        
+        This catches when the LLM ignores our prompt instructions.
+        
+        We built a machine that can process language at superhuman levels, and we use it
+        to generate social media posts. Then we have to check if the machine used the words
+        "INSANE" or "EPIC" because apparently we can't trust it to follow basic fucking instructions.
+        
+        It's like hiring a PhD to write greeting cards, then having to make sure they didn't
+        write anything too smart. Welcome to the goddamn future.
+        
+        Args:
+            message: The generated message
+            
+        Returns:
+            tuple: (has_forbidden_words, list_of_found_words)
+        """
+        # Forbidden words we explicitly tell the AI not to use
+        forbidden_words = [
+            'insane', 'epic', 'crazy', 'smash', 'unmissable', 
+            'incredible', 'amazing', 'lit', 'fire', 'legendary',
+            'mind-blowing', 'jaw-dropping', 'unbelievable'
+        ]
+        
+        message_lower = message.lower()
+        found_words = [word for word in forbidden_words if word in message_lower]
+        
+        return (len(found_words) > 0, found_words)
+    
+    @staticmethod
+    def _validate_message_quality(message: str, expected_hashtag_count: int, 
+                                  title: str, username: str) -> tuple[bool, List[str]]:
+        """
+        Validate that generated message follows our rules.
+        
+        This is a post-generation quality check to catch when the LLM:
+        - Uses wrong number of hashtags
+        - Includes forbidden clickbait words
+        - Accidentally includes the URL in content
+        - Hallucinates details not in the title
+        
+        Yes, we have to fact-check the robot. The robot that we programmed. That we gave
+        explicit instructions to. And it STILL fucks up about 10% of the time.
+        
+        It's like having a calculator that's right 90% of the time. Great job, humanity.
+        We've achieved artificial intelligence that needs a fucking babysitter.
+        
+        George Carlin would lose his shit: "We can't trust people, so we built machines.
+        Now we can't trust the machines either. What's next, we build machines to watch
+        the machines? It's mistrust all the way down!"
+        
+        Args:
+            message: The generated message (without URL)
+            expected_hashtag_count: Expected number of hashtags (3 for start, 2 for end)
+            title: Original stream title
+            username: Streamer username
+            
+        Returns:
+            tuple: (is_valid, list_of_issues)
+        """
+        issues = []
+        
+        # Check hashtag count
+        hashtags = AIMessageGenerator._extract_hashtags(message)
+        if len(hashtags) != expected_hashtag_count:
+            issues.append(f"Wrong hashtag count: {len(hashtags)} (expected {expected_hashtag_count})")
+        
+        # Check for forbidden words
+        has_forbidden, found_words = AIMessageGenerator._contains_forbidden_words(message)
+        if has_forbidden:
+            issues.append(f"Contains forbidden words: {', '.join(found_words)}")
+        
+        # Check if message accidentally includes a URL (should be added separately)
+        if re.search(r'https?://', message):
+            issues.append("Message contains URL (should be added separately)")
+        
+        # Check for common hallucinations
+        hallucination_patterns = [
+            r'drops?\s+enabled',
+            r'giveaway',
+            r'tonight\s+at\s+\d',
+            r'starting\s+at\s+\d',
+            r'\d+\s*pm',
+            r'\d+\s*am',
+            r'vod\s+coming',
+            r'vod\s+soon',
+            r'next\s+stream',
+            r'\d+\s+viewers?',
+            r'raided?\s+',
+            r'special\s+guest',
+            r'new\s+video'
+        ]
+        
+        for pattern in hallucination_patterns:
+            if re.search(pattern, message, re.IGNORECASE):
+                issues.append(f"Possible hallucination detected: '{pattern}'")
+                break  # Only report first hallucination
+        
+        return (len(issues) == 0, issues)
+    
+    def _is_duplicate_message(self, message: str) -> bool:
+        """
+        Check if message is too similar to recent messages.
+        
+        Because nobody wants to read the same fucking announcement 5 times.
+        Although to be fair, humans already do this manually. "Going live! Twitch!"
+        "Going live! YouTube!" "Going live! Kick!" - Real creative there, chief.
+        
+        At least the AI has the decency to pretend it's trying to be different.
+        
+        Args:
+            message: The generated message to check
+            
+        Returns:
+            True if message is a duplicate or too similar
+        """
+        if not self.enable_deduplication:
+            return False
+        
+        # Normalize message for comparison (lowercase, no emojis, no hashtags)
+        normalized = message.lower()
+        normalized = re.sub(r'#\w+', '', normalized)  # Remove hashtags
+        normalized = re.sub(r'[^\w\s]', '', normalized)  # Remove punctuation/emoji
+        normalized = re.sub(r'\s+', ' ', normalized).strip()  # Normalize whitespace
+        
+        # Check against cache
+        for cached in self._message_cache:
+            cached_normalized = cached.lower()
+            cached_normalized = re.sub(r'#\w+', '', cached_normalized)
+            cached_normalized = re.sub(r'[^\w\s]', '', cached_normalized)
+            cached_normalized = re.sub(r'\s+', ' ', cached_normalized).strip()
+            
+            # If messages are >80% similar, consider it a duplicate
+            if normalized == cached_normalized:
+                return True
+            
+            # Calculate simple similarity (word overlap)
+            msg_words = set(normalized.split())
+            cached_words = set(cached_normalized.split())
+            if len(msg_words) > 0 and len(cached_words) > 0:
+                overlap = len(msg_words & cached_words) / max(len(msg_words), len(cached_words))
+                if overlap > 0.8:
+                    return True
+        
+        return False
+    
+    def _add_to_message_cache(self, message: str):
+        """
+        Add message to deduplication cache.
+        
+        Uses a simple FIFO queue. Old messages get pushed out.
+        It's not rocket science, just a fucking list.
+        
+        Args:
+            message: The message to cache
+        """
+        if not self.enable_deduplication:
+            return
+        
+        self._message_cache.append(message)
+        
+        # Keep cache size limited
+        if len(self._message_cache) > self.dedup_cache_size:
+            self._message_cache.pop(0)
+    
+    @staticmethod
+    def _count_emojis(message: str) -> int:
+        """
+        Count emoji characters in a message.
+        
+        Because apparently some people think more emojis = more engagement.
+        Spoiler alert: It doesn't. You just look like you're 12.
+        
+        But hey, who am I to judge? I'm just here teaching robots not to spam emojis.
+        Living the dream.
+        
+        Args:
+            message: The message to check
+            
+        Returns:
+            Number of emoji characters
+        """
+        # Unicode emoji ranges (basic coverage, not exhaustive)
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map symbols
+            "\U0001F1E0-\U0001F1FF"  # flags (iOS)
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "]+", flags=re.UNICODE
+        )
+        
+        matches = emoji_pattern.findall(message)
+        return len(matches)
+    
+    @staticmethod
+    def _contains_profanity(message: str, severity: str = 'moderate') -> tuple[bool, List[str]]:
+        """
+        Check if message contains profanity.
+        
+        Ironic, considering this entire codebase is written by the ghost of George Carlin.
+        But apparently we draw the line at the AI dropping F-bombs about Minecraft streams.
+        
+        "You can't say fuck on television!" - George Carlin, probably rolling in his grave
+        that we're now censoring robots too.
+        
+        Args:
+            message: The message to check
+            severity: 'mild', 'moderate', or 'severe'
+            
+        Returns:
+            tuple: (has_profanity, list_of_found_words)
+        """
+        # Profanity lists by severity
+        severe_words = ['damn', 'hell', 'crap', 'suck', 'sucks', 'piss', 'pissed']
+        moderate_words = ['ass', 'bastard', 'bitch', 'dick', 'cock', 'pussy', 'slut', 'whore']
+        mild_words = ['fuck', 'fucking', 'shit', 'shitty', 'motherfucker', 'asshole', 'cunt']
+        
+        # Build word list based on severity
+        if severity == 'severe':
+            check_words = severe_words + moderate_words + mild_words
+        elif severity == 'moderate':
+            check_words = moderate_words + mild_words
+        else:  # mild
+            check_words = mild_words
+        
+        message_lower = message.lower()
+        found_words = []
+        
+        for word in check_words:
+            # Use word boundaries to avoid false positives (e.g., 'bass' shouldn't match 'ass')
+            if re.search(rf'\b{word}\b', message_lower):
+                found_words.append(word)
+        
+        return (len(found_words) > 0, found_words)
+    
+    @staticmethod
+    def _score_message_quality(message: str, title: str) -> tuple[int, List[str]]:
+        """
+        Score message quality on a scale of 1-10.
+        
+        We're literally grading the AI's homework. Like it's in school.
+        "Sorry robot, you get a C-. Try harder next time."
+        
+        This is what we've become. Quality control for artificial enthusiasm.
+        George Carlin would have a 30-minute bit about this shit.
+        
+        Scoring criteria:
+        - 10: Perfect (natural, engaging, unique)
+        - 7-9: Good (clear, interesting)
+        - 4-6: Mediocre (generic, boring)
+        - 1-3: Bad (very generic, poor grammar, wrong info)
+        
+        Args:
+            message: The generated message
+            title: Original stream title
+            
+        Returns:
+            tuple: (score 1-10, list_of_issues)
+        """
+        score = 10
+        issues = []
+        
+        # Check for generic/overused phrases (deduct 2 points each)
+        generic_phrases = [
+            'come hang out',
+            'let\'s go',
+            'join me',
+            'thanks for watching',
+            'see you next time',
+            'stream time',
+            'going live'
+        ]
+        
+        message_lower = message.lower()
+        generic_count = sum(1 for phrase in generic_phrases if phrase in message_lower)
+        if generic_count > 2:
+            score -= 2
+            issues.append(f"Too many generic phrases ({generic_count})")
+        
+        # Check length (too short = lazy, too long = rambling)
+        content_without_hashtags = re.sub(r'#\w+', '', message).strip()
+        word_count = len(content_without_hashtags.split())
+        
+        if word_count < 5:
+            score -= 3
+            issues.append("Too short (feels lazy)")
+        elif word_count > 25:
+            score -= 2
+            issues.append("Too long (rambling)")
+        
+        # Check for repeated words (sign of poor generation)
+        words = content_without_hashtags.lower().split()
+        unique_ratio = len(set(words)) / len(words) if words else 0
+        if unique_ratio < 0.7:  # >30% repeated words
+            score -= 2
+            issues.append("Too many repeated words")
+        
+        # Check for title integration (should reference stream content)
+        title_words = set(title.lower().split())
+        message_words = set(message_lower.split())
+        overlap = len(title_words & message_words)
+        
+        if overlap == 0:
+            score -= 3
+            issues.append("Doesn't reference stream title/content")
+        
+        # Check for personality/engagement (exclamation marks, questions, emojis)
+        has_personality = bool(
+            re.search(r'[!?]', message) or
+            re.search(r'[\U0001F600-\U0001F64F]', message)  # emoji
+        )
+        
+        if not has_personality:
+            score -= 1
+            issues.append("Lacks personality (no punctuation variety or emoji)")
+        
+        # Clamp score to 1-10
+        score = max(1, min(10, score))
+        
+        return (score, issues)
+    
+    def _validate_platform_specific(self, message: str, platform: str) -> tuple[bool, List[str]]:
+        """
+        Platform-specific validation rules.
+        
+        Because each social media platform is a special fucking snowflake
+        with its own rules and quirks that we have to account for.
+        
+        Discord wants mentions and embeds formatted just so.
+        Bluesky has its fancy "facets" and AT Protocol nonsense.
+        Mastodon... well, Mastodon is pretty chill actually.
+        
+        But we still need to validate all this shit because apparently
+        "just post some text" was too simple. Had to complicate it.
+        
+        Args:
+            message: The generated message
+            platform: Platform name (bluesky, mastodon, discord, matrix)
+            
+        Returns:
+            tuple: (is_valid, list_of_issues)
+        """
+        if not self.enable_platform_validation:
+            return (True, [])
+        
+        issues = []
+        platform_lower = platform.lower()
+        
+        if platform_lower == 'discord':
+            # Discord: Check for malformed mentions or embeds
+            # Mentions should be <@userid> format (but we don't generate those)
+            # Just make sure we didn't accidentally create something that looks like a broken mention
+            if re.search(r'@\d+>', message):
+                issues.append("Malformed Discord mention detected")
+            
+            # Check for markdown that might break
+            unmatched_markdown = (
+                message.count('**') % 2 != 0 or
+                message.count('__') % 2 != 0 or
+                message.count('*') % 2 != 0
+            )
+            if unmatched_markdown:
+                issues.append("Unmatched markdown formatting")
+        
+        elif platform_lower == 'bluesky':
+            # Bluesky: Check for issues that would break facets/link cards
+            # Facets are their fancy word for "rich text annotations"
+            
+            # Check for URLs that aren't at the end (we add URL separately)
+            urls_in_content = re.findall(r'https?://\S+', message)
+            if urls_in_content:
+                issues.append("URL found in content (should be added separately for facets)")
+            
+            # Check for @ mentions without handle format
+            if '@' in message and not re.search(r'@[a-zA-Z0-9][a-zA-Z0-9-]*\.', message):
+                issues.append("Malformed Bluesky handle (needs .domain)")
+        
+        elif platform_lower == 'mastodon':
+            # Mastodon: Pretty forgiving, but check for HTML entities
+            # and excessive formatting
+            if re.search(r'&[a-z]+;', message):
+                issues.append("HTML entities detected (should be plain text)")
+        
+        return (len(issues) == 0, issues)
     
     @staticmethod
     def _remove_hashtag_from_message(message: str, hashtag: str) -> str:
@@ -227,7 +636,7 @@ class AIMessageGenerator:
         return trimmed if trimmed else message[:limit]
     
     @staticmethod
-    def _prompt_stream_start(platform_name: str, username: str, title: str, content_max: int) -> str:
+    def _prompt_stream_start(platform_name: str, username: str, title: str, content_max: int, strict_mode: bool = False) -> str:
         """
         Build optimized prompt for stream start messages.
         
@@ -239,6 +648,7 @@ class AIMessageGenerator:
             username: Streamer username
             title: Stream title
             content_max: Maximum character count for generated content
+            strict_mode: If True, adds extra emphasis for rule compliance (used for retries)
         
         Returns:
             Formatted prompt string
@@ -248,7 +658,13 @@ class AIMessageGenerator:
         The irony is that we have to explicitly tell the AI NOT to sound like a fucking robot.
         "Don't say EPIC! Don't say INSANE!" - like we're training a puppy not to shit on the rug.
         """
-        return f"""You are a social media assistant that writes go-live stream announcements.
+        strict_prefix = ""
+        if strict_mode:
+            strict_prefix = """⚠️ CRITICAL: Previous attempt violated rules. FOLLOW INSTRUCTIONS EXACTLY. ⚠️
+
+"""
+        
+        return f"""{strict_prefix}You are a social media assistant that writes go-live stream announcements.
 
 TASK: Write a short, engaging post announcing that {username} is live on {platform_name}.
 
@@ -303,7 +719,7 @@ NOW: Write the post for "{title}" on {platform_name}. Remember: exactly 3 hashta
 Post:"""
     
     @staticmethod
-    def _prompt_stream_end(platform_name: str, username: str, title: str, prompt_max: int) -> str:
+    def _prompt_stream_end(platform_name: str, username: str, title: str, prompt_max: int, strict_mode: bool = False) -> str:
         """
         Build optimized prompt for stream end messages.
         
@@ -315,11 +731,18 @@ Post:"""
             username: Streamer username  
             title: Stream title from when it started
             prompt_max: Maximum character count
+            strict_mode: If True, adds extra emphasis for rule compliance (used for retries)
         
         Returns:
             Formatted prompt string
         """
-        return f"""You are a social media assistant that writes thank-you posts after streams end.
+        strict_prefix = ""
+        if strict_mode:
+            strict_prefix = """⚠️ CRITICAL: Previous attempt violated rules. FOLLOW INSTRUCTIONS EXACTLY. ⚠️
+
+"""
+        
+        return f"""{strict_prefix}You are a social media assistant that writes thank-you posts after streams end.
 
 TASK: Write a short, grateful post thanking viewers for watching {username}'s stream.
 
@@ -676,6 +1099,89 @@ Post:"""
             # Apply guardrail: Remove username-derived hashtags
             message = self._validate_hashtags_against_username(message, username)
             
+            # NEW GUARDRAILS: Additional quality checks (configurable via .env)
+            all_issues = []
+            
+            # Check 1: Emoji count validation
+            if self.max_emoji_count > 0:
+                emoji_count = self._count_emojis(message)
+                if emoji_count > self.max_emoji_count:
+                    all_issues.append(f"Too many emojis: {emoji_count} (max: {self.max_emoji_count})")
+            
+            # Check 2: Profanity filter
+            if self.enable_profanity_filter:
+                has_profanity, profane_words = self._contains_profanity(message, self.profanity_severity)
+                if has_profanity:
+                    all_issues.append(f"Contains profanity: {', '.join(profane_words)}")
+            
+            # Check 3: Quality scoring
+            if self.enable_quality_scoring:
+                quality_score, quality_issues = self._score_message_quality(message, title)
+                if quality_score < self.min_quality_score:
+                    all_issues.append(f"Quality score too low: {quality_score}/10 (min: {self.min_quality_score})")
+                    all_issues.extend(quality_issues)
+            
+            # Check 4: Platform-specific validation
+            platform_valid, platform_issues = self._validate_platform_specific(message, social_platform)
+            if not platform_valid:
+                all_issues.extend(platform_issues)
+            
+            # Check 5: Deduplication check
+            if self._is_duplicate_message(message):
+                all_issues.append("Message too similar to recent announcements")
+            
+            # Post-generation quality check (original hashtag/forbidden word validation)
+            is_valid, issues = self._validate_message_quality(message, 3, title, username)
+            if not is_valid:
+                all_issues.extend(issues)
+            
+            # If ANY guardrail failed, retry once with strict mode
+            if len(all_issues) > 0:
+                logger.warning(f"⚠ Generated message has {len(all_issues)} issue(s): {', '.join(all_issues[:3])}{'...' if len(all_issues) > 3 else ''}")
+                # Try ONE more time with stricter instructions
+                logger.info("🔄 Retrying with stricter prompt...")
+                strict_prompt = self._prompt_stream_start(platform_name, username, title, content_max, strict_mode=True)
+                retry_message = self._generate_with_retry(strict_prompt)
+                
+                if retry_message:
+                    # Re-validate ALL guardrails on retry
+                    retry_issues = []
+                    
+                    # Trim and clean retry
+                    if len(retry_message) > content_max:
+                        retry_message = self._safe_trim(retry_message, content_max)
+                    retry_message = self._validate_hashtags_against_username(retry_message, username)
+                    
+                    # Check all guardrails again
+                    if self.max_emoji_count > 0 and self._count_emojis(retry_message) > self.max_emoji_count:
+                        retry_issues.append("emojis")
+                    if self.enable_profanity_filter and self._contains_profanity(retry_message, self.profanity_severity)[0]:
+                        retry_issues.append("profanity")
+                    if self.enable_quality_scoring:
+                        retry_score, _ = self._score_message_quality(retry_message, title)
+                        if retry_score < self.min_quality_score:
+                            retry_issues.append(f"quality({retry_score}/10)")
+                    platform_ok, _ = self._validate_platform_specific(retry_message, social_platform)
+                    if not platform_ok:
+                        retry_issues.append("platform")
+                    if self._is_duplicate_message(retry_message):
+                        retry_issues.append("duplicate")
+                    retry_valid, _ = self._validate_message_quality(retry_message, 3, title, username)
+                    if not retry_valid:
+                        retry_issues.append("hashtags/forbidden")
+                    
+                    if len(retry_issues) == 0:
+                        logger.info("✅ Retry produced valid message, using it")
+                        message = retry_message
+                    else:
+                        logger.warning(f"⚠ Retry still has issues: {', '.join(retry_issues)}, using original")
+                        # Keep original message - it's better to have minor issues than fail completely
+                else:
+                    logger.warning("⚠ Retry failed, using original message despite issues")
+            
+            # Add to deduplication cache (after all validation/retries)
+            self._add_to_message_cache(message)
+            
             # Add URL to the message
             full_message = f"{message}\n\n{url}"
             
@@ -746,6 +1252,89 @@ Post:"""
             
             # Apply guardrail: Remove username-derived hashtags
             message = self._validate_hashtags_against_username(message, username)
+            
+            # NEW GUARDRAILS: Additional quality checks (configurable via .env)
+            all_issues = []
+            
+            # Check 1: Emoji count validation
+            if self.max_emoji_count > 0:
+                emoji_count = self._count_emojis(message)
+                if emoji_count > self.max_emoji_count:
+                    all_issues.append(f"Too many emojis: {emoji_count} (max: {self.max_emoji_count})")
+            
+            # Check 2: Profanity filter
+            if self.enable_profanity_filter:
+                has_profanity, profane_words = self._contains_profanity(message, self.profanity_severity)
+                if has_profanity:
+                    all_issues.append(f"Contains profanity: {', '.join(profane_words)}")
+            
+            # Check 3: Quality scoring
+            if self.enable_quality_scoring:
+                quality_score, quality_issues = self._score_message_quality(message, title)
+                if quality_score < self.min_quality_score:
+                    all_issues.append(f"Quality score too low: {quality_score}/10 (min: {self.min_quality_score})")
+                    all_issues.extend(quality_issues)
+            
+            # Check 4: Platform-specific validation
+            platform_valid, platform_issues = self._validate_platform_specific(message, social_platform)
+            if not platform_valid:
+                all_issues.extend(platform_issues)
+            
+            # Check 5: Deduplication check
+            if self._is_duplicate_message(message):
+                all_issues.append("Message too similar to recent announcements")
+            
+            # Post-generation quality check (expect 2 hashtags for end messages)
+            is_valid, issues = self._validate_message_quality(message, 2, title, username)
+            if not is_valid:
+                all_issues.extend(issues)
+            
+            # If ANY guardrail failed, retry once with strict mode
+            if len(all_issues) > 0:
+                logger.warning(f"⚠ Generated end message has {len(all_issues)} issue(s): {', '.join(all_issues[:3])}{'...' if len(all_issues) > 3 else ''}")
+                # Try ONE more time with stricter instructions
+                logger.info("🔄 Retrying with stricter prompt...")
+                strict_prompt = self._prompt_stream_end(platform_name, username, title, prompt_max, strict_mode=True)
+                retry_message = self._generate_with_retry(strict_prompt)
+                
+                if retry_message:
+                    # Re-validate ALL guardrails on retry
+                    retry_issues = []
+                    
+                    # Trim and clean retry
+                    if len(retry_message) > max_chars:
+                        retry_message = self._safe_trim(retry_message, max_chars)
+                    retry_message = self._validate_hashtags_against_username(retry_message, username)
+                    
+                    # Check all guardrails again
+                    if self.max_emoji_count > 0 and self._count_emojis(retry_message) > self.max_emoji_count:
+                        retry_issues.append("emojis")
+                    if self.enable_profanity_filter and self._contains_profanity(retry_message, self.profanity_severity)[0]:
+                        retry_issues.append("profanity")
+                    if self.enable_quality_scoring:
+                        retry_score, _ = self._score_message_quality(retry_message, title)
+                        if retry_score < self.min_quality_score:
+                            retry_issues.append(f"quality({retry_score}/10)")
+                    platform_ok, _ = self._validate_platform_specific(retry_message, social_platform)
+                    if not platform_ok:
+                        retry_issues.append("platform")
+                    if self._is_duplicate_message(retry_message):
+                        retry_issues.append("duplicate")
+                    retry_valid, _ = self._validate_message_quality(retry_message, 2, title, username)
+                    if not retry_valid:
+                        retry_issues.append("hashtags/forbidden")
+                    
+                    if len(retry_issues) == 0:
+                        logger.info("✅ Retry produced valid message, using it")
+                        message = retry_message
+                    else:
+                        logger.warning(f"⚠ Retry still has issues: {', '.join(retry_issues)}, using original")
+                        # Keep original - better to have minor issues than fail completely
+                else:
+                    logger.warning("⚠ Retry failed, using original message despite issues")
+            
+            # Add to deduplication cache (after all validation/retries)
+            self._add_to_message_cache(message)
             
             logger.info(f"✨ Generated stream end message ({len(message)}/{max_chars} chars)")
             return message

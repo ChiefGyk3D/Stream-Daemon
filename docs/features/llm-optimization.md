@@ -14,7 +14,7 @@ enable = true
 provider = ollama  # or gemini
 
 # Model selection
-model = gemma2:4b  # or gemma2:2b, phi3:mini, llama3.2:3b
+model = gemma3:4b  # or gemma3:4b, phi3:mini, llama3.2:3b
 
 # Ollama connection (if using local models)
 ollama_host = http://localhost
@@ -96,7 +96,7 @@ Key constraints are repeated multiple times:
 
 **Installation:**
 ```bash
-ollama pull gemma2:4b
+ollama pull gemma3:4b
 ```
 
 ### Google Gemini (Cloud API)
@@ -173,14 +173,14 @@ max_tokens = 120  # Forces more concise output
 
 ### For CPU-Only Systems
 ```ini
-model = gemma2:2b
+model = gemma3:2b
 temperature = 0.2
 max_tokens = 100
 ```
 
 ### For GPU Systems (NVIDIA/AMD)
 ```ini
-model = gemma2:4b  # or qwen2.5:7b for even better quality
+model = gemma3:4b  # or qwen2.5:7b for even better quality
 temperature = 0.3
 max_tokens = 150
 ```

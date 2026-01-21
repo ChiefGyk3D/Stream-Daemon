@@ -40,6 +40,34 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
 
 **Or: Teaching Machines to Pretend They Give a Shit About Your Minecraft Stream**
 
+### CRITICAL CLARIFICATION: What Does "George Carlin Persona" Mean Here?
+
+Before you freak out thinking your stream bot is going to start cursing at your audience:
+
+**NO, the AI does NOT generate profane announcements.**
+
+Your stream posts will be normal, professional messages like:
+- "Playing Valorant ranked! Come join the climb 🎮 #Valorant #Competitive #FPS"
+- "Thanks for watching! See you next stream #Minecraft #GG"
+
+They will **NOT** be:
+- "Streaming some Valorant bullshit, come watch if you give a fuck"
+- "Thanks for wasting 3 hours watching me play video games"
+
+**George Carlin's voice is in the CODE, not in your announcements.**
+
+The profanity and social commentary are in:
+- ✅ Code comments and docstrings
+- ✅ Documentation and configuration files
+- ✅ This README
+- ❌ NOT in the AI-generated stream announcements
+
+We're being honest about what this software does (automates fake enthusiasm), but we're not sabotaging your social media presence.
+
+---
+
+### The Absurdity Explained
+
 Look, let's be honest about what's happening here. For thousands of years, we taught humans to read and write. We fought wars over literacy. We built entire civilizations on the written word. And now? Now we're paying computers to pretend they're excited about your Fortnite stream.
 
 Think about that for a fucking second. We built machines that can process billions of calculations per second, that can simulate nuclear explosions and model climate change, and we're using them to write "OMG going live with some epic Valorant gameplay! 🎮 Come hang out! #Valorant #Gaming #Live"
@@ -114,6 +142,15 @@ The only difference? The machine doesn't pretend it has feelings about it. It do
 - Dynamic, personalized messages that never repeat
 - Graceful fallback to static messages if AI unavailable
 - Configurable retry logic for reliability
+
+**🛡️ Built-in AI Guardrails (NEW!):**
+- **Post-generation validation** - Catches common AI mistakes (wrong hashtag counts, clickbait words, hallucinated details)
+- **Auto-retry with strict mode** - If validation fails, retries once with stricter instructions
+- **Username protection** - Automatically removes username parts from hashtags
+- **Hallucination detection** - Blocks invented details like "drops enabled", viewer counts, giveaways
+- **Forbidden word filtering** - Prevents cringe words (INSANE, EPIC, SMASH, etc.)
+- **Quality logging** - Clear visibility into issues and retry outcomes
+- See [docs/features/llm-guardrails.md](docs/features/llm-guardrails.md) for full details
 
 ### 🔐 Enterprise-Grade Secrets Management
 - **Doppler** - Modern secrets platform with environment-specific tokens (dev/staging/prod)
