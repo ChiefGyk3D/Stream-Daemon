@@ -142,8 +142,9 @@ class AIMessageGenerator:
         Returns:
             List of hashtags (without # prefix, lowercase)
         """
-        # Match hashtags: # followed by alphanumeric characters
-        hashtags = re.findall(r'#(\w+)', message)
+        # Match hashtags: # followed by a letter, then any alphanumeric characters
+        # This excludes things like #50 (just numbers) which aren't valid hashtags
+        hashtags = re.findall(r'#([a-zA-Z]\w*)', message)
         return [tag.lower() for tag in hashtags]
     
     @staticmethod
