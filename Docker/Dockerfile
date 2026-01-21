@@ -1,5 +1,7 @@
 # Use an official Python runtime as a parent image
 # Python 3.14 with multi-arch support: amd64, arm64
+# Because running stream announcements requires the absolute latest Python.
+# Can't use 3.13. That would be barbaric. We need 3.14 to tell people about Fortnite streams.
 FROM python:3.14-slim
 
 # Set build arguments for platform detection (automatically set by buildx)
@@ -12,6 +14,9 @@ WORKDIR /app
 # Install system dependencies and upgrade SQLite to fix CVE-2025-7709
 # CVE-2025-7709: Integer overflow in SQLite FTS5 extension (fixed in 3.50.3)
 # Debian trixie ships 3.46.1-7, so we compile SQLite 3.50.4 from source
+# Because a database vulnerability in our stream announcement tool is clearly
+# a national security threat. The terrorists might hack our "going live" messages.
+# Better compile from source. For the children.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libc6-dev \

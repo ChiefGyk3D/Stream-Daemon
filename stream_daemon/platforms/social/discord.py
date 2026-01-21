@@ -1,5 +1,11 @@
 """
 Discord webhook platform implementation with per-platform webhook and role support.
+
+Or as I call it: Yelling "@everyone" into a chatroom full of people who are already
+watching streams to tell them about streams they might want to watch.
+
+It's like standing in a library and screaming about books. But digital.
+And with more teenage boys calling each other slurs. Progress!
 """
 
 import logging

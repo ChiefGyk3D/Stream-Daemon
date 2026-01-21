@@ -36,7 +36,8 @@ def test_prompt_outputs():
             print("   - Ollama running at configured host")
         else:
             print("   - GEMINI_API_KEY set")
-        return False
+        # Don't return - pytest functions should not return values
+        return
     
     print(f"✅ Authenticated with {generator.provider} (model: {generator.model})")
     print()
@@ -146,7 +147,7 @@ def test_prompt_outputs():
     print("✅ Testing Complete!")
     print("=" * 80)
     
-    return True
+    # Test functions should not return values - just complete successfully
 
 if __name__ == '__main__':
     try:

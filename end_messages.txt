@@ -2,6 +2,15 @@
 # Format: Use [PLATFORM] sections for platform-specific messages, or [DEFAULT] for all platforms
 # Supported platforms: TWITCH, YOUTUBE, KICK
 # Variables: {username}
+#
+# The obligatory "thanks for watching" messages.
+# Because people need to be TOLD that the stream ended.
+# They couldn't possibly figure that out from the black screen
+# and the "OFFLINE" banner.
+#
+# "Thanks for hanging out!" "See you next time!" "Catch you later!"
+# Five different ways to say the exact same thing.
+# This is content creation in 2026.
 
 [DEFAULT]
 Thanks for watching! See you next time! 👋

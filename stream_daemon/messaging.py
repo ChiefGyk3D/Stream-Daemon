@@ -1,4 +1,9 @@
-"""Message generation utilities for stream announcements."""
+"""Message generation utilities for stream announcements.
+
+The part where we decide whether to let an AI write "Come watch me play games!"
+or use the template you've been copy-pasting since 2019. Either way, the result
+is the same: people on the internet find out you're on the internet. Meta.
+"""
 
 import logging
 import random
@@ -61,6 +66,8 @@ def get_message_for_stream(ai_generator: AIMessageGenerator,
             logger.error(f"✗ AI message generation failed: {e}, using fallback")
     
     # Fallback to traditional messages
+    # When the AI fails us, we return to our roots: template strings from 2011
+    # It's retro. It's authentic. It's manually-crafted-but-still-automated content.
     if not fallback_messages:
         logger.error(f"✗ No fallback messages available for {platform_name}")
         return f"🎮 {username} is {'now live' if is_stream_start else 'done streaming'} on {platform_name}! {title}"

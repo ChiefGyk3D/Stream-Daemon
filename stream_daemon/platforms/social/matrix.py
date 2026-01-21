@@ -3,6 +3,15 @@ Matrix platform implementation with rich message support.
 
 NOTE: Matrix does NOT support editing messages like Discord.
 Messages are posted once and cannot be updated with live viewer counts.
+
+Matrix: Because Discord was too centralized, Mastodon was too ActivityPub,
+and IRC was too... 1988. So we created a federated chat protocol where your
+server talks to other servers through a distributed network using JSON over HTTPS
+to eventually, somewhere, somehow, deliver the groundbreaking news that you're playing Minecraft.
+
+The future of decentralized communication: now with 300% more JSON, 500% more complexity,
+and 0% more actual functionality than IRC had in 1988. But hey, at least we can send emojis.
+Fucking emojis. That's what we needed to solve. Not world hunger, not climate change - emojis.
 """
 
 import logging

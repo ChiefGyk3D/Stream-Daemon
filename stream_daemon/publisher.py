@@ -1,4 +1,8 @@
-"""Social media publishing utilities for stream announcements."""
+"""Social media publishing utilities for stream announcements.
+
+The part where we spray your "I'm playing video games!" message across 4 different
+platforms simultaneously, because apparently one wasn't enough. Gotta saturate that market.
+"""
 
 import logging
 from typing import Optional, Dict, List
@@ -22,6 +26,10 @@ def post_to_social_async(enabled_social: list,
                          reply_to_ids: Optional[Dict[str, str]] = None) -> Dict[str, Optional[str]]:
     """
     Post to all social platforms asynchronously using ThreadPoolExecutor.
+    
+    We use threads here because when you absolutely, positively need to tell
+    4 different social networks AT THE SAME TIME that someone started playing Fortnite.
+    Can't risk a 200ms delay. That's 200ms someone might miss the stream start. The horror.
     
     Args:
         enabled_social: List of enabled social platform instances

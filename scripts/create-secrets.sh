@@ -1,6 +1,13 @@
 #!/bin/bash
 # Stream Daemon - Secrets Management Setup Script
 # This script helps create and configure secrets in Doppler, AWS Secrets Manager, or HashiCorp Vault
+#
+# Because typing "TWITCH_CLIENT_ID=abc123" into a .env file was too fucking simple.
+# We need an interactive wizard that asks you 47 questions to store the same information
+# in three different enterprise-grade secret management systems.
+#
+# Your Minecraft stream credentials deserve military-grade security.
+# The Pentagon wishes they had this level of paranoia.
 
 set -e
 

@@ -6,6 +6,8 @@
 
 **Automate your multi-platform live streams with intelligent social media announcements**
 
+*Or: An over-engineered solution to a problem nobody asked us to solve, but we solved it anyway because we could.*
+
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -31,6 +33,60 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
 - 🎯 **Smart Multi-Platform** - Stream to multiple platforms? Choose combined, threaded, or separate announcements
 - 🐳 **Production Ready** - Docker, Docker Compose, systemd service support
 - ⚡ **Lightweight** - Runs on anything from Raspberry Pi to AWS Lambda
+
+---
+
+## 🎭 A Note on AI-Generated "Authenticity"
+
+**Or: Teaching Machines to Pretend They Give a Shit About Your Minecraft Stream**
+
+### CRITICAL CLARIFICATION: What Does "George Carlin Persona" Mean Here?
+
+Before you freak out thinking your stream bot is going to start cursing at your audience:
+
+**NO, the AI does NOT generate profane announcements.**
+
+Your stream posts will be normal, professional messages like:
+- "Playing Valorant ranked! Come join the climb 🎮 #Valorant #Competitive #FPS"
+- "Thanks for watching! See you next stream #Minecraft #GG"
+
+They will **NOT** be:
+- "Streaming some Valorant bullshit, come watch if you give a fuck"
+- "Thanks for wasting 3 hours watching me play video games"
+
+**George Carlin's voice is in the CODE, not in your announcements.**
+
+The profanity and social commentary are in:
+- ✅ Code comments and docstrings
+- ✅ Documentation and configuration files
+- ✅ This README
+- ❌ NOT in the AI-generated stream announcements
+
+We're being honest about what this software does (automates fake enthusiasm), but we're not sabotaging your social media presence.
+
+---
+
+### The Absurdity Explained
+
+Look, let's be honest about what's happening here. For thousands of years, we taught humans to read and write. We fought wars over literacy. We built entire civilizations on the written word. And now? Now we're paying computers to pretend they're excited about your Fortnite stream.
+
+Think about that for a fucking second. We built machines that can process billions of calculations per second, that can simulate nuclear explosions and model climate change, and we're using them to write "OMG going live with some epic Valorant gameplay! 🎮 Come hang out! #Valorant #Gaming #Live"
+
+The best part? We have to **explicitly program** the AI not to sound like a bot:
+- "Don't say INSANE!"
+- "Don't say EPIC!"
+- "Don't use the streamer's name in the hashtags!"
+- "Count to 3. Not 2. Not 4. Exactly 3 hashtags."
+
+Yes, we literally have to teach a computer how to count. Welcome to the fucking future.
+
+But here's the thing - it works. And that's either beautiful or terrifying, I honestly can't decide. We've created a system where machines generate "authentic" social media posts, which is perfect because social media was never authentic to begin with. It's artificial authenticity all the way down. It's bullshit turtles on a bullshit turtle stack.
+
+So go ahead, use the AI. Let it announce your streams. Let it pick the hashtags. Let it pretend to care about your 12-hour Final Fantasy XIV marathon. Because at the end of the day, you're just automating what influencers have been faking for years anyway.
+
+The only difference? The machine doesn't pretend it has feelings about it. It doesn't lie to you. It doesn't tell you it "loves your content" while secretly wanting to die. It's honest dishonesty. It's authentic inauthenticity.
+
+**Want to disable this beautiful absurdity?** Set `LLM_ENABLE=false` and go back to the good old days of manually copy-pasting the same announcement template you've used for 3 years. At least that's honest dishonesty.
 
 ---
 
@@ -86,6 +142,15 @@ Stream Daemon is an enterprise-grade, open-source automation platform for conten
 - Dynamic, personalized messages that never repeat
 - Graceful fallback to static messages if AI unavailable
 - Configurable retry logic for reliability
+
+**🛡️ Built-in AI Guardrails (NEW!):**
+- **Post-generation validation** - Catches common AI mistakes (wrong hashtag counts, clickbait words, hallucinated details)
+- **Auto-retry with strict mode** - If validation fails, retries once with stricter instructions
+- **Username protection** - Automatically removes username parts from hashtags
+- **Hallucination detection** - Blocks invented details like "drops enabled", viewer counts, giveaways
+- **Forbidden word filtering** - Prevents cringe words (INSANE, EPIC, SMASH, etc.)
+- **Quality logging** - Clear visibility into issues and retry outcomes
+- See [docs/features/llm-guardrails.md](docs/features/llm-guardrails.md) for full details
 
 ### 🔐 Enterprise-Grade Secrets Management
 - **Doppler** - Modern secrets platform with environment-specific tokens (dev/staging/prod)

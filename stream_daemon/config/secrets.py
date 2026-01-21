@@ -1,4 +1,12 @@
-"""Secrets management for AWS, Vault, and Doppler."""
+"""Secrets management for AWS, Vault, and Doppler.
+
+Because storing a fucking Twitch API key in a text file was too simple.
+We need THREE enterprise secret management systems with fallback chains.
+Nothing says "I take my Minecraft stream seriously" like HashiCorp Vault integration.
+
+Jeff Bezos, Mark Zuckerberg's ghost, and some startup's Series B funding
+all conspiring to protect your sacred livestream announcement credentials.
+"""
 
 import os
 import json
@@ -13,6 +21,8 @@ logger = logging.getLogger(__name__)
 def load_secrets_from_aws(secret_name):
     """
     Load secrets from AWS Secrets Manager.
+    
+    Because Jeff Bezos should definitely know about your Twitch stream announcements.
     
     Args:
         secret_name: Name of the secret in AWS Secrets Manager

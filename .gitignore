@@ -1,7 +1,16 @@
+# .gitignore for Stream Daemon
+# The file that keeps you from accidentally committing your API keys
+# to GitHub, where they'll be scraped by bots within 30 seconds
+# and used to announce Bitcoin scams on your Twitch account.
+#
+# This is the only thing standing between you and professional embarrassment.
+# Guard it with your life.
+
 # Node
 node_modules
 
 # Python
+# The turds Python leaves all over your filesystem
 __pycache__/
 *.pyc
 *.pyo
@@ -9,8 +18,9 @@ __pycache__/
 .Python
 
 # Environment files
+# Your secrets. Your shame. Your API keys that you definitely got from legitimate sources.
 .env
-!.env.example
+!.env.example  # This one's safe. It's all fake. Like your enthusiasm for this project.
 config.ini
 
 # Docker user configuration
