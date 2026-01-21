@@ -353,8 +353,8 @@ class TestIntegratedGuardrails:
             platform_name="twitch",
             username="testuser",
             title="Valorant Ranked Grind",
-            game="Valorant",
-            target_platform="mastodon"
+            url="https://twitch.tv/testuser",
+            social_platform="mastodon"
         )
         
         # Verify message passes all guardrails
@@ -370,7 +370,7 @@ class TestIntegratedGuardrails:
         assert has_prof is False
         
         # Check quality
-        score, issues = gen._score_message_quality(message, "Valorant Ranked Grind", "mastodon")
+        score, issues = gen._score_message_quality(message, "Valorant Ranked Grind")
         assert score >= gen.min_quality_score or len(issues) == 0
 
 
