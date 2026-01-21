@@ -36,6 +36,7 @@ class AIMessageGenerator:
     
     Features:
     - Support for multiple LLM providers (Gemini, Ollama)
+    - Robust multi-model support (gemma2/3, llama3.x, phi3/4, qwen, mistral, etc.)
     - Platform-specific character limits (Bluesky: 300, Mastodon: 500)
     - Automatic hashtag generation based on stream title
     - Customizable tone for start vs. end messages
@@ -44,6 +45,36 @@ class AIMessageGenerator:
     - Error handling and retry logic
     - Rate limiting: max 4 concurrent calls, 2-second delay between requests
     """
+    
+    # Model-specific optimal configurations for Ollama
+    OLLAMA_MODEL_CONFIGS = {
+        # Gemma models (Google)
+        'gemma2:2b': {'temperature': 0.3, 'num_predict': 150, 'top_k': 40, 'context_window': 8192},
+        'gemma2:9b': {'temperature': 0.3, 'num_predict': 200, 'top_k': 40, 'context_window': 8192},
+        'gemma3:4b': {'temperature': 0.3, 'num_predict': 200, 'top_k': 40, 'context_window': 8192},
+        'gemma3:12b': {'temperature': 0.3, 'num_predict': 250, 'top_k': 40, 'context_window': 8192},
+        
+        # Llama models (Meta)
+        'llama3.2:1b': {'temperature': 0.3, 'num_predict': 120, 'top_k': 40, 'context_window': 128000},
+        'llama3.2:3b': {'temperature': 0.3, 'num_predict': 150, 'top_k': 40, 'context_window': 128000},
+        'llama3.1:8b': {'temperature': 0.3, 'num_predict': 200, 'top_k': 40, 'context_window': 128000},
+        'llama3.1:70b': {'temperature': 0.3, 'num_predict': 300, 'top_k': 50, 'context_window': 128000},
+        'llama3.3:70b': {'temperature': 0.3, 'num_predict': 300, 'top_k': 50, 'context_window': 128000},
+        
+        # Phi models (Microsoft)
+        'phi3:mini': {'temperature': 0.3, 'num_predict': 120, 'top_k': 40, 'context_window': 128000},
+        'phi3:medium': {'temperature': 0.3, 'num_predict': 180, 'top_k': 40, 'context_window': 128000},
+        'phi4:latest': {'temperature': 0.3, 'num_predict': 200, 'top_k': 40, 'context_window': 16384},
+        
+        # Qwen models (Alibaba)
+        'qwen2.5:0.5b': {'temperature': 0.3, 'num_predict': 100, 'top_k': 30, 'context_window': 32768},
+        'qwen2.5:3b': {'temperature': 0.3, 'num_predict': 150, 'top_k': 40, 'context_window': 32768},
+        'qwen2.5:7b': {'temperature': 0.3, 'num_predict': 200, 'top_k': 40, 'context_window': 128000},
+        
+        # Mistral models
+        'mistral:7b': {'temperature': 0.3, 'num_predict': 200, 'top_k': 40, 'context_window': 32000},
+        'mixtral:8x7b': {'temperature': 0.3, 'num_predict': 250, 'top_k': 50, 'context_window': 32000},
+    }
     
     def __init__(self):
         self.enabled = False
@@ -65,6 +96,9 @@ class AIMessageGenerator:
         self.top_p = float(get_config('LLM', 'top_p', default='0.9'))
         self.max_tokens = int(get_config('LLM', 'max_tokens', default='150'))
         
+        # Model-specific config (set during authentication)
+        self._model_config = None
+        
         # Guardrails configuration
         # Because we need rules to govern the rule-following machine. Meta as fuck.
         self.enable_deduplication = get_config('LLM', 'enable_deduplication', default='True').lower() == 'true'
@@ -79,6 +113,35 @@ class AIMessageGenerator:
         # Deduplication cache: stores recent messages to prevent repeats
         # Because variety is the spice of life, even for robot-generated bullshit
         self._message_cache: List[str] = []
+    
+    def _get_ollama_model_config(self, model_name: str):
+        """Get optimal configuration for the specified Ollama model."""
+        # Try exact match
+        if model_name in self.OLLAMA_MODEL_CONFIGS:
+            logger.info(f"Using optimized config for {model_name}")
+            return self.OLLAMA_MODEL_CONFIGS[model_name]
+        
+        # Try partial match (e.g., "gemma3:4b-instruct" matches "gemma3:4b")
+        base_model = ':'.join(model_name.split(':')[:2])  # Get "model:size"
+        if base_model in self.OLLAMA_MODEL_CONFIGS:
+            logger.info(f"Using config from {base_model} for variant {model_name}")
+            return self.OLLAMA_MODEL_CONFIGS[base_model]
+        
+        # Try model family match
+        model_family = model_name.split(':')[0]
+        for known_model, config in self.OLLAMA_MODEL_CONFIGS.items():
+            if known_model.startswith(model_family):
+                logger.info(f"Using config from {known_model} family for {model_name}")
+                return config
+        
+        # Default fallback
+        logger.info(f"Using default config for unknown model {model_name}")
+        return {
+            'temperature': self.temperature,
+            'num_predict': self.max_tokens,
+            'top_k': 40,
+            'context_window': 8192
+        }
     
     @staticmethod
     def _tokenize_username(username: str) -> Set[str]:
@@ -857,12 +920,18 @@ Post:"""
                         return response.text.strip()
                     
                     elif self.provider == 'ollama':
-                        # Use generation options for better control
+                        # Use generation options for better control with model-specific config
                         options = {
-                            'temperature': self.temperature,
+                            'temperature': self._model_config.get('temperature', self.temperature) if self._model_config else self.temperature,
                             'top_p': self.top_p,
-                            'num_predict': self.max_tokens,
+                            'num_predict': self._model_config.get('num_predict', self.max_tokens) if self._model_config else self.max_tokens,
+                            'top_k': self._model_config.get('top_k', 40) if self._model_config else 40,
                         }
+                        
+                        # Add context window if model supports it
+                        if self._model_config and 'context_window' in self._model_config:
+                            options['num_ctx'] = self._model_config['context_window']
+                        
                         response = self.ollama_client.chat(
                             model=self.model,
                             messages=[{'role': 'user', 'content': prompt}],
@@ -961,6 +1030,16 @@ Post:"""
                 self.ollama_host = ollama_host
             
             self.model = model_name
+            
+            # Get model-specific configuration
+            self._model_config = self._get_ollama_model_config(model_name)
+            
+            # Override defaults with model-specific values
+            if self._model_config:
+                self.temperature = self._model_config.get('temperature', self.temperature)
+                self.max_tokens = self._model_config.get('num_predict', self.max_tokens)
+                logger.info(f"Model config: temp={self.temperature}, tokens={self.max_tokens}, "
+                           f"context={self._model_config.get('context_window', 'default')}")
             
             # Test connection by listing models
             try:
