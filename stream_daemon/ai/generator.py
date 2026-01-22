@@ -793,7 +793,7 @@ STEP 1 - STYLE & TONE:
 ✓ Match the vibe: Keep the same energy as the stream (technical, gaming, casual, etc.)
 ✓ Be genuine: Real gratitude, not corporate-speak
 ✓ Keep it natural: Short, punchy, or casual - whatever fits the stream's style
-✓ Emoji: Use 0-1 emoji that fits the vibe (optional)
+✓ Emoji: Use 0-2 emojis that fit the vibe (optional)
 
 STEP 2 - CONTENT RULES (FOLLOW EXACTLY):
 ✓ Length: MUST be {prompt_max} characters or less (including hashtags)
