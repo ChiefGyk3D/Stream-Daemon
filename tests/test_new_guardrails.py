@@ -180,6 +180,56 @@ class TestProfanityFilter:
         assert has_prof is False
 
 
+class TestForbiddenWords:
+    """Test that forbidden words are properly detected with word boundaries."""
+    
+    def test_forbidden_word_detected(self):
+        """Forbidden words should be detected when used as standalone words."""
+        gen = AIMessageGenerator()
+        
+        # "fire" as a standalone word should be caught
+        message = "This stream is fire! #Gaming"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is True
+        assert "fire" in words
+    
+    def test_technical_terms_not_blocked(self):
+        """Technical terms containing forbidden words should NOT be blocked."""
+        gen = AIMessageGenerator()
+        
+        # "firewall" contains "fire" but should pass
+        message = "Configuring firewall rules in pfSense! #Networking #Security"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is False
+        
+        # "firefox" contains "fire" but should pass
+        message = "Testing my site in Firefox browser #WebDev"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is False
+        
+        # "campfire" contains "fire" but should pass
+        message = "Building a campfire in the game #Survival"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is False
+    
+    def test_word_boundary_matching_forbidden(self):
+        """Forbidden words should respect word boundaries like profanity filter."""
+        gen = AIMessageGenerator()
+        
+        # "legendary" in "non-legendary" should still be caught (word boundary after 'legendary')
+        message = "Testing legendary items #Gaming"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is True
+        assert "legendary" in words
+        
+        # But compound words should pass
+        message = "The smashing pumpkins #Music"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        # "smashing" contains "smash" but is a different word
+        # This should pass since we're matching whole words
+        assert has_forbidden is False
+
+
 class TestQualityScoring:
     """Test AI homework grading. Because that's what we've become."""
     

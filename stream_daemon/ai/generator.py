@@ -175,7 +175,12 @@ class AIMessageGenerator:
         ]
         
         message_lower = message.lower()
-        found_words = [word for word in forbidden_words if word in message_lower]
+        found_words = []
+        
+        for word in forbidden_words:
+            # Use word boundaries to avoid false positives (e.g., 'firewall' shouldn't match 'fire')
+            if re.search(rf'\b{word}\b', message_lower):
+                found_words.append(word)
         
         return (len(found_words) > 0, found_words)
     
