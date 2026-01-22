@@ -468,6 +468,25 @@ class AIMessageGenerator:
             score -= 3
             issues.append("Doesn't reference stream title/content")
         
+        # Check if message is just reposting the title (should be based on it, not duplicate it)
+        # Extract content before hashtags for comparison
+        content_before_hashtags = re.split(r'\s+#', message)[0].strip()
+        title_clean = title.strip()
+        
+        # Check if message is essentially just the title with minimal additions
+        # Remove punctuation for better comparison
+        content_no_punct = re.sub(r'[^\w\s]', '', content_before_hashtags.lower())
+        title_no_punct = re.sub(r'[^\w\s]', '', title_clean.lower())
+        
+        # Case 1: Content is exactly the title (or title with punctuation)
+        if content_no_punct.strip() == title_no_punct.strip():
+            score -= 4
+            issues.append("Message just reposts the title verbatim - should encourage engagement instead")
+        # Case 2: Title makes up >70% of the content length (lazy repost with minor additions like "playing..." or "!")
+        elif len(title_no_punct) > 0 and len(title_no_punct) / len(content_no_punct) > 0.7:
+            score -= 3
+            issues.append("Message too similar to title - should add value and encourage viewers")
+        
         # Check for personality/engagement (exclamation marks, questions, emojis)
         has_personality = bool(
             re.search(r'[!?]', message) or
@@ -687,6 +706,8 @@ STEP 1 - CONTENT RULES (FOLLOW EXACTLY):
 ✓ Tone: Casual, friendly, genuine (like a real person, not a bot)
 ✓ Call-to-action: Include ONE phrase like "come hang out", "join me", or "let's go"
 ✓ Emoji: Use 0-1 emoji maximum (optional)
+✓ Based on title: Reference the stream topic BUT don't just copy/paste the title
+✗ DO NOT just repost the title - the link already shows it, encourage people to watch instead
 ✗ DO NOT include the URL (it's added automatically)
 ✗ DO NOT invent details not in the title (no "drops enabled", "giveaways", "tonight at 7pm", etc.)
 ✗ DO NOT use cringe words: "INSANE", "EPIC", "smash that", "unmissable", "crazy"
@@ -765,6 +786,8 @@ STEP 1 - CONTENT RULES (FOLLOW EXACTLY):
 ✓ Tone: Warm, genuine, grateful (not overly enthusiastic)
 ✓ Message: Simple thank you for watching/joining
 ✓ Emoji: Use 0-1 emoji maximum (optional)
+✓ Based on title: Reference what was streamed BUT don't just copy/paste the title
+✗ DO NOT just repost the title - add gratitude and value instead
 ✗ DO NOT invent details (no "200 viewers", "raided someone", "highlight was X", "VOD soon")
 ✗ DO NOT mention next stream time or schedule
 ✗ DO NOT use exaggerated words: "AMAZING", "INCREDIBLE", "INSANE", "smashed it"

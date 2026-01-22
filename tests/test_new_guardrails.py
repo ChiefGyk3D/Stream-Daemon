@@ -296,6 +296,50 @@ class TestQualityScoring:
         # Should detect repetition
         assert score < 8
         assert any("repeat" in issue.lower() for issue in issues)
+    
+    def test_title_verbatim_repost_deduction(self):
+        """Message that just reposts the title verbatim should be heavily penalized."""
+        gen = AIMessageGenerator()
+        
+        # Exact title repost
+        title = "Valorant Ranked Grind"
+        message = "Valorant Ranked Grind #Valorant #Ranked #FPS"
+        
+        score, issues = gen._score_message_quality(message, title)
+        
+        # Should be heavily penalized
+        assert score < 6
+        assert any("repost" in issue.lower() or "verbatim" in issue.lower() for issue in issues)
+    
+    def test_title_too_similar_deduction(self):
+        """Message that is too similar to title (>85% word overlap) should be penalized."""
+        gen = AIMessageGenerator()
+        
+        # Very high overlap with title
+        title = "Minecraft Creative Building Adventure"
+        message = "Minecraft Creative Building Adventure time! #Minecraft #Creative #Building"
+        
+        score, issues = gen._score_message_quality(message, title)
+        
+        # Should be penalized for being too similar
+        assert score <= 7
+        assert any("similar" in issue.lower() or "title" in issue.lower() for issue in issues)
+    
+    def test_title_based_but_unique_passes(self):
+        """Message based on title but with unique content should pass."""
+        gen = AIMessageGenerator()
+        
+        # References title but adds engagement
+        title = "Valorant Ranked Grind"
+        message = "Time to climb the ranks! Join me for some Valorant ranked 🎮 #Valorant #Competitive #FPS"
+        
+        score, issues = gen._score_message_quality(message, title)
+        
+        # Should score well (references title but isn't just copying it)
+        assert score >= 7
+        # Should not have title-related issues
+        title_issues = [issue for issue in issues if "title" in issue.lower() or "repost" in issue.lower() or "similar" in issue.lower()]
+        assert len(title_issues) == 0
 
 
 class TestPlatformSpecificValidation:
