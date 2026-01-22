@@ -483,7 +483,8 @@ class AIMessageGenerator:
             score -= 4
             issues.append("Message just reposts the title verbatim - should encourage engagement instead")
         # Case 2: Title makes up >70% of the content length (lazy repost with minor additions like "playing..." or "!")
-        elif len(title_no_punct) > 0 and len(title_no_punct) / len(content_no_punct) > 0.7:
+        # Only check if title is not longer than content (otherwise ratio doesn't make sense)
+        elif len(title_no_punct) > 0 and len(content_no_punct) >= len(title_no_punct) and len(title_no_punct) / len(content_no_punct) > 0.7:
             score -= 3
             issues.append("Message too similar to title - should add value and encourage viewers")
         

@@ -312,7 +312,7 @@ class TestQualityScoring:
         assert any("repost" in issue.lower() or "verbatim" in issue.lower() for issue in issues)
     
     def test_title_too_similar_deduction(self):
-        """Message that is too similar to title (>85% word overlap) should be penalized."""
+        """Message that is too similar to title (>70% character length ratio) should be penalized."""
         gen = AIMessageGenerator()
         
         # Very high overlap with title
