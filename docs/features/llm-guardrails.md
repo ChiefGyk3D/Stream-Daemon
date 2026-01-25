@@ -499,6 +499,13 @@ The LLM guardrail system provides **automatic quality enforcement** with:
 
 Combined with enhanced prompts (see [llm-optimization.md](llm-optimization.md)) and generation parameters (see [../configuration/llm-parameters.md](../configuration/llm-parameters.md)), this creates a robust system for reliable AI-generated stream announcements.
 
+## See Also
+
+- [LLM Model Recommendations](llm-model-recommendations.md) - Choose the right model for your hardware
+- [LLM Optimization](llm-optimization.md) - Fine-tune your generation parameters
+- [AI Messages](ai-messages.md) - The main AI messaging guide
+- [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM) - Multi-GPU setup for the mad scientists among us
+
 ---
 
 *"We created machines that can think, but we still need to teach them not to be assholes."* - The Ghost of George Carlin

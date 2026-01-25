@@ -125,9 +125,19 @@ The only difference? The machine doesn't pretend it has feelings about it. It do
 - **Zero API Costs** - Unlimited usage, no quotas
 - **Fast** - Sub-second response times with proper hardware
 - **Offline Capable** - Works without internet connection
-- **Multiple Models** - gemma2, llama3.2, qwen2.5, mistral, phi3, and more
-- **Multi-GPU Support** - Mix different GPU models with [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM)
-- **Easy Setup** - `curl -fsSL https://ollama.com/install.sh | sh && ollama pull gemma2:2b`
+- **Multiple Models** - gemma3, llama3.1, qwen2.5, mistral, phi3, and more
+- **Multi-GPU Support** - Mix different GPU models with [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM) (build your own LLM monster!)
+- **Easy Setup** - `curl -fsSL https://ollama.com/install.sh | sh && ollama pull qwen2.5:7b`
+
+**📊 Model Recommendations by VRAM:**
+| VRAM | Recommended Model | Quality |
+|------|-------------------|---------|
+| 4GB | `gemma3:2b` | ⭐⭐⭐ |
+| 8GB | `qwen2.5:7b` | ⭐⭐⭐⭐⭐ |
+| 16GB | `qwen2.5:14b` | ⭐⭐⭐⭐⭐+ |
+| 24GB+ | `qwen2.5:32b` | Maximum |
+
+See [docs/features/llm-model-recommendations.md](docs/features/llm-model-recommendations.md) for detailed hardware-specific guidance.
 
 #### **Option 2: Google Gemini (Cloud API)**
 - **No Local Resources** - Runs entirely in the cloud

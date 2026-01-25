@@ -63,7 +63,7 @@ brew install ollama
 # Windows - download from https://ollama.com/download
 ```
 
-**Multi-GPU Setup:** For mixed/multiple GPU configurations (different vendors/models), see [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM) for advanced setup guides.
+**Multi-GPU Setup:** Got GPUs from different eras, vendors, or possibly dimensions? See [FrankenLLM](https://github.com/ChiefGyk3D/FrankenLLM) for the dark arts of combining them into one unholy LLM server. NVIDIA RTX 3050 + RTX 5060 Ti? Sure. AMD + NVIDIA in the same box? Why not. We named it FrankenLLM because you're literally stitching GPU corpses together. "IT'S ALIVE! AND IT KNOWS EXACTLY 3 HASHTAGS!"
 
 ### Step 2: Discover Available Models
 

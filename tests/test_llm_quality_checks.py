@@ -237,13 +237,17 @@ class TestForbiddenWords:
             assert "insane" in found
     
     def test_partial_word_matching(self):
-        """Forbidden words are detected even within other words."""
-        # "insane" should be found in "insanely"
+        """Forbidden words use word boundaries to avoid false positives."""
+        # "insane" should NOT be found in "insanely" (different word)
         has_forbidden, found = AIMessageGenerator._contains_forbidden_words("This is insanely good!")
+        assert not has_forbidden
+        
+        # But standalone "insane" should still be caught
+        has_forbidden, found = AIMessageGenerator._contains_forbidden_words("This is insane!")
         assert has_forbidden
         assert "insane" in found
         
-        # But normal words should be fine
+        # Normal words should be fine
         has_forbidden, found = AIMessageGenerator._contains_forbidden_words("Playing a casual game")
         assert not has_forbidden
     
