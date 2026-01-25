@@ -180,6 +180,56 @@ class TestProfanityFilter:
         assert has_prof is False
 
 
+class TestForbiddenWords:
+    """Test that forbidden words are properly detected with word boundaries."""
+    
+    def test_forbidden_word_detected(self):
+        """Forbidden words should be detected when used as standalone words."""
+        gen = AIMessageGenerator()
+        
+        # "fire" as a standalone word should be caught
+        message = "This stream is fire! #Gaming"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is True
+        assert "fire" in words
+    
+    def test_technical_terms_not_blocked(self):
+        """Technical terms containing forbidden words should NOT be blocked."""
+        gen = AIMessageGenerator()
+        
+        # "firewall" contains "fire" but should pass
+        message = "Configuring firewall rules in pfSense! #Networking #Security"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is False
+        
+        # "firefox" contains "fire" but should pass
+        message = "Testing my site in Firefox browser #WebDev"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is False
+        
+        # "campfire" contains "fire" but should pass
+        message = "Building a campfire in the game #Survival"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is False
+    
+    def test_word_boundary_matching_forbidden(self):
+        """Forbidden words should respect word boundaries like profanity filter."""
+        gen = AIMessageGenerator()
+        
+        # "legendary" in "non-legendary" should still be caught (word boundary after 'legendary')
+        message = "Testing legendary items #Gaming"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        assert has_forbidden is True
+        assert "legendary" in words
+        
+        # But compound words should pass
+        message = "The smashing pumpkins #Music"
+        has_forbidden, words = gen._contains_forbidden_words(message)
+        # "smashing" contains "smash" but is a different word
+        # This should pass since we're matching whole words
+        assert has_forbidden is False
+
+
 class TestQualityScoring:
     """Test AI homework grading. Because that's what we've become."""
     
@@ -246,6 +296,50 @@ class TestQualityScoring:
         # Should detect repetition
         assert score < 8
         assert any("repeat" in issue.lower() for issue in issues)
+    
+    def test_title_verbatim_repost_deduction(self):
+        """Message that just reposts the title verbatim should be heavily penalized."""
+        gen = AIMessageGenerator()
+        
+        # Exact title repost
+        title = "Valorant Ranked Grind"
+        message = "Valorant Ranked Grind #Valorant #Ranked #FPS"
+        
+        score, issues = gen._score_message_quality(message, title)
+        
+        # Should be heavily penalized
+        assert score < 6
+        assert any("repost" in issue.lower() or "verbatim" in issue.lower() for issue in issues)
+    
+    def test_title_too_similar_deduction(self):
+        """Message that is too similar to title (>70% character length ratio) should be penalized."""
+        gen = AIMessageGenerator()
+        
+        # Very high overlap with title
+        title = "Minecraft Creative Building Adventure"
+        message = "Minecraft Creative Building Adventure time! #Minecraft #Creative #Building"
+        
+        score, issues = gen._score_message_quality(message, title)
+        
+        # Should be penalized for being too similar
+        assert score <= 7
+        assert any("similar" in issue.lower() or "title" in issue.lower() for issue in issues)
+    
+    def test_title_based_but_unique_passes(self):
+        """Message based on title but with unique content should pass."""
+        gen = AIMessageGenerator()
+        
+        # References title but adds engagement
+        title = "Valorant Ranked Grind"
+        message = "Time to climb the ranks! Join me for some Valorant ranked 🎮 #Valorant #Competitive #FPS"
+        
+        score, issues = gen._score_message_quality(message, title)
+        
+        # Should score well (references title but isn't just copying it)
+        assert score >= 7
+        # Should not have title-related issues
+        title_issues = [issue for issue in issues if "title" in issue.lower() or "repost" in issue.lower() or "similar" in issue.lower()]
+        assert len(title_issues) == 0
 
 
 class TestPlatformSpecificValidation:

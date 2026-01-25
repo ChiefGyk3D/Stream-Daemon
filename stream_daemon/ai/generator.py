@@ -71,7 +71,7 @@ class AIMessageGenerator:
         self.dedup_cache_size = int(get_config('LLM', 'dedup_cache_size', default='20'))
         self.enable_quality_scoring = get_config('LLM', 'enable_quality_scoring', default='False').lower() == 'true'
         self.min_quality_score = int(get_config('LLM', 'min_quality_score', default='6'))
-        self.max_emoji_count = int(get_config('LLM', 'max_emoji_count', default='1'))
+        self.max_emoji_count = int(get_config('LLM', 'max_emoji_count', default='2'))
         self.enable_profanity_filter = get_config('LLM', 'enable_profanity_filter', default='False').lower() == 'true'
         self.profanity_severity = get_config('LLM', 'profanity_severity', default='moderate')
         self.enable_platform_validation = get_config('LLM', 'enable_platform_validation', default='True').lower() == 'true'
@@ -175,7 +175,12 @@ class AIMessageGenerator:
         ]
         
         message_lower = message.lower()
-        found_words = [word for word in forbidden_words if word in message_lower]
+        found_words = []
+        
+        for word in forbidden_words:
+            # Use word boundaries to avoid false positives (e.g., 'firewall' shouldn't match 'fire')
+            if re.search(rf'\b{word}\b', message_lower):
+                found_words.append(word)
         
         return (len(found_words) > 0, found_words)
     
@@ -463,6 +468,26 @@ class AIMessageGenerator:
             score -= 3
             issues.append("Doesn't reference stream title/content")
         
+        # Check if message is just reposting the title (should be based on it, not duplicate it)
+        # Extract content before hashtags for comparison
+        content_before_hashtags = re.split(r'\s+#', message)[0].strip()
+        title_clean = title.strip()
+        
+        # Check if message is essentially just the title with minimal additions
+        # Remove punctuation for better comparison
+        content_no_punct = re.sub(r'[^\w\s]', '', content_before_hashtags.lower())
+        title_no_punct = re.sub(r'[^\w\s]', '', title_clean.lower())
+        
+        # Case 1: Content is exactly the title (or title with punctuation)
+        if content_no_punct.strip() == title_no_punct.strip():
+            score -= 4
+            issues.append("Message just reposts the title verbatim - should encourage engagement instead")
+        # Case 2: Title makes up >70% of the content length (lazy repost with minor additions like "playing..." or "!")
+        # Only check if title is not longer than content (otherwise ratio doesn't make sense)
+        elif len(title_no_punct) > 0 and len(content_no_punct) >= len(title_no_punct) and len(title_no_punct) / len(content_no_punct) > 0.7:
+            score -= 3
+            issues.append("Message too similar to title - should add value and encourage viewers")
+        
         # Check for personality/engagement (exclamation marks, questions, emojis)
         has_personality = bool(
             re.search(r'[!?]', message) or
@@ -670,57 +695,67 @@ class AIMessageGenerator:
 
 """
         
-        return f"""{strict_prefix}You are a social media assistant that writes go-live stream announcements.
+        return f"""{strict_prefix}You are a social media assistant that writes go-live stream announcements with personality and hype.
 
 TASK: Write a short, engaging post announcing that {username} is live on {platform_name}.
 
 STREAM TITLE: "{title}"
 
-STEP 1 - CONTENT RULES (FOLLOW EXACTLY):
-✓ Length: MUST be {content_max} characters or less
+STEP 1 - STYLE & TONE:
+✓ Match the vibe: Read the title and match its energy (technical/professional, gaming/competitive, casual/chill, creative/artistic, etc.)
+✓ Be personality-driven: Write like a real person with character, not a corporate bot
+✓ Add hype: Make people want to click - build excitement without being cringe
+✓ Use formatting: Short lines, bullet points (•), or line breaks work great for impact
+✓ Emoji: Use 0-2 emojis that fit the vibe (🔴 for live, 🔥 for hype, 🎮 for gaming, etc.)
+
+STEP 2 - CONTENT RULES (FOLLOW EXACTLY):
+✓ Length: MUST be {content_max} characters or less (including hashtags)
 ✓ Output: ONLY the post text (no quotes, no meta-commentary, no labels)
-✓ Tone: Casual, friendly, genuine (like a real person, not a bot)
-✓ Call-to-action: Include ONE phrase like "come hang out", "join me", or "let's go"
-✓ Emoji: Use 0-1 emoji maximum (optional)
+✓ Based on title: Break down what's happening BUT don't just copy/paste the title
+✓ Call-to-action: Natural invite like "come hang out", "let's build", "watch the chaos"
+✗ DO NOT repost the title verbatim - the link already shows it
 ✗ DO NOT include the URL (it's added automatically)
 ✗ DO NOT invent details not in the title (no "drops enabled", "giveaways", "tonight at 7pm", etc.)
-✗ DO NOT use cringe words: "INSANE", "EPIC", "smash that", "unmissable", "crazy"
+✗ DO NOT use cringe words: "INSANE", "EPIC", "smash that", "unmissable", "legendary"
 
-STEP 2 - HASHTAG RULES (CRITICAL):
+STEP 3 - HASHTAG RULES (CRITICAL):
 You MUST include EXACTLY 3 hashtags at the end.
-
-Count: 1, 2, 3 hashtags. Not 2. Not 4. Exactly 3.
-(Yes, we have to teach a computer how to count. Welcome to the future.)
-
-Hashtag source rules:
-- Extract hashtags ONLY from words in the stream title: "{title}"
-- NEVER use the username "{username}" or any part of it as a hashtag
-- NEVER use generic tags (#Gaming, #Live, #Stream) unless in the title
+- Extract hashtags from key words/topics in the title
+- NEVER use the username "{username}" as a hashtag
+- NEVER use generic tags (#Gaming, #Live, #Stream) unless they're in the title
 - Format: space before each hashtag
 
-EXAMPLES:
+EXAMPLES OF DIFFERENT STYLES:
 
-Example 1:
+Example 1 - Tech/Professional:
+Title: "Building a Firewall | Cybersecurity & Linux"
+Good: "Stream is live 🔴
+
+Building a firewall from scratch.
+Cybersecurity rants included.
+Linux tinkering after.
+
+Come hang out. #Cybersecurity #Linux #Firewall"
+
+Example 2 - Gaming/Competitive:
+Title: "Valorant Ranked Climb"
+Good: "Ranked grind time.
+Climbing out of plat.
+Let's get it. #Valorant #Ranked #Competitive"
+
+Example 3 - Creative/Chill:
 Title: "Minecraft Creative Building"
-Good post: "Building something cool in Minecraft! Come hang out and share ideas 🏗️ #Minecraft #Creative #Building"
-(3 hashtags from title words)
+Good: "Building something cool in Minecraft! Come share ideas and hang out 🏗️ #Minecraft #Creative #Building"
 
-Example 2:
-Title: "Valorant Competitive"
-Good post: "Ranked grind time! Let's climb together #Valorant #Competitive #FPS"
-(3 hashtags, last one inferred from game type)
-
-Example 3:
-Title: "Just Chatting"
-Good post: "Hanging out and talking about life. Join me! #JustChatting #{platform_name} #Community"
-(Using platform when title is generic)
+Example 4 - Casual/Fun:
+Title: "Just Chatting - AMA"
+Good: "Hanging out and answering your questions. Come chat! #JustChatting #AMA #Community"
 
 Bad examples to AVOID:
-✗ "Epic stream starting NOW! #LIVE #INSANE #HYPE" (cringe words, generic tags)
-✗ "Come watch! #TwitchStream #GamingLife" (generic, not from title)
-✗ Using only 2 hashtags or using 4+ hashtags
+✗ "EPIC stream starting NOW! INSANE gameplay! #LIVE #HYPE #GAMING" (cringe, generic)
+✗ Just copying the title: "Building a Firewall | Cybersecurity & Linux #Firewall #Cyber #Linux"
 
-NOW: Write the post for "{title}" on {platform_name}. Remember: exactly 3 hashtags, under {content_max} characters.
+NOW: Write the post for "{title}" on {platform_name}. Match the title's energy. Exactly 3 hashtags. Under {content_max} characters.
 
 Post:"""
     
@@ -748,56 +783,54 @@ Post:"""
 
 """
         
-        return f"""{strict_prefix}You are a social media assistant that writes thank-you posts after streams end.
+        return f"""{strict_prefix}You are a social media assistant that writes thank-you posts after streams end with personality.
 
 TASK: Write a short, grateful post thanking viewers for watching {username}'s stream.
 
 STREAM TITLE: "{title}"
 
-STEP 1 - CONTENT RULES (FOLLOW EXACTLY):
-✓ Length: MUST be {prompt_max} characters or less
+STEP 1 - STYLE & TONE:
+✓ Match the vibe: Keep the same energy as the stream (technical, gaming, casual, etc.)
+✓ Be genuine: Real gratitude, not corporate-speak
+✓ Keep it natural: Short, punchy, or casual - whatever fits the stream's style
+✓ Emoji: Use 0-2 emojis that fit the vibe (optional)
+
+STEP 2 - CONTENT RULES (FOLLOW EXACTLY):
+✓ Length: MUST be {prompt_max} characters or less (including hashtags)
 ✓ Output: ONLY the post text (no quotes, no meta-commentary)
-✓ Tone: Warm, genuine, grateful (not overly enthusiastic)
-✓ Message: Simple thank you for watching/joining
-✓ Emoji: Use 0-1 emoji maximum (optional)
+✓ Based on title: Reference what was streamed BUT don't just copy/paste the title
+✓ Message: Simple, genuine thank you for watching/joining
+✗ DO NOT repost the title verbatim - add gratitude and personality
 ✗ DO NOT invent details (no "200 viewers", "raided someone", "highlight was X", "VOD soon")
 ✗ DO NOT mention next stream time or schedule
-✗ DO NOT use exaggerated words: "AMAZING", "INCREDIBLE", "INSANE", "smashed it"
+✗ DO NOT use exaggerated words: "AMAZING", "INCREDIBLE", "INSANE", "legendary"
 
-STEP 2 - HASHTAG RULES (CRITICAL):
+STEP 3 - HASHTAG RULES (CRITICAL):
 You MUST include EXACTLY 2 hashtags at the end.
-
-Count: 1, 2 hashtags. Not 1. Not 3. Exactly 2.
-
-Hashtag source rules:
-- Extract hashtags ONLY from words in the stream title: "{title}"
-- NEVER use the username "{username}" or any part of it as a hashtag
+- Extract hashtags from key words/topics in the title
+- NEVER use the username "{username}" as a hashtag
 - NEVER use generic tags unless the title has no clear words
 - Format: space before each hashtag
 
 EXAMPLES:
 
-Example 1:
-Title: "Minecraft Building"
-Good post: "Thanks for hanging out while I built! See you next time 🏗️ #Minecraft #Building"
-(2 hashtags from title)
+Example 1 - Tech/Professional:
+Title: "Firewall Build | Cybersecurity"
+Good: "Stream's over! Thanks for watching the firewall build. GG #Cybersecurity #Homelab"
 
-Example 2:
+Example 2 - Gaming:
 Title: "Valorant Ranked"
-Good post: "Stream's over! Thanks for watching the ranked grind gg #Valorant #Ranked"
-(2 hashtags from title)
+Good: "Thanks for watching the ranked grind! See you next time #Valorant #Ranked"
 
-Example 3:
-Title: "Just Chatting"
-Good post: "Thanks for the great conversation today! #{platform_name} #GG"
-(Using platform when title is generic)
+Example 3 - Creative:
+Title: "Minecraft Building"
+Good: "Thanks for hanging out while I built! See you next time 🏗️ #Minecraft #Building"
 
 Bad examples to AVOID:
-✗ "AMAZING stream! 150 viewers! Raided someone! #EPIC #HYPE #GG" (invented details, 3 tags)
+✗ "AMAZING stream! 150 viewers! Raided someone! #EPIC #HYPE" (invented details, cringe)
 ✗ "Thanks everyone! Stream again tomorrow at 7pm!" (mentioned next stream time)
-✗ Using only 1 hashtag or using 3+ hashtags
 
-NOW: Write the thank-you post for "{title}" on {platform_name}. Remember: exactly 2 hashtags, under {prompt_max} characters.
+NOW: Write the thank-you post for "{title}" on {platform_name}. Match the stream's vibe. Exactly 2 hashtags. Under {prompt_max} characters.
 
 Post:"""
     

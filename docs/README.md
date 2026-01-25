@@ -68,6 +68,12 @@ Enhance your stream announcements with powerful features:
   - Platform-aware character limits
   - Automatic fallback to static messages
   - See [Ollama Migration Guide](features/ollama-migration.md) to switch providers
+
+- **[LLM Model Recommendations](features/llm-model-recommendations.md)** 🎯 **NEW!** - Choose the right model for your GPU
+  - VRAM-based recommendations (4GB to 24GB+)
+  - Qwen 2.5, Gemma 3, LLaMA 3.1, Mistral comparisons
+  - Optimized settings per model size
+  - Multi-GPU setup guidance
   
 - **[Custom Messages](features/custom-messages.md)** - Personalize announcements
   - Platform-specific templates (Twitch, YouTube, Kick)
