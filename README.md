@@ -248,7 +248,7 @@ That's it! Stream Daemon will now monitor your streams and post announcements au
    ```bash
    # On your LLM server (can be same machine or remote):
    curl -fsSL https://ollama.com/install.sh | sh
-   ollama pull gemma2:2b  # Or gemma3:4b for better quality
+   ollama pull gemma3:4b  # 🏆 Recommended - fast (~1s) and great quality
    ollama serve
    
    # In your .env file:
@@ -256,7 +256,7 @@ That's it! Stream Daemon will now monitor your streams and post announcements au
    LLM_PROVIDER=ollama
    LLM_OLLAMA_HOST=http://localhost  # Or your server IP
    LLM_OLLAMA_PORT=11434
-   LLM_MODEL=gemma2:2b
+   LLM_MODEL=gemma3:4b
    
    # Test it:
    python3 tests/test_ollama.py

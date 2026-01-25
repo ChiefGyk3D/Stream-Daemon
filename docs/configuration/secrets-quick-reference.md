@@ -77,7 +77,7 @@ python3 stream-daemon.py
 | Webhooks | .env | `DISCORD_WEBHOOK_URL=https://...` |
 | Usernames | .env | `TWITCH_USERNAME=yourname` |
 | LLM Provider | .env | `LLM_PROVIDER=gemini` or `LLM_PROVIDER=ollama` |
-| LLM Settings | .env | `LLM_MODEL=gemma2:2b`, `LLM_OLLAMA_HOST=http://192.168.1.100` |
+| LLM Settings | .env | `LLM_MODEL=gemma3:4b`, `LLM_OLLAMA_HOST=http://192.168.1.100` |
 | Settings | .env | `SETTINGS_CHECK_INTERVAL=5` |
 
 **Run with:**

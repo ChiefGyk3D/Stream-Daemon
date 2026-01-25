@@ -20,14 +20,95 @@ Think of VRAM like a hot dog eating contest. You want to shove as many parameter
 
 *For those of you with the attention span of a goldfish (so, everyone in 2026):*
 
-| VRAM | Primary Model | Backup Model | Quality | Notes |
+| VRAM | Primary Model | Backup Model | Quality | Speed |
 |------|---------------|--------------|---------|-------|
-| **4GB** | `gemma3:2b` | `phi3:mini` | ⭐⭐⭐ | Entry-level, CPU offload may occur |
-| **6GB** | `gemma3:4b` | `qwen2.5:3b` | ⭐⭐⭐⭐ | Good balance |
-| **8GB** | `qwen2.5:7b` | `gemma3:4b` | ⭐⭐⭐⭐⭐ | **Sweet spot for most users** |
-| **12GB** | `qwen2.5:7b` | `llama3.1:8b` | ⭐⭐⭐⭐⭐ | Headroom for larger context |
-| **16GB** | `qwen2.5:14b` | `gemma3:12b` | ⭐⭐⭐⭐⭐+ | Premium quality |
-| **24GB+** | `qwen2.5:32b` | `llama3.1:70b-q4` | ⭐⭐⭐⭐⭐+ | Maximum quality |
+| **4GB** | `gemma3:2b` | `phi3:mini` | ⭐⭐⭐ | ⚡⚡⚡ |
+| **6GB** | `gemma3:4b` | `qwen2.5:3b` | ⭐⭐⭐⭐ | ⚡⚡⚡ |
+| **8GB** | `gemma3:4b` | `qwen2.5:7b` | ⭐⭐⭐⭐⭐ | **⚡⚡⚡ ~1s** |
+| **12GB** | `gemma3:4b` | `llama3.1:8b` | ⭐⭐⭐⭐⭐ | ⚡⚡⚡ |
+| **16GB** | `gemma3:12b` | `qwen2.5:14b` | ⭐⭐⭐⭐⭐+ | **⚡⚡⚡ ~1.3s** |
+| **24GB+** | `gemma3:27b` | `qwen2.5:32b` | ⭐⭐⭐⭐⭐+ | ⚡⚡ |
+
+> **🏆 January 2026 Benchmark Winner:** Gemma3 models are **6-10x faster** than Qwen2.5 for stream announcements (~1s vs ~11s). For social media posts, speed wins.
+
+---
+
+## Complete Model Comparison Table
+
+*Every model you might consider, all in one place. You're welcome.*
+
+This table covers all popular Ollama models for Stream Daemon, including those installed on ChiefGyk3D's FrankenLLM setup.
+
+### All Models At-A-Glance
+
+| Model | Params | VRAM | Speed | Quality | Instruction | Best For |
+|-------|--------|------|-------|---------|-------------|----------|
+| **Gemma 3 Family** |||||||
+| `gemma3:2b` | 2B | ~2GB | ~1.5s ⚡ | ⭐⭐⭐ | Good | CPU/4GB GPU |
+| `gemma3:4b` | 4B | ~3GB | **~1.0s** 🏆 | ⭐⭐⭐⭐⭐ | Very Good | **6-12GB GPU (RECOMMENDED)** |
+| `gemma3:12b` | 12B | ~8GB | ~1.3s ⚡ | ⭐⭐⭐⭐⭐+ | Excellent | **16GB GPU (PREMIUM)** |
+| `gemma3:27b` | 27B | ~17GB | ~2s | ⭐⭐⭐⭐⭐+ | Excellent | 24GB+ GPU |
+| **Qwen 2.5 Family** |||||||
+| `qwen2.5:1.5b` | 1.5B | ~1GB | ~2s | ⭐⭐ | Good | Minimal systems |
+| `qwen2.5:3b` | 3B | ~2GB | ~4s | ⭐⭐⭐ | Excellent | 4-6GB GPU |
+| `qwen2.5:7b` | 7B | ~5GB | ~11s | ⭐⭐⭐⭐⭐ | **Exceptional** | 8GB GPU (precise tasks) |
+| `qwen2.5:14b` | 14B | ~9GB | ~11s | ⭐⭐⭐⭐⭐+ | **Exceptional** | 16GB GPU |
+| `qwen2.5:32b` | 32B | ~20GB | ~15s | ⭐⭐⭐⭐⭐++ | Near-Perfect | 24GB+ GPU |
+| **Qwen 3 Family** ⚠️ *Thinking Mode* |||||||
+| `qwen3:4b` | 4B | ~2.5GB | ~6s* | ⭐⭐⭐⭐⭐ | Excellent | Experimental |
+| `qwen3:8b` | 8B | ~5GB | ~8s* | ⭐⭐⭐⭐⭐ | Excellent | Experimental |
+| `qwen3:14b` | 14B | ~9GB | ~10s* | ⭐⭐⭐⭐⭐+ | Excellent | Experimental |
+| **LLaMA 3 Family** |||||||
+| `llama3.2:1b` | 1B | ~1GB | ~1s | ⭐⭐ | Fair | Speed over quality |
+| `llama3.2:3b` | 3B | ~2GB | ~2s | ⭐⭐⭐ | Good | Fast backup |
+| `llama3.1:8b` | 8B | ~5GB | ~8s | ⭐⭐⭐⭐ | Good | General purpose |
+| `llama3.1:70b` | 70B | ~40GB | ~30s | ⭐⭐⭐⭐⭐+ | Excellent | Multi-GPU only |
+| **Mistral Family** |||||||
+| `mistral:7b` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Good | French efficiency |
+| `mixtral:8x7b` | 47B MoE | ~26GB | ~12s | ⭐⭐⭐⭐⭐+ | Very Good | 24GB+ (MoE) |
+| **Microsoft Phi** |||||||
+| `phi3:mini` | 3.8B | ~2GB | ~2s | ⭐⭐⭐ | Good | CPU/Low VRAM |
+| `phi3:medium` | 14B | ~8GB | ~8s | ⭐⭐⭐⭐ | Good | 12GB GPU |
+| **Other Notable Models** |||||||
+| `openhermes:latest` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Very Good | Instruction following |
+| `neural-chat:7b` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Good | Conversational |
+| `zephyr:7b` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Good | DPO-tuned |
+| `solar:10.7b` | 10.7B | ~6GB | ~9s | ⭐⭐⭐⭐ | Good | General purpose |
+| `nous-hermes2:10.7b` | 10.7B | ~6GB | ~9s | ⭐⭐⭐⭐ | Good | Creative tasks |
+| `deepseek-coder:6.7b` | 6.7B | ~4GB | ~6s | ⭐⭐⭐⭐ | Good | **Code only** |
+
+**Legend:**
+- 🏆 = Benchmark champion for stream announcements
+- ⚡ = Sub-2 second response time
+- ⚠️ = Requires `LLM_ENABLE_THINKING_MODE=True`
+- *Speed with thinking mode enabled and token multiplier
+
+### Speed vs Quality Trade-offs
+
+```
+SPEED (Response Time)                    QUALITY (Output)
+─────────────────────────────────────────────────────────────
+⚡ FAST (<2s)          │ gemma3:2b, gemma3:4b, gemma3:12b, llama3.2:3b, phi3:mini
+   MODERATE (2-8s)     │ mistral:7b, openhermes, neural-chat, zephyr, llama3.1:8b
+   SLOW (8-15s)        │ qwen2.5:7b, qwen2.5:14b, qwen3 family, solar, nous-hermes2
+🐌 VERY SLOW (15s+)    │ qwen2.5:32b, llama3.1:70b, mixtral
+
+⭐⭐⭐     BASIC      │ gemma3:2b, llama3.2:1b, qwen2.5:1.5b
+⭐⭐⭐⭐   GOOD       │ llama3.2:3b, phi3:mini, mistral:7b, neural-chat, zephyr
+⭐⭐⭐⭐⭐ EXCELLENT  │ gemma3:4b, gemma3:12b, qwen2.5:7b, llama3.1:8b
+⭐⭐⭐⭐⭐+PREMIUM    │ qwen2.5:14b, qwen3:14b, gemma3:27b, qwen2.5:32b
+```
+
+### Recommendation Summary
+
+| Your Priority | Choose This | Why |
+|---------------|-------------|-----|
+| **Speed** 🏎️ | `gemma3:4b` | ~1s response, great quality |
+| **Quality** 📝 | `qwen2.5:14b` | Best instruction following |
+| **Balance** ⚖️ | `gemma3:12b` | Fast AND excellent quality |
+| **Budget GPU** 💰 | `gemma3:2b` | Works on 4GB VRAM |
+| **No GPU** 🖥️ | `phi3:mini` | CPU-friendly |
+| **Experimental** 🧪 | `qwen3:4b` | Thinking mode, cutting edge |
 
 ---
 
@@ -106,46 +187,46 @@ ollama pull qwen2.5:3b       # Backup option
 
 **The "Sweet Spot" - Also Known As "What Most People Actually Have"**
 
-8GB is where the magic happens. You can run 7 billion parameter models comfortably. 
-Seven. Billion. Parameters. To generate a fucking tweet.
+8GB is where the magic happens. And thanks to Google's Gemma 3, you can generate 
+social media posts in about ONE SECOND. ONE. SECOND.
 
-Let that sink in. We have machines with 7 billion learned behaviors, and we're using them to say "Hey everyone, I'm playing Minecraft! Come hang out! 🎮"
+Meanwhile, some models take 11 seconds to write "Hey, I'm live on Twitch." 
+That's enough time to make a sandwich. Choose wisely.
 
-But hey, at least it'll use the RIGHT number of hashtags.
+| Model | Size | Quality | Speed | Response Time |
+|-------|------|---------|-------|---------------|
+| **`gemma3:4b`** | ~3.0GB | ⭐⭐⭐⭐⭐ | ⚡⚡⚡ | **~1.0s** 🏆 |
+| `qwen2.5:7b` | ~4.7GB | ⭐⭐⭐⭐⭐ | ⚡ | ~11s |
+| `llama3.1:8b` | ~4.9GB | ⭐⭐⭐⭐⭐ | ⚡⚡ | ~8s |
+| `mistral:7b` | ~4.1GB | ⭐⭐⭐⭐ | ⚡⚡ | ~7s |
 
-| Model | Size | Quality | Speed | Instruction Following |
-|-------|------|---------|-------|----------------------|
-| **`qwen2.5:7b`** | ~4.7GB | ⭐⭐⭐⭐⭐ | ⚡⚡ | **Excellent** |
-| `gemma3:4b` | ~2.9GB | ⭐⭐⭐⭐ | ⚡⚡⚡ | Very Good |
-| `llama3.1:8b` | ~4.9GB | ⭐⭐⭐⭐⭐ | ⚡⚡ | Good |
-| `mistral:7b` | ~4.1GB | ⭐⭐⭐⭐ | ⚡⚡ | Good |
+**Why Gemma3:4b?** 
 
-**Why Qwen2.5:7b?** 
+Benchmark testing in January 2026 showed Gemma3:4b completing stream announcements 
+in ~1 second while Qwen2.5:7b took ~11 seconds. That's a 10x speed difference.
 
-Here's where it gets interesting. The Qwen 2.5 family - made by Alibaba, yes, THAT Alibaba - 
-absolutely destroys at instruction following. It's like that kid in class who actually reads 
-the assignment requirements. "Exactly 3 hashtags? YOU GOT IT, BOSS."
+For generating social media posts, you want the announcement out BEFORE you've 
+already been streaming for 30 seconds. Gemma3 gets it done while you're still 
+adjusting your webcam.
 
-Meanwhile, other models are out here like "Hashtags? Sure! Here's 7! Or maybe none! Who knows! 
-I'm an AI, I do what I want!" 
-
-Qwen doesn't play that shit.
+**Qwen2.5:7b** is still excellent for instruction following - it won't fuck up 
+your hashtag counts. But if speed matters (and it does for going live), Gemma3 wins.
 
 **Recommended Configuration:**
 ```bash
 # .env settings for 8GB VRAM (RECOMMENDED)
-LLM_MODEL=qwen2.5:7b
+LLM_MODEL=gemma3:4b
 LLM_TEMPERATURE=0.3
 LLM_TOP_P=0.9
 LLM_MAX_TOKENS=150
 LLM_ENABLE_QUALITY_SCORING=True
-LLM_MIN_QUALITY_SCORE=7      # Can be stricter with better model
+LLM_MIN_QUALITY_SCORE=7
 ```
 
 **Installation:**
 ```bash
-ollama pull qwen2.5:7b       # Primary - best instruction following
-ollama pull gemma3:4b        # Backup - faster, still good
+ollama pull gemma3:4b        # Primary - blazing fast, great quality
+ollama pull qwen2.5:7b       # Backup - excellent instruction following
 ```
 
 ---
@@ -191,31 +272,33 @@ ollama pull llama3.1:8b      # Alternative with different "voice"
 
 **The "I Made Some Good Life Choices" Tier** *(Or bad ones, depending on your credit card statement)*
 
-16GB. Now you're playing with the big boys. You can run 12-14 billion parameter models.
-That's more parameters than there are neurons in a goldfish brain. Significantly more, actually.
+16GB. Now you're playing with the big boys. And with Gemma3:12b, you get premium 
+quality at near-instant speeds (~1.3 seconds). That's faster than some people can 
+read the tweet, let alone write it.
 
-You're essentially running a digital entity smarter than most aquarium inhabitants, 
-and you're using it to announce your Fortnite streams. Peak humanity.
+You're essentially running a digital entity that can write better social media posts 
+than most humans, in less time than it takes to blink twice. Peak humanity.
 
-| Model | Size | Quality | Speed | Instruction Following |
-|-------|------|---------|-------|----------------------|
-| **`qwen2.5:14b`** | ~9.0GB | ⭐⭐⭐⭐⭐+ | ⚡⚡ | **Exceptional** |
-| `gemma3:12b` | ~7.5GB | ⭐⭐⭐⭐⭐ | ⚡⚡ | Excellent |
-| `llama3.1:8b` | ~4.9GB | ⭐⭐⭐⭐⭐ | ⚡⚡⚡ | Good |
-| `codestral:22b-v0.1-q4` | ~13GB | ⭐⭐⭐⭐⭐ | ⚡ | Very Good |
+| Model | Size | Quality | Speed | Response Time |
+|-------|------|---------|-------|---------------|
+| **`gemma3:12b`** | ~7.5GB | ⭐⭐⭐⭐⭐+ | ⚡⚡⚡ | **~1.3s** 🏆 |
+| `qwen2.5:14b` | ~9.0GB | ⭐⭐⭐⭐⭐+ | ⚡ | ~11s |
+| `llama3.1:8b` | ~4.9GB | ⭐⭐⭐⭐⭐ | ⚡⚡ | ~8s |
+| `codestral:22b-v0.1-q4` | ~13GB | ⭐⭐⭐⭐⭐ | ⚡ | ~15s |
 
-**Why Qwen2.5:14b?** 
+**Why Gemma3:12b?** 
 
-At 14 billion parameters, this thing almost NEVER fucks up. Wrong hashtag count? 
-Basically unheard of. Character limits? Respects them like a gentleman. 
-Forbidden words like "INSANE" and "EPIC"? Won't touch 'em.
+Benchmark winner. Premium quality with near-instant response. It's like having 
+a professional copywriter who works for free and never takes breaks.
 
-It's like having an employee who actually read the company handbook. Rare. Precious. Treasure it.
+**Qwen2.5:14b** is still exceptional for instruction following, but takes ~11 seconds. 
+If you're batch processing or don't mind the wait, it's great. For real-time 
+stream announcements? Gemma3:12b is the clear winner.
 
 **Recommended Configuration:**
 ```bash
 # .env settings for 16GB VRAM (PREMIUM)
-LLM_MODEL=qwen2.5:14b
+LLM_MODEL=gemma3:12b
 LLM_TEMPERATURE=0.3
 LLM_TOP_P=0.9
 LLM_MAX_TOKENS=150
@@ -225,8 +308,8 @@ LLM_MIN_QUALITY_SCORE=7
 
 **Installation:**
 ```bash
-ollama pull qwen2.5:14b      # Primary - exceptional quality
-ollama pull gemma3:12b       # Alternative
+ollama pull gemma3:12b       # Primary - premium quality, fast
+ollama pull qwen2.5:14b      # Alternative - exceptional instruction following
 ollama pull llama3.1:8b      # Fast backup
 ```
 

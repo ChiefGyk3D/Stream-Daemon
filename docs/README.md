@@ -74,6 +74,11 @@ Enhance your stream announcements with powerful features:
   - Qwen 2.5, Gemma 3, LLaMA 3.1, Mistral comparisons
   - Optimized settings per model size
   - Multi-GPU setup guidance
+
+- **[Qwen3 Thinking Mode](features/qwen3-thinking-mode.md)** 🧠 **EXPERIMENTAL** - Support for Qwen3's reasoning models
+  - Extract responses from Qwen3's "thinking" field
+  - Automatic token limit adjustment
+  - Pattern-based content extraction
   
 - **[Custom Messages](features/custom-messages.md)** - Personalize announcements
   - Platform-specific templates (Twitch, YouTube, Kick)

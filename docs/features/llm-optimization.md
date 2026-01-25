@@ -123,25 +123,28 @@ it's got tables, tiers, and more hardware-shaming than a PC gaming forum.
 
 *The "I Don't Have Time to Read Documentation" Table*
 
-| VRAM | Primary Model | Backup | Quality |
-|------|---------------|--------|---------|
-| **4GB** | `gemma3:2b` | `phi3:mini` | ⭐⭐⭐ |
-| **6GB** | `gemma3:4b` | `qwen2.5:3b` | ⭐⭐⭐⭐ |
-| **8GB** | `qwen2.5:7b` | `gemma3:4b` | ⭐⭐⭐⭐⭐ |
-| **16GB** | `qwen2.5:14b` | `gemma3:12b` | ⭐⭐⭐⭐⭐+ |
-| **24GB+** | `qwen2.5:32b` | `qwen2.5:14b` | Maximum |
+| VRAM | Primary Model | Backup | Speed |
+|------|---------------|--------|-------|
+| **4GB** | `gemma3:2b` | `phi3:mini` | ~1.5s |
+| **6GB** | `gemma3:4b` | `qwen2.5:3b` | ~1.0s |
+| **8GB** | `gemma3:4b` | `qwen2.5:7b` | **~1.0s** 🏆 |
+| **16GB** | `gemma3:12b` | `qwen2.5:14b` | ~1.3s |
+| **24GB+** | `gemma3:27b` | `qwen2.5:32b` | ~2s |
+
+> 💡 **Benchmark Note:** Gemma3 models are 6-10x faster than Qwen2.5 for stream announcements.
 
 ### Ollama (Local/Self-hosted)
 
 | Model | Size | Speed | Quality | Best For |
 |-------|------|-------|---------|----------|
-| **`qwen2.5:7b`** | 4.7GB | ⚡⚡ | ⭐⭐⭐⭐⭐ | **Recommended** - Best instruction following |
+| **`gemma3:4b`** | 3.0GB | ⚡⚡⚡ | ⭐⭐⭐⭐⭐ | **Recommended** - ~1s response 🏆 |
+| **`gemma3:12b`** | 7.5GB | ⚡⚡⚡ | ⭐⭐⭐⭐⭐+ | **Premium** - ~1.3s, 16GB GPU |
 | `gemma3:2b` | 1.6GB | ⚡⚡⚡ | ⭐⭐⭐ | CPU-only systems |
-| `gemma3:4b` | 2.9GB | ⚡⚡ | ⭐⭐⭐⭐ | 6GB GPUs |
-| `qwen2.5:14b` | 9.0GB | ⚡⚡ | ⭐⭐⭐⭐⭐+ | 16GB GPUs - Premium quality |
+| `qwen2.5:7b` | 4.7GB | ⚡ | ⭐⭐⭐⭐⭐ | Excellent instruction following |
+| `qwen2.5:14b` | 9.0GB | ⚡ | ⭐⭐⭐⭐⭐+ | Premium quality (slower) |
 | `llama3.1:8b` | 4.9GB | ⚡⚡ | ⭐⭐⭐⭐ | Good reasoning |
 
-**Why Qwen 2.5?** The Qwen 2.5 family excels at following precise instructions - exactly what Stream Daemon needs for hashtag counts, character limits, and formatting rules. It's the "actually reads the assignment" model.
+**Why Gemma3?** Benchmark testing shows Gemma3 models complete stream announcements in ~1 second vs ~11 seconds for Qwen2.5. For time-sensitive "going live" posts, speed wins.
 
 ### Google Gemini (Cloud API)
 

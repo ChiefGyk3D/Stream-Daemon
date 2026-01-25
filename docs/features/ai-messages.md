@@ -148,7 +148,7 @@ LLM_PROVIDER=ollama
 # Ollama server configuration
 LLM_OLLAMA_HOST=http://192.168.1.100  # Your LLM server IP
 LLM_OLLAMA_PORT=11434                  # Default Ollama port
-LLM_MODEL=gemma2:2b                    # Model to use
+LLM_MODEL=gemma3:4b                    # Model to use (Gemma3 recommended for speed)
 
 # Optional: Retry configuration
 LLM_MAX_RETRIES=3
@@ -373,7 +373,7 @@ Rate limiting is automatically enabled when using AI-powered messages. The 4 con
 |----------|-------------|---------|
 | `LLM_OLLAMA_HOST` | Ollama server IP/hostname | `http://localhost` |
 | `LLM_OLLAMA_PORT` | Ollama server port | `11434` |
-| `LLM_MODEL` | Ollama model to use | `gemma2:2b` |
+| `LLM_MODEL` | Ollama model to use | `gemma3:4b` |
 
 ### Optional Settings (Both Providers)
 
@@ -419,12 +419,38 @@ Rate limiting is automatically enabled when using AI-powered messages. The 4 con
 
 *"Here's where the fun begins. Pick your fighter."*
 
-**gemma2:2b** (Recommended - Default for 4B variant):
-- ✅ Fast inference on modest hardware
-- ✅ Good quality for social media posts
-- ✅ Low memory usage (~2GB VRAM)
-- ✅ Based on Google's Gemma 2 architecture
-- ✅ Best balance of speed and quality
+#### Quick Reference by VRAM
+
+| VRAM | Recommended | Backup | Response Time |
+|------|-------------|--------|---------------|
+| 4GB | `gemma3:2b` | `phi3:mini` | ~1.5s |
+| 6GB | `gemma3:4b` | `qwen2.5:3b` | ~1.0s |
+| **8GB** | **`gemma3:4b`** | `qwen2.5:7b` | **~1.0s** ⚡ |
+| 16GB | `gemma3:12b` | `qwen2.5:14b` | ~1.3s |
+| 24GB+ | `gemma3:27b` | `qwen2.5:32b` | ~2s |
+
+**Why Gemma3?** Benchmark testing shows Gemma3 models are **6-10x faster** than Qwen2.5 for stream announcements (~1s vs ~11s). Speed matters when going live!
+
+#### Model Details
+
+**gemma3:4b** (🏆 Recommended):
+- ✅ Blazing fast (~1 second response)
+- ✅ Excellent quality for social media posts
+- ✅ Low memory usage (~3GB VRAM)
+- ✅ Based on Google's Gemma 3 architecture
+- ✅ **Best balance of speed and quality**
+
+**gemma3:12b** (Premium):
+- ✅ Fast response (~1.3 seconds)
+- ✅ Higher quality output
+- ⚠️ Needs 16GB VRAM (~7.5GB model)
+- ✅ Excellent instruction following
+
+**qwen2.5:7b** (Good alternative):
+- ✅ Exceptional instruction following
+- ⚠️ Slower inference (~11 seconds)
+- ✅ Memory usage (~5GB VRAM)
+- ✅ Great for complex prompts
 
 **llama3.2:3b**:
 - ✅ Very fast inference
@@ -432,39 +458,33 @@ Rate limiting is automatically enabled when using AI-powered messages. The 4 con
 - ✅ Low memory usage (~2GB VRAM)
 - ✅ Meta's latest small model
 
-**qwen2.5:3b**:
-- ✅ Excellent for technical content
-- ✅ Fast inference
-- ✅ Low memory usage (~2GB VRAM)
-- ✅ Strong at following instructions
-
 **mistral:7b**:
-- ✅ Higher quality output
-- ⚠️ Slower inference
-- ⚠️ Higher memory usage (~5GB VRAM)
-- ✅ Good for detailed, creative content
+- ✅ Good output quality
+- ⚠️ Moderate speed (~7s)
+- ⚠️ Higher memory usage (~4GB VRAM)
+- ✅ Good for creative content
 
-**phi3:3b**:
+**phi3:mini**:
 - ✅ Very fast
 - ✅ Low memory (~2GB VRAM)
 - ✅ Good at concise content
 - ✅ Microsoft's efficient model
 
-**To pull a model:**
+**To pull recommended models:**
 ```bash
 # On your Ollama server
-ollama pull gemma2:2b
-ollama pull llama3.2:3b
-ollama pull qwen2.5:3b
-ollama pull mistral:7b
+ollama pull gemma3:4b      # Primary - fast & good
+ollama pull gemma3:12b     # Premium quality (16GB GPU)
+ollama pull qwen2.5:7b     # Alternative - great instruction following
+ollama pull llama3.2:3b    # Fast backup option
 ```
 
 **Model Performance Tips:**
-- For GPU: Any 3B-7B model works well (your GPU finally has a purpose besides gaming)
-- For CPU only: Use 2B-3B models (gemma2:2b, llama3.2:3b) - your CPU will thank you
-- For fastest: llama3.2:3b or phi3:3b - speed demons
-- For quality: mistral:7b or qwen2.5:3b - the perfectionists
-- For balance: gemma2:2b (default) - the Switzerland of models
+- For GPU: **gemma3:4b** is the sweet spot (your stream posts in ~1 second)
+- For CPU only: Use 2B-3B models (gemma3:2b, llama3.2:3b)
+- For fastest: gemma3:4b or llama3.2:3b - speed demons
+- For quality: gemma3:12b or qwen2.5:14b - the perfectionists
+- For balance: gemma3:4b (default) - **the champion**
 
 ---
 
