@@ -33,6 +33,85 @@ Think of VRAM like a hot dog eating contest. You want to shove as many parameter
 
 ---
 
+## Complete Model Comparison Table
+
+*Every model you might consider, all in one place. You're welcome.*
+
+This table covers all popular Ollama models for Stream Daemon, including those installed on ChiefGyk3D's FrankenLLM setup.
+
+### All Models At-A-Glance
+
+| Model | Params | VRAM | Speed | Quality | Instruction | Best For |
+|-------|--------|------|-------|---------|-------------|----------|
+| **Gemma 3 Family** |||||||
+| `gemma3:2b` | 2B | ~2GB | ~1.5s ⚡ | ⭐⭐⭐ | Good | CPU/4GB GPU |
+| `gemma3:4b` | 4B | ~3GB | **~1.0s** 🏆 | ⭐⭐⭐⭐⭐ | Very Good | **6-12GB GPU (RECOMMENDED)** |
+| `gemma3:12b` | 12B | ~8GB | ~1.3s ⚡ | ⭐⭐⭐⭐⭐+ | Excellent | **16GB GPU (PREMIUM)** |
+| `gemma3:27b` | 27B | ~17GB | ~2s | ⭐⭐⭐⭐⭐+ | Excellent | 24GB+ GPU |
+| **Qwen 2.5 Family** |||||||
+| `qwen2.5:1.5b` | 1.5B | ~1GB | ~2s | ⭐⭐ | Good | Minimal systems |
+| `qwen2.5:3b` | 3B | ~2GB | ~4s | ⭐⭐⭐ | Excellent | 4-6GB GPU |
+| `qwen2.5:7b` | 7B | ~5GB | ~11s | ⭐⭐⭐⭐⭐ | **Exceptional** | 8GB GPU (precise tasks) |
+| `qwen2.5:14b` | 14B | ~9GB | ~11s | ⭐⭐⭐⭐⭐+ | **Exceptional** | 16GB GPU |
+| `qwen2.5:32b` | 32B | ~20GB | ~15s | ⭐⭐⭐⭐⭐++ | Near-Perfect | 24GB+ GPU |
+| **Qwen 3 Family** ⚠️ *Thinking Mode* |||||||
+| `qwen3:4b` | 4B | ~2.5GB | ~6s* | ⭐⭐⭐⭐⭐ | Excellent | Experimental |
+| `qwen3:8b` | 8B | ~5GB | ~8s* | ⭐⭐⭐⭐⭐ | Excellent | Experimental |
+| `qwen3:14b` | 14B | ~9GB | ~10s* | ⭐⭐⭐⭐⭐+ | Excellent | Experimental |
+| **LLaMA 3 Family** |||||||
+| `llama3.2:1b` | 1B | ~1GB | ~1s | ⭐⭐ | Fair | Speed over quality |
+| `llama3.2:3b` | 3B | ~2GB | ~2s | ⭐⭐⭐ | Good | Fast backup |
+| `llama3.1:8b` | 8B | ~5GB | ~8s | ⭐⭐⭐⭐ | Good | General purpose |
+| `llama3.1:70b` | 70B | ~40GB | ~30s | ⭐⭐⭐⭐⭐+ | Excellent | Multi-GPU only |
+| **Mistral Family** |||||||
+| `mistral:7b` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Good | French efficiency |
+| `mixtral:8x7b` | 47B MoE | ~26GB | ~12s | ⭐⭐⭐⭐⭐+ | Very Good | 24GB+ (MoE) |
+| **Microsoft Phi** |||||||
+| `phi3:mini` | 3.8B | ~2GB | ~2s | ⭐⭐⭐ | Good | CPU/Low VRAM |
+| `phi3:medium` | 14B | ~8GB | ~8s | ⭐⭐⭐⭐ | Good | 12GB GPU |
+| **Other Notable Models** |||||||
+| `openhermes:latest` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Very Good | Instruction following |
+| `neural-chat:7b` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Good | Conversational |
+| `zephyr:7b` | 7B | ~4GB | ~7s | ⭐⭐⭐⭐ | Good | DPO-tuned |
+| `solar:10.7b` | 10.7B | ~6GB | ~9s | ⭐⭐⭐⭐ | Good | General purpose |
+| `nous-hermes2:10.7b` | 10.7B | ~6GB | ~9s | ⭐⭐⭐⭐ | Good | Creative tasks |
+| `deepseek-coder:6.7b` | 6.7B | ~4GB | ~6s | ⭐⭐⭐⭐ | Good | **Code only** |
+
+**Legend:**
+- 🏆 = Benchmark champion for stream announcements
+- ⚡ = Sub-2 second response time
+- ⚠️ = Requires `LLM_ENABLE_THINKING_MODE=True`
+- *Speed with thinking mode enabled and token multiplier
+
+### Speed vs Quality Trade-offs
+
+```
+SPEED (Response Time)                    QUALITY (Output)
+─────────────────────────────────────────────────────────────
+⚡ FAST (<2s)          │ gemma3:2b, gemma3:4b, gemma3:12b, llama3.2:3b, phi3:mini
+   MODERATE (2-8s)     │ mistral:7b, openhermes, neural-chat, zephyr, llama3.1:8b
+   SLOW (8-15s)        │ qwen2.5:7b, qwen2.5:14b, qwen3 family, solar, nous-hermes2
+🐌 VERY SLOW (15s+)    │ qwen2.5:32b, llama3.1:70b, mixtral
+
+⭐⭐⭐     BASIC      │ gemma3:2b, llama3.2:1b, qwen2.5:1.5b
+⭐⭐⭐⭐   GOOD       │ llama3.2:3b, phi3:mini, mistral:7b, neural-chat, zephyr
+⭐⭐⭐⭐⭐ EXCELLENT  │ gemma3:4b, gemma3:12b, qwen2.5:7b, llama3.1:8b
+⭐⭐⭐⭐⭐+PREMIUM    │ qwen2.5:14b, qwen3:14b, gemma3:27b, qwen2.5:32b
+```
+
+### Recommendation Summary
+
+| Your Priority | Choose This | Why |
+|---------------|-------------|-----|
+| **Speed** 🏎️ | `gemma3:4b` | ~1s response, great quality |
+| **Quality** 📝 | `qwen2.5:14b` | Best instruction following |
+| **Balance** ⚖️ | `gemma3:12b` | Fast AND excellent quality |
+| **Budget GPU** 💰 | `gemma3:2b` | Works on 4GB VRAM |
+| **No GPU** 🖥️ | `phi3:mini` | CPU-friendly |
+| **Experimental** 🧪 | `qwen3:4b` | Thinking mode, cutting edge |
+
+---
+
 ## Detailed Recommendations by VRAM Tier
 
 *Because apparently we need to categorize everything. Here's your GPU caste system:*
