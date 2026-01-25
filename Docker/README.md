@@ -330,7 +330,7 @@ LLM_ENABLE: 'True'
 LLM_PROVIDER: 'ollama'
 LLM_OLLAMA_HOST: 'http://192.168.1.100'  # Your Ollama server IP
 LLM_OLLAMA_PORT: '11434'
-LLM_MODEL: 'gemma2:2b'  # or gemma2:4b, llama3.2:3b, etc.
+LLM_MODEL: 'gemma3:4b'  # or gemma3:12b for 16GB GPUs
 ```
 
 **Benefits:**

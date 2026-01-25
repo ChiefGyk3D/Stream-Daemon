@@ -1086,7 +1086,7 @@ Post:"""
             # Get Ollama configuration
             ollama_host = get_config('LLM', 'ollama_host', default='http://localhost')
             ollama_port = get_config('LLM', 'ollama_port', default='11434')
-            model_name = get_config('LLM', 'model', default='gemma2:2b')
+            model_name = get_config('LLM', 'model', default='gemma3:4b')
             
             # Build full host URL if port is specified separately
             if not ollama_host.startswith('http'):

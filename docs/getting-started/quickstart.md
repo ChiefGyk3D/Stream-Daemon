@@ -72,7 +72,7 @@ LLM_ENABLE=True
 LLM_PROVIDER=ollama  # Use 'ollama' for local AI or 'gemini' for cloud
 LLM_OLLAMA_HOST=http://localhost
 LLM_OLLAMA_PORT=11434
-LLM_MODEL=gemma2:2b
+LLM_MODEL=gemma3:4b
 
 # =====================================
 # INTERVALS (optional)
@@ -83,7 +83,7 @@ SETTINGS_CHECK_INTERVAL=5  # Check every 5 minutes
 **Where to get credentials:**
 - **Twitch:** [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps)
 - **Mastodon:** Your instance → Settings → Development → New Application
-- **Ollama:** [ollama.com](https://ollama.com) - Install with `curl -fsSL https://ollama.com/install.sh | sh`, then `ollama pull gemma2:2b`
+- **Ollama:** [ollama.com](https://ollama.com) - Install with `curl -fsSL https://ollama.com/install.sh | sh`, then `ollama pull gemma3:4b`
 
 **Want more platforms?** See [configuration examples](#configuration-examples) below.
 

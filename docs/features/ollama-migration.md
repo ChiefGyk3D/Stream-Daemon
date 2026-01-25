@@ -85,13 +85,13 @@ ollama search gemma
 Choose a model based on your hardware:
 
 ```bash
-# Recommended for most users (4B params, ~2GB VRAM)
-ollama pull gemma2:2b
+# 🏆 Recommended for most users (~1 second response time!)
+ollama pull gemma3:4b
 
 # Alternative options:
-ollama pull llama3.2:3b   # Meta's latest small model
-ollama pull qwen2.5:3b    # Great for technical content
-ollama pull mistral:7b    # Higher quality (needs more VRAM)
+ollama pull gemma3:12b    # Premium quality (16GB GPU)
+ollama pull qwen2.5:7b    # Excellent instruction following (slower ~11s)
+ollama pull llama3.2:3b   # Fast backup option
 ```
 
 ### Step 4: Start Ollama Server
@@ -120,7 +120,7 @@ LLM_OLLAMA_HOST=http://192.168.1.100  # Your server IP
 LLM_OLLAMA_PORT=11434                  # Default port
 
 # Model to use
-LLM_MODEL=gemma2:2b
+LLM_MODEL=gemma3:4b
 ```
 
 ### Step 6: Test
@@ -166,7 +166,7 @@ LLM_ENABLE=True
 LLM_PROVIDER=ollama                    # Add this line
 LLM_OLLAMA_HOST=http://192.168.1.100  # Add this line
 LLM_OLLAMA_PORT=11434                  # Add this line
-LLM_MODEL=gemma2:2b                    # Change model
+LLM_MODEL=gemma3:4b                    # Change model (fast!)
 
 # GEMINI_API_KEY is ignored when using Ollama (can leave it or remove it)
 ```
@@ -189,7 +189,7 @@ LLM_ENABLE=True
 LLM_PROVIDER=ollama
 LLM_OLLAMA_HOST=http://192.168.1.100
 LLM_OLLAMA_PORT=11434
-LLM_MODEL=gemma2:2b
+LLM_MODEL=gemma3:4b
 ```
 
 ### After (Gemini)
@@ -236,8 +236,8 @@ LLM_OLLAMA_PORT=11434
 
 # Model selection (provider-specific)
 # For Gemini: gemini-2.0-flash-lite, gemini-1.5-flash, etc.
-# For Ollama: gemma2:2b, llama3.2:3b, mistral:7b, etc.
-LLM_MODEL=gemma2:2b
+# For Ollama: gemma3:4b, gemma3:12b, qwen2.5:7b, etc.
+LLM_MODEL=gemma3:4b
 
 # Shared settings
 LLM_MAX_RETRIES=3
@@ -251,7 +251,7 @@ Just change one line and restart:
 ```bash
 # Use Ollama (local)
 LLM_PROVIDER=ollama
-LLM_MODEL=gemma2:2b
+LLM_MODEL=gemma3:4b
 
 # Or use Gemini (cloud)
 LLM_PROVIDER=gemini
@@ -267,12 +267,12 @@ That's it! All other settings stay the same, and the unused provider's config is
 ### For Ollama
 
 | Use Case | Model | VRAM | Speed | Quality |
-|----------|-------|------|-------|---------|
-| **General use** | `gemma2:2b` | ~2GB | Fast | Very good |
-| **Fastest** | `llama3.2:3b` | ~2GB | Very fast | Good |
-| **Technical content** | `qwen2.5:3b` | ~2GB | Fast | Excellent |
-| **Best quality** | `mistral:7b` | ~5GB | Moderate | Excellent |
-| **CPU-only** | `phi3:3b` | ~2GB | Fast | Good |
+|----------|-------|------|-------|--------|
+| **🏆 Recommended** | `gemma3:4b` | ~3GB | **~1s** | Excellent |
+| **Premium** | `gemma3:12b` | ~8GB | ~1.3s | Excellent+ |
+| **Instruction following** | `qwen2.5:7b` | ~5GB | ~11s | Excellent |
+| **Fastest small** | `llama3.2:3b` | ~2GB | Very fast | Good |
+| **CPU-only** | `gemma3:2b` | ~2GB | Fast | Good |
 
 ### For Gemini
 
@@ -289,15 +289,15 @@ That's it! All other settings stay the same, and the unused provider's config is
 ### Minimum (CPU-only)
 - **CPU:** 4 cores
 - **RAM:** 8GB
-- **Model:** `gemma2:2b` or `llama3.2:3b`
+- **Model:** `gemma3:2b` or `llama3.2:3b`
 - **Speed:** 3-10 seconds per message
 
 ### Recommended (with GPU)
-- **GPU:** 4GB VRAM (GTX 1650, RTX 3050, etc.)
+- **GPU:** 6GB+ VRAM (RTX 3060, RTX 4060, etc.)
 - **CPU:** Any modern CPU
 - **RAM:** 8GB
-- **Model:** Any 3B-7B model
-- **Speed:** 1-3 seconds per message
+- **Model:** `gemma3:4b` (🏆 ~1 second response!)
+- **Speed:** 1-2 seconds per message
 
 ### Optimal (High-end GPU)
 - **GPU:** 8GB+ VRAM (RTX 3060, 4060, etc.)
@@ -329,7 +329,7 @@ OLLAMA_HOST=0.0.0.0 ollama serve
 **Solution:**
 ```bash
 # Pull the model
-ollama pull gemma2:2b
+ollama pull gemma3:4b
 
 # Verify it's available
 ollama list
