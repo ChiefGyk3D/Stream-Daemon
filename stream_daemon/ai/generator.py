@@ -58,6 +58,16 @@ class AIMessageGenerator:
         # Retry configuration for handling transient API errors (503, 429, etc.)
         self.max_retries = int(get_config('LLM', 'max_retries', default='3'))
         self.retry_delay_base = int(get_config('LLM', 'retry_delay_base', default='2'))
+        
+        # Reconnection configuration for Ollama
+        # When Ollama becomes unavailable (server restart, network issue), we'll attempt
+        # to reconnect automatically instead of staying in a failed state forever.
+        self.enable_auto_reconnect = get_config('LLM', 'enable_auto_reconnect', default='True').lower() == 'true'
+        self.reconnect_interval = int(get_config('LLM', 'reconnect_interval', default='60'))  # seconds between reconnect attempts
+        self.max_reconnect_attempts = int(get_config('LLM', 'max_reconnect_attempts', default='0'))  # 0 = unlimited
+        self._last_reconnect_attempt = 0
+        self._reconnect_attempt_count = 0
+        self._connection_was_successful = False  # Track if we ever connected successfully
         # Generation parameters for better control with small LLMs
         # Temperature: Because even AI needs a chill pill to stop hallucinating
         # We set it low so the model doesn't get "creative" and start making shit up
@@ -850,6 +860,7 @@ Post:"""
         - 503 Service Unavailable (model overloaded)
         - 429 Rate Limit Exceeded
         - Network timeouts
+        - Connection failures (with auto-reconnect for Ollama)
         
         Uses a global semaphore to limit concurrent API calls (max 4) and enforces
         minimum 2-second delay between requests to prevent quota exhaustion when
@@ -866,6 +877,19 @@ Post:"""
         
         if max_retries is None:
             max_retries = self.max_retries
+        
+        # If disabled but we're using Ollama and had a previous successful connection,
+        # try to reconnect before giving up
+        if not self.enabled and self.provider == 'ollama' and self.ollama_host:
+            logger.debug("Ollama not enabled, checking if we can reconnect...")
+            if self._attempt_ollama_reconnect():
+                logger.info("✓ Ollama reconnected, proceeding with generation")
+            else:
+                logger.warning("⚠ Ollama reconnection failed, cannot generate AI content")
+                return None
+        
+        if not self.enabled:
+            return None
         
         last_error = None
         
@@ -943,15 +967,40 @@ Post:"""
                 
             except Exception as e:
                 last_error = e
-                error_str = str(e)
+                error_str = str(e).lower()
+                
+                # Check if it's a connection error (Ollama server down/unreachable)
+                is_connection_error = (
+                    'connection' in error_str or
+                    'connect' in error_str or
+                    'refused' in error_str or
+                    'unreachable' in error_str or
+                    'failed to connect' in error_str or
+                    'no route' in error_str
+                )
+                
+                # If it's a connection error for Ollama, attempt reconnection
+                if is_connection_error and self.provider == 'ollama':
+                    logger.error(f"✗ Failed to generate content: {e}")
+                    
+                    # Mark as disabled and attempt reconnection
+                    self.enabled = False
+                    
+                    if self._attempt_ollama_reconnect():
+                        # Reconnected! Continue to next retry attempt
+                        logger.info("🔄 Retrying generation after successful reconnect...")
+                        continue
+                    else:
+                        # Reconnection failed, give up
+                        return None
                 
                 # Check if it's a retryable error
                 is_retryable = (
                     '503' in error_str or  # Service Unavailable
                     '429' in error_str or  # Rate Limit
-                    'overloaded' in error_str.lower() or
-                    'quota' in error_str.lower() or
-                    'timeout' in error_str.lower()
+                    'overloaded' in error_str or
+                    'quota' in error_str or
+                    'timeout' in error_str
                 )
                 
                 if not is_retryable or attempt >= max_retries:
@@ -962,7 +1011,7 @@ Post:"""
                 # Calculate exponential backoff delay
                 delay = self.retry_delay_base ** attempt
                 logger.warning(
-                    f"⚠ API error (attempt {attempt + 1}/{max_retries + 1}): {error_str}. "
+                    f"⚠ API error (attempt {attempt + 1}/{max_retries + 1}): {str(e)}. "
                     f"Retrying in {delay}s..."
                 )
                 time.sleep(delay)
@@ -1127,11 +1176,62 @@ Post:"""
                 return False
             
             self.enabled = True
+            self._connection_was_successful = True
+            self._reconnect_attempt_count = 0  # Reset on successful connection
             logger.info(f"✓ Ollama LLM initialized (host: {self.ollama_host}, model: {model_name})")
             return True
             
         except Exception as e:
             logger.error(f"✗ Failed to initialize Ollama: {e}")
+            return False
+    
+    def _attempt_ollama_reconnect(self) -> bool:
+        """
+        Attempt to reconnect to Ollama server.
+        
+        This is called when a generation fails due to connection issues.
+        Respects cooldown interval to avoid hammering a down server.
+        
+        Returns:
+            bool: True if reconnection successful, False otherwise
+        """
+        if not self.enable_auto_reconnect:
+            return False
+        
+        # Check if we've exceeded max attempts (0 = unlimited)
+        if self.max_reconnect_attempts > 0 and self._reconnect_attempt_count >= self.max_reconnect_attempts:
+            logger.debug(f"Max reconnect attempts ({self.max_reconnect_attempts}) reached, not retrying")
+            return False
+        
+        # Check cooldown
+        current_time = time.time()
+        time_since_last_attempt = current_time - self._last_reconnect_attempt
+        
+        if time_since_last_attempt < self.reconnect_interval:
+            remaining = self.reconnect_interval - time_since_last_attempt
+            logger.debug(f"Reconnect cooldown: {remaining:.0f}s remaining")
+            return False
+        
+        # Attempt reconnection
+        self._last_reconnect_attempt = current_time
+        self._reconnect_attempt_count += 1
+        
+        logger.info(f"🔄 Attempting Ollama reconnection (attempt #{self._reconnect_attempt_count})...")
+        
+        try:
+            # Try to reconnect using stored configuration
+            self.ollama_client = ollama.Client(host=self.ollama_host)
+            models_response = self.ollama_client.list()
+            
+            # Connection successful
+            self.enabled = True
+            self._connection_was_successful = True
+            self._reconnect_attempt_count = 0  # Reset counter on success
+            logger.info(f"✓ Ollama reconnected successfully (host: {self.ollama_host})")
+            return True
+            
+        except Exception as e:
+            logger.warning(f"⚠ Ollama reconnection failed (attempt #{self._reconnect_attempt_count}): {e}")
             return False
     
     def _authenticate_gemini(self):
