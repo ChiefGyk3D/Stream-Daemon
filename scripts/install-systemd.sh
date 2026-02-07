@@ -362,6 +362,10 @@ User=$ACTUAL_USER
 Group=$ACTUAL_USER
 WorkingDirectory=$PROJECT_DIR
 
+# Stop and remove any existing container before starting
+ExecStartPre=-/usr/bin/docker stop stream-daemon
+ExecStartPre=-/usr/bin/docker rm -f stream-daemon
+
 # Start the Docker container
 ExecStart=/usr/bin/docker run -d \\
     --name stream-daemon \\

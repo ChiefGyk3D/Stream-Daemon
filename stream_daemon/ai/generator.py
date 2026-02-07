@@ -65,6 +65,14 @@ class AIMessageGenerator:
         self.top_p = float(get_config('LLM', 'top_p', default='0.9'))
         self.max_tokens = int(get_config('LLM', 'max_tokens', default='150'))
         
+        # Qwen3 thinking mode support
+        # Qwen3 models have a "thinking" mode that outputs reasoning in a separate field
+        # before generating the final response. We need to handle this specially.
+        # When enable_thinking_mode is True, we extract content from the 'thinking' field
+        # if 'content' is empty, and we increase max_tokens to allow for reasoning.
+        self.enable_thinking_mode = get_config('LLM', 'enable_thinking_mode', default='False').lower() == 'true'
+        self.thinking_token_multiplier = float(get_config('LLM', 'thinking_token_multiplier', default='4.0'))
+        
         # Guardrails configuration
         # Because we need rules to govern the rule-following machine. Meta as fuck.
         self.enable_deduplication = get_config('LLM', 'enable_deduplication', default='True').lower() == 'true'
@@ -891,17 +899,43 @@ Post:"""
                     
                     elif self.provider == 'ollama':
                         # Use generation options for better control
+                        # For Qwen3 thinking mode, we need more tokens to allow reasoning
+                        effective_max_tokens = self.max_tokens
+                        if self.enable_thinking_mode:
+                            effective_max_tokens = int(self.max_tokens * self.thinking_token_multiplier)
+                            logger.debug(f"Thinking mode enabled: using {effective_max_tokens} tokens (base: {self.max_tokens})")
+                        
                         options = {
                             'temperature': self.temperature,
                             'top_p': self.top_p,
-                            'num_predict': self.max_tokens,
+                            'num_predict': effective_max_tokens,
                         }
                         response = self.ollama_client.chat(
                             model=self.model,
                             messages=[{'role': 'user', 'content': prompt}],
                             options=options
                         )
-                        return response['message']['content'].strip()
+                        
+                        # Handle Qwen3 thinking mode response structure
+                        # Qwen3 returns: {"message": {"content": "", "thinking": "reasoning..."}}
+                        # The actual response may be at the end of 'thinking' or we need to re-prompt
+                        message = response.get('message', {})
+                        content = message.get('content', '').strip()
+                        
+                        if not content and self.enable_thinking_mode:
+                            # Check if there's thinking content we can extract from
+                            thinking = message.get('thinking', '')
+                            if thinking:
+                                logger.debug(f"Qwen3 thinking mode: extracting from thinking field ({len(thinking)} chars)")
+                                # Try to extract the final answer from thinking
+                                # Look for patterns like "Final post:", "Here's the post:", etc.
+                                content = self._extract_from_thinking(thinking)
+                                if content:
+                                    logger.debug(f"Extracted content from thinking: {content[:50]}...")
+                                else:
+                                    logger.warning("Could not extract content from Qwen3 thinking field")
+                        
+                        return content if content else None
                     
                     else:
                         logger.error(f"✗ Unknown provider: {self.provider}")
@@ -966,6 +1000,77 @@ Post:"""
             self.enabled = False
             return False
     
+    def _extract_from_thinking(self, thinking: str) -> Optional[str]:
+        """
+        Extract the final answer from Qwen3's thinking field.
+        
+        Qwen3 models output their reasoning in a 'thinking' field before the content.
+        Sometimes the actual post is embedded in the thinking, or we need to parse it out.
+        
+        This method looks for common patterns indicating the final answer:
+        - Lines starting with ">" (quoted text, often the final post)
+        - Text after "Final post:", "Here's the post:", etc.
+        - The last complete sentence/paragraph that looks like a social media post
+        
+        Args:
+            thinking: The raw thinking field content from Qwen3
+            
+        Returns:
+            Extracted content or None if extraction fails
+        """
+        if not thinking:
+            return None
+        
+        # Pattern 1: Look for quoted text (lines starting with ">")
+        # This is common when the model "shows" its answer
+        quoted_lines = []
+        for line in thinking.split('\n'):
+            stripped = line.strip()
+            if stripped.startswith('>'):
+                # Remove the ">" prefix and any leading space
+                quoted_lines.append(stripped[1:].strip())
+        
+        if quoted_lines:
+            # Join quoted lines and return
+            result = ' '.join(quoted_lines).strip()
+            if len(result) >= 20:  # Minimum viable post length
+                return result
+        
+        # Pattern 2: Look for explicit markers
+        markers = [
+            'final post:', 'here\'s the post:', 'the post:', 'my post:',
+            'announcement:', 'here it is:', 'result:', 'output:'
+        ]
+        thinking_lower = thinking.lower()
+        for marker in markers:
+            if marker in thinking_lower:
+                # Find the position and extract what follows
+                pos = thinking_lower.find(marker)
+                after_marker = thinking[pos + len(marker):].strip()
+                # Take the first line or paragraph
+                first_line = after_marker.split('\n')[0].strip()
+                if first_line and len(first_line) >= 20:
+                    # Clean up any quotes
+                    first_line = first_line.strip('"\'')
+                    return first_line
+        
+        # Pattern 3: Look for lines containing hashtags (likely the post)
+        for line in thinking.split('\n'):
+            stripped = line.strip()
+            if '#' in stripped and len(stripped) >= 30 and len(stripped) <= 300:
+                # This line has hashtags and is post-length
+                # Clean up any leading markers like "- " or "* "
+                cleaned = re.sub(r'^[-*•]\s*', '', stripped)
+                cleaned = cleaned.strip('"\'')
+                if cleaned:
+                    return cleaned
+        
+        # Pattern 4: If thinking was cut off (done_reason: length), 
+        # the model ran out of tokens while thinking
+        # In this case, we can't extract a valid response
+        logger.debug("Could not extract content from thinking - model may have run out of tokens")
+        return None
+    
     def _authenticate_ollama(self):
         """
         Initialize Ollama connection for local LLM.
@@ -981,7 +1086,7 @@ Post:"""
             # Get Ollama configuration
             ollama_host = get_config('LLM', 'ollama_host', default='http://localhost')
             ollama_port = get_config('LLM', 'ollama_port', default='11434')
-            model_name = get_config('LLM', 'model', default='gemma2:2b')
+            model_name = get_config('LLM', 'model', default='gemma3:4b')
             
             # Build full host URL if port is specified separately
             if not ollama_host.startswith('http'):
