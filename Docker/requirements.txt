@@ -34,7 +34,7 @@ zipp==3.23.0
 urllib3==2.5.0
 # pip symbolic link extraction vulnerability fix
 # Ensures pip >= 24.2 for CVE fixes
-pip==25.3
+pip==26.0
 # Testing framework
 pytest==8.4.2
 pytest-asyncio==1.2.0
