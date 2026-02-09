@@ -13,7 +13,7 @@ atproto==0.0.63
 doppler-sdk==1.3.0
 python-dotenv==1.2.1
 google-api-python-client==2.187.0
-google-genai==1.61.0
+google-genai==1.62.0
 # CVE-2025-4565 fix: Requires protobuf >= 4.25.8 (v4), >= 5.29.5 (v5), or >= 6.31.1 (v6)
 # Using v4 for compatibility; upgrade to v5/v6 requires testing
 protobuf==6.33.5
