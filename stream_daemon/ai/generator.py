@@ -478,7 +478,7 @@ class AIMessageGenerator:
             issues.append("Too many repeated words")
         
         # Check for title integration (should reference stream content)
-        title_words = set(title.lower().split())
+        title_words = set(title.lower().split()) if title else set()
         message_words = set(message_lower.split())
         overlap = len(title_words & message_words)
         
@@ -489,7 +489,7 @@ class AIMessageGenerator:
         # Check if message is just reposting the title (should be based on it, not duplicate it)
         # Extract content before hashtags for comparison
         content_before_hashtags = re.split(r'\s+#', message)[0].strip()
-        title_clean = title.strip()
+        title_clean = title.strip() if title else ''
         
         # Check if message is essentially just the title with minimal additions
         # Remove punctuation for better comparison
@@ -1448,7 +1448,7 @@ Post:"""
     def generate_stream_end_message(self,
                                     platform_name: str,
                                     username: str,
-                                    title: str,
+                                    title: Optional[str] = None,
                                     social_platform: str = "generic") -> Optional[str]:
         """
         Generate a thankful stream end message.
@@ -1464,6 +1464,10 @@ Post:"""
         """
         if not self.enabled:
             return None
+        
+        # Guard against None title (can happen when stream state clears title on offline)
+        if title is None:
+            title = 'Stream'
         
         try:
             # Determine character limit
