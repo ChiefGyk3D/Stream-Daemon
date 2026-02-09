@@ -22,6 +22,7 @@ class StreamStatus:
     username: str
     state: StreamState = StreamState.OFFLINE
     title: Optional[str] = None
+    last_title: Optional[str] = None  # Preserved title from when stream was live (for end messages)
     stream_data: Optional[dict] = None  # Full stream data (title, viewers, thumbnail, etc.)
     went_live_at: Optional[datetime] = None
     last_check_live: bool = False
@@ -97,6 +98,7 @@ class StreamStatus:
                     self.state = StreamState.OFFLINE
                     duration = datetime.now() - self.went_live_at if self.went_live_at else None
                     logger.info(f"🔵 {self.platform_name}/{self.username} went OFFLINE (duration: {duration})")
+                    self.last_title = self.title  # Preserve title for end messages
                     self.title = None
                     self.stream_data = None
                     self.went_live_at = None
