@@ -1,296 +1,86 @@
 # GitHub Actions Workflows
 
-This directory contains automated CI/CD workflows for Stream Daemon.
+Three thin callers. The jobs themselves live in
+[ChiefGyk3D/git-your-ship-together](https://github.com/ChiefGyk3D/git-your-ship-together),
+shared with Typo Sniper, Star Daemon and Boon Tube Daemon, so a pipeline fix or
+a new scan step lands once. Each file here says only what is specific to
+Stream Daemon: Python versions, the test command, the Dockerfile path, the
+Doppler project.
 
-## 📋 Workflows Overview
+| Workflow | Triggers | Calls | What it does |
+|---|---|---|---|
+| `ci.yml` | push to main/develop/copilot/**, PRs, manual | `python-ci.yml` | Lint (ruff), tests on Python 3.10–3.14 with coverage to Codecov, Docker build with an import check, one `CI green` gate job for branch protection |
+| `release.yml` | push to main, `v*.*.*` tags, PRs, manual | `python-docker-release.yml` | Build and test on every PR; on main and tags publish a multi-arch (amd64 + arm64) image to `ghcr.io/chiefgyk3d/stream-daemon` and Docker Hub, signed with cosign, with a syft SBOM attached and SLSA provenance recorded; Trivy scan to the Security tab |
+| `security.yml` | push to main/develop, PRs, weekly, manual | `security.yml` | CodeQL, gitleaks over the full history, pip-audit, dependency review on PRs, Snyk |
 
-### 🧪 CI - Tests (`ci-tests.yml`)
-**Triggers:** Push to main/develop/copilot branches, PRs, manual dispatch
+## Secrets: Doppler, not GitHub
 
-**What it does:**
-- Tests on Python 3.11, 3.12, and 3.13
-- Runs full pytest suite with coverage
-- Uploads coverage to Codecov
-- Runs security scanning (Bandit)
-- Lints code with Ruff
-- Checks for known vulnerabilities (Safety)
+No secret is stored in this repository's GitHub secrets. A job authenticates
+to Doppler with a short-lived token minted from its own GitHub OIDC identity
+(a Doppler Service Account Identity) and reads the `ci` config of the
+`stream-daemon` project, which holds only what the pipelines need:
 
-**Required Secrets:**
-- `CODECOV_TOKEN` (optional, for coverage reports)
+| Name | Used by |
+|---|---|
+| `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN` | `release.yml`, Docker Hub publish |
+| `CODECOV_TOKEN` | `ci.yml`, coverage upload |
+| `SNYK_TOKEN` | `security.yml`, Snyk |
 
----
+The one per-repository setting is the **repository variable**
+`DOPPLER_IDENTITY_ID` (Settings → Secrets and variables → Actions →
+Variables), the UUID of the identity. It is an identifier, not a secret.
 
-### 🔍 Dependency Review (`dependency-review.yml`)
-**Triggers:** PRs to main/develop, weekly schedule (Mondays), manual dispatch
+Before that is set the pipelines still run: Docker Hub publish and Codecov
+upload skip with a notice, Snyk warns and skips, GHCR publishing works
+regardless because it uses the job's own `GITHUB_TOKEN`.
 
-**What it does:**
-- Reviews dependency changes in PRs
-- Scans for vulnerabilities with Safety and pip-audit
-- **Snyk scanning included** (requires SNYK_TOKEN secret)
-- Uploads security reports as artifacts
+The setup runbook, the fallback path (a Doppler Service Token as the single
+GitHub secret `DOPPLER_TOKEN`), and every input are documented in the
+git-your-ship-together README.
 
-**Required Secrets:**
-- `SNYK_TOKEN` (optional but recommended - get from https://snyk.io)
+## Verifying a published image
 
-**Note:** Snyk provides comprehensive vulnerability scanning with a larger database than GitHub's native tools. It's already integrated into this workflow - no need for a separate snyk-security.yml file.
+```sh
+cosign verify ghcr.io/chiefgyk3d/stream-daemon:latest \
+  --certificate-identity-regexp '^https://github.com/ChiefGyk3D/git-your-ship-together/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
 
----
+gh attestation verify oci://ghcr.io/chiefgyk3d/stream-daemon:latest --owner ChiefGyk3D
+```
 
-### 🐳 Docker Build & Publish (`docker-build-publish.yml`)
-**Triggers:** Push to main, version tags (v*.*.*), PRs, manual dispatch
+The SBOM is also attached to every run of `release.yml` as the
+`sbom.spdx.json` artifact.
 
-**What it does:**
-- Builds Docker image from `Docker/Dockerfile`
-- Tests image can import stream_daemon
-- Scans image with Trivy for vulnerabilities
-- Publishes to GitHub Container Registry (ghcr.io)
-- Publishes to Docker Hub (on main branch/tags only)
-- Multi-architecture builds (amd64, arm64)
+## Image tags
 
-**Image Tags Generated:**
 - `latest` (main branch only)
-- `v1.2.3`, `v1.2`, `v1` (from git tags)
-- `main-<sha>` (branch + commit SHA)
-- `pr-123` (pull request number)
+- `1.2.3`, `1.2`, `1` (from `v1.2.3` tags)
+- `main`, `sha-<short>` (branch and commit)
+- `pr-123` (pull requests; built and tested, never pushed)
 
-**Required Secrets:**
-- `GITHUB_TOKEN` (auto-provided)
-- `DOCKERHUB_USERNAME` (for Docker Hub publishing)
-- `DOCKERHUB_TOKEN` (for Docker Hub publishing)
+## Dependabot
 
----
+`dependabot.yml` opens weekly PRs for Python packages, the Docker base image
+and GitHub Actions.
 
-### 🔐 CodeQL Analysis (`codeql-analysis.yml`)
-**Triggers:** Push to main/develop, PRs, weekly schedule (Sundays), manual dispatch
-
-**What it does:**
-- Static code analysis for security issues
-- Scans Python code for vulnerabilities
-- Uploads results to GitHub Security tab
-- Runs extended security and quality queries
-
-**Required Secrets:** None (uses GITHUB_TOKEN)
-
----
-
-## 🤖 Dependabot Configuration (`dependabot.yml`)
-
-Automatically creates PRs for dependency updates:
-
-- **Python packages** (requirements.txt): Weekly on Mondays
-- **Docker base images**: Weekly on Mondays
-- **GitHub Actions**: Weekly on Mondays
-
-All PRs are labeled and assigned for review.
-
----
-
-## 🚀 Setup Instructions
-
-### 1. Enable GitHub Actions
-GitHub Actions are enabled by default for public repositories.
-
-### 2. Configure Secrets
-
-#### Required for Docker Hub Publishing:
-```bash
-# Go to: Settings → Secrets and variables → Actions → New repository secret
-
-DOCKERHUB_USERNAME: your_dockerhub_username
-DOCKERHUB_TOKEN: your_dockerhub_access_token
-```
-
-#### Optional Integrations:
-```bash
-CODECOV_TOKEN: your_codecov_token  # For coverage reports at codecov.io
-SNYK_TOKEN: your_snyk_token        # For enhanced vulnerability scanning
-```
-
-### 3. Docker Hub Access Token
-1. Log in to Docker Hub
-2. Go to Account Settings → Security
-3. Click "New Access Token"
-4. Name: `github-actions-stream-daemon`
-5. Permissions: Read, Write, Delete
-6. Copy token and add to GitHub secrets
-
-### 4. Enable GitHub Container Registry
-1. Go to your profile → Packages
-2. Find the stream-daemon package
-3. Package settings → Change visibility (Public/Private)
-4. Connect to repository
-
----
-
-## 📊 Workflow Status Badges
-
-Add these to your README.md:
+## Status badges
 
 ```markdown
-[![CI Tests](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci-tests.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci-tests.yml)
-[![Docker Build](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/docker-build-publish.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/docker-build-publish.yml)
-[![CodeQL](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/codeql-analysis.yml)
+[![CI](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/ci.yml)
+[![Release](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/release.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/release.yml)
+[![Security](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/security.yml/badge.svg)](https://github.com/ChiefGyk3D/Stream-Daemon/actions/workflows/security.yml)
 ```
 
----
+## What changed in the migration
 
-## 🔧 Testing Workflows Locally
-
-### Using `act` (GitHub Actions local runner):
-```bash
-# Install act
-brew install act  # macOS
-# or
-curl https://raw.githubusercontent.com/nektos/act/master/install.sh | sudo bash
-
-# Run a specific workflow
-act -W .github/workflows/ci-tests.yml
-
-# Run with secrets
-act -W .github/workflows/ci-tests.yml -s CODECOV_TOKEN=your_token
-```
-
-### Testing Docker builds locally:
-```bash
-# Build the image
-docker build -f Docker/Dockerfile -t stream-daemon:test .
-
-# Test the image
-docker run --rm stream-daemon:test python -c "import stream_daemon; print('Success')"
-
-# Scan with Trivy
-trivy image stream-daemon:test
-```
-
----
-
-## 🎯 Workflow Triggers Reference
-
-| Workflow | Push | PR | Tag | Schedule | Manual |
-|----------|------|----|----|----------|--------|
-| CI Tests | ✅ main/develop/copilot | ✅ | ❌ | ❌ | ✅ |
-| Dependency Review (includes Snyk) | ❌ | ✅ | ❌ | ✅ Weekly | ✅ |
-| Docker Build/Publish | ✅ main | ✅ | ✅ v*.*.* | ❌ | ✅ |
-| CodeQL Analysis | ✅ main/develop | ✅ | ❌ | ✅ Weekly | ✅ |
-
----
-
-## 🛡️ Security Features
-
-### Automated Scans:
-- **Snyk**: Comprehensive vulnerability database (proprietary + open source)
-  - Daily automated scans
-  - Detailed remediation advice
-  - License compliance checking
-  - Container and dependency scanning
-- **CodeQL**: GitHub's native static code analysis
-- **Trivy**: Container vulnerability scanning
-- **Bandit**: Python security linting
-- **Safety**: Known vulnerability database (PyPI)
-- **pip-audit**: PyPI vulnerability scanner
-
-### Why Multiple Security Tools?
-Using Snyk + GitHub Security provides **defense in depth**:
-- **Snyk**: Larger database, faster detection, better remediation
-- **GitHub**: Native integration, free for public repos, backup layer
-- **No Conflicts**: They complement each other perfectly
-- **More Coverage**: Catches vulnerabilities others might miss
-
-### Dependency Management:
-- **Dependabot**: Automated dependency updates
-- **Dependency Review**: PR-based dependency change review
-- Locked versions in requirements.txt (supply chain security)
-
----
-
-## 📝 Maintenance
-
-### Updating Workflows:
-1. Edit workflow files in `.github/workflows/`
-2. Test locally with `act` if possible
-3. Commit and push to a feature branch
-4. Create PR to test workflows
-5. Merge to main
-
-### Monitoring:
-- Check Actions tab for workflow runs
-- Review Security tab for CodeQL/Snyk/Trivy findings
-- Check Dependabot PRs weekly
-- Review artifact uploads for detailed reports
-- Monitor Snyk dashboard at https://app.snyk.io
-
----
-
-## 🔗 External Services Integration
-
-### Snyk (Security Scanning) - RECOMMENDED
-1. Sign up at https://snyk.io (free for open source)
-2. Link GitHub repository (authorize GitHub app)
-3. Go to Account Settings → API Tokens
-4. Copy your API token
-5. Add to GitHub: Settings → Secrets → `SNYK_TOKEN`
-6. Workflow will automatically start scanning
-
-**Why Snyk?**
-- Larger vulnerability database than GitHub/Safety
-- Detailed fix guidance with specific version recommendations
-- License compliance checking
-- Daily automated scans
-- Free for open source projects (200 tests/month)
-
-### Codecov (Code Coverage)
-1. Sign up at https://codecov.io
-2. Link GitHub repository
-3. Get upload token
-4. Add as `CODECOV_TOKEN` secret
-
-### Snyk (Security Scanning)
-1. Sign up at https://snyk.io
-2. Link GitHub repository
-3. Get API token
-4. Add as `SNYK_TOKEN` secret
-
----
-
-## 💡 Best Practices
-
-1. **Always test in PRs** before merging to main
-2. **Review Dependabot PRs** - don't auto-merge without testing
-3. **Monitor workflow failures** - fix immediately
-4. **Keep secrets secure** - never commit tokens
-5. **Update workflows** when adding new dependencies
-6. **Check security alerts** in GitHub Security tab
-
----
-
-## 🆘 Troubleshooting
-
-### Workflow fails on pip install:
-- Check requirements.txt for version conflicts
-- Verify all packages are available on PyPI
-- Check Python version compatibility
-
-### Docker build fails:
-- Ensure Dockerfile path is correct: `./Docker/Dockerfile`
-- Verify all files in Dockerfile COPY exist
-- Check .dockerignore isn't excluding needed files
-
-### Tests fail in CI but pass locally:
-- Check Python version (CI uses 3.11, 3.12, 3.13)
-- Verify environment variables are set
-- Check for race conditions in async tests
-
-### Docker Hub publish fails:
-- Verify DOCKERHUB_USERNAME secret is correct
-- Ensure DOCKERHUB_TOKEN hasn't expired
-- Check Docker Hub repository exists
-
----
-
-## 📚 Resources
-
-- [GitHub Actions Documentation](https://docs.github.com/en/actions)
-- [Docker Build Push Action](https://github.com/docker/build-push-action)
-- [CodeQL Documentation](https://codeql.github.com/docs/)
-- [Dependabot Documentation](https://docs.github.com/en/code-security/dependabot)
-- [Trivy Scanner](https://aquasecurity.github.io/trivy/)
+- `ci-tests.yml`, `docker-build-publish.yml`, `codeql-analysis.yml`,
+  `dependency-review.yml`, `dependency-scan.yml` and `snyk-security.yml` were
+  replaced by the three callers above.
+- Bandit and `safety check` were dropped: `safety check` is deprecated
+  upstream and needs an account, and both ran as advisory-only. CodeQL covers
+  SAST and pip-audit covers the advisory database.
+- Ruff lint and pip-audit stay advisory (`lint-continue-on-error`,
+  `pip-audit-continue-on-error`) until the tree is clean; delete those lines
+  to make them gate.
+- Images are now signed, carry an SBOM and provenance, and the multi-arch
+  build uses the GitHub Actions cache instead of `no-cache: true`.

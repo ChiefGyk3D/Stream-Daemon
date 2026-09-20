@@ -1,0 +1,40 @@
+# Container release: build and test on every pull request; on main and on a
+# version tag, publish a multi-arch (amd64 + arm64) image to GHCR and Docker
+# Hub, signed with cosign, with a syft SBOM and build provenance attached.
+#
+# Docker Hub credentials come from Doppler (project stream-daemon, config ci),
+# never from this repository's secrets. The jobs live in
+# ChiefGyk3D/git-your-ship-together.
+#
+# Image: ghcr.io/chiefgyk3d/stream-daemon
+name: Release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*.*.*']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  container:
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-docker-release.yml@main
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+      security-events: write
+    secrets: inherit
+    with:
+      dockerfile: Docker/Dockerfile
+      push: ${{ github.event_name != 'pull_request' }}
+      dockerhub: true
+      docker-test-command: docker run --rm "$IMAGE" python -c "import stream_daemon; print('Import successful')"
+      doppler-project: stream-daemon
+      doppler-config: ci
+      doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}
