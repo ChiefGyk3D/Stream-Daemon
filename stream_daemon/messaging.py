@@ -7,7 +7,6 @@ is the same: people on the internet find out you're on the internet. Meta.
 
 import logging
 import random
-from typing import List
 
 from stream_daemon.ai import AIMessageGenerator
 
@@ -21,7 +20,7 @@ def get_message_for_stream(ai_generator: AIMessageGenerator,
                            title: str,
                            url: str,
                            social_platform_name: str,
-                           fallback_messages: List[str]) -> str:
+                           fallback_messages: list[str]) -> str:
     """
     Get message for stream announcement, using AI if enabled, otherwise fallback.
     
@@ -62,7 +61,7 @@ def get_message_for_stream(ai_generator: AIMessageGenerator,
                 if ai_message:
                     return ai_message
                 logger.warning("⚠ AI generation returned None, using fallback message")
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # fall back to a template message; error is logged
             logger.error(f"✗ AI message generation failed: {e}, using fallback")
     
     # Fallback to traditional messages

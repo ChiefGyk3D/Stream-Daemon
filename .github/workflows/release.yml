@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   container:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-docker-release.yml@d5d9556afeeb06f78419b91ecb5d146e789c6d51 # v1.0.0
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-docker-release.yml@38f1c486833c7f572502b134e950913cc92d044c # v1.1.1
     permissions:
       contents: read
       packages: write
@@ -40,6 +40,6 @@ jobs:
       push: ${{ github.event_name != 'pull_request' }}
       dockerhub: true
       docker-test-command: docker run --rm "$IMAGE" python -c "import stream_daemon; print('Import successful')"
-      doppler-project: stream-daemon
+      doppler-project: ci
       doppler-config: ci
       doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}

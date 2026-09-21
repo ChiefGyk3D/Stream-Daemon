@@ -16,7 +16,6 @@ LLM_MAX_EMOJI_COUNT, ...), plus LLM_FALLBACK_PROVIDER for automatic failover.
 """
 
 import logging
-from typing import List, Optional
 
 from hypeman_social.llm import STREAM_PROFILE, LLMManager
 from hypeman_social.llm import guardrails as _guardrails
@@ -39,11 +38,11 @@ logger = logging.getLogger(__name__)
 # get_secret and the availability flags are part of this module's public
 # surface (tests patch them here; callers historically read them here).
 __all__ = [
-    'AIMessageGenerator',
-    'OLLAMA_AVAILABLE',
     'GEMINI_AVAILABLE',
-    'get_config',
+    'OLLAMA_AVAILABLE',
+    'AIMessageGenerator',
     'get_bool_config',
+    'get_config',
     'get_secret',
 ]
 
@@ -60,8 +59,8 @@ class AIMessageGenerator:
     def __init__(self):
         self.engine = LLMManager(profile=STREAM_PROFILE)
         self.enabled = False
-        self.provider: Optional[str] = None
-        self.model: Optional[str] = None
+        self.provider: str | None = None
+        self.model: str | None = None
 
         self.bluesky_max_chars = 300
         self.mastodon_max_chars = 500
@@ -146,7 +145,7 @@ class AIMessageGenerator:
                                       username: str,
                                       title: str,
                                       url: str,
-                                      social_platform: str = "generic") -> Optional[str]:
+                                      social_platform: str = "generic") -> str | None:
         """
         Generate an engaging stream start message, URL appended.
 
@@ -199,15 +198,15 @@ class AIMessageGenerator:
                 f"({len(message)} chars content + URL = {len(full_message)}/{max_chars} total)")
             return full_message
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # fall back to a template message; error is logged
             logger.error(f"✗ Failed to generate start message: {e}")
             return None
 
     def generate_stream_end_message(self,
                                     platform_name: str,
                                     username: str,
-                                    title: Optional[str] = None,
-                                    social_platform: str = "generic") -> Optional[str]:
+                                    title: str | None = None,
+                                    social_platform: str = "generic") -> str | None:
         """Generate a thankful stream end message (no URL)."""
         if not self.enabled:
             return None
@@ -242,13 +241,13 @@ class AIMessageGenerator:
             logger.info(f"✨ Generated stream end message ({len(message)}/{max_chars} chars)")
             return message
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # fall back to a template message; error is logged
             logger.error(f"✗ Failed to generate end message: {e}")
             return None
 
     def _generate_validated(self, build_prompt, title: str, username: str,
                             social_platform: str, content_max: int,
-                            expected_hashtags: int) -> Optional[str]:
+                            expected_hashtags: int) -> str | None:
         """
         Generate, validate, and retry once with a stricter prompt on issues.
 
@@ -303,9 +302,9 @@ class AIMessageGenerator:
         return self._validate_hashtags_against_username(message, username)
 
     def _check_guardrails(self, message: str, title: str, username: str,
-                          social_platform: str, expected_hashtags: int) -> List[str]:
+                          social_platform: str, expected_hashtags: int) -> list[str]:
         """Every configured quality check; returns the list of issues found."""
-        issues: List[str] = []
+        issues: list[str] = []
 
         if self.max_emoji_count > 0:
             emoji_count = self._count_emojis(message)
@@ -337,7 +336,7 @@ class AIMessageGenerator:
 
         return issues
 
-    def _generate_with_retry(self, prompt: str, max_retries: Optional[int] = None) -> Optional[str]:
+    def _generate_with_retry(self, prompt: str, max_retries: int | None = None) -> str | None:
         """
         One generation through the manager.
 
@@ -510,7 +509,7 @@ Post:"""
         return _guardrails.validate_hashtags_against_username(message, username)
 
     @staticmethod
-    def _validate_platform_specific(message: str, platform: str) -> List[str]:
+    def _validate_platform_specific(message: str, platform: str) -> list[str]:
         return _guardrails.validate_platform_specific(message, platform)
 
     @staticmethod
@@ -530,7 +529,7 @@ Post:"""
         return _guardrails.tokenize_username(username)
 
     @staticmethod
-    def _extract_hashtags(message: str) -> List[str]:
+    def _extract_hashtags(message: str) -> list[str]:
         return _guardrails.extract_hashtags(message)
 
     @staticmethod
@@ -542,7 +541,7 @@ Post:"""
         return _guardrails.safe_trim(message, limit)
 
     @staticmethod
-    def _extract_from_thinking(thinking_content: str, max_chars: int = 300) -> Optional[str]:
+    def _extract_from_thinking(thinking_content: str, max_chars: int = 300) -> str | None:
         return _guardrails.extract_from_thinking(thinking_content, max_chars)
 
     def _is_duplicate_message(self, message: str) -> bool:

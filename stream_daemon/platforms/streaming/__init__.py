@@ -1,11 +1,11 @@
 """Streaming platform integrations for Twitch, YouTube, and Kick."""
 
+from .kick import KickPlatform
 from .twitch import TwitchPlatform
 from .youtube import YouTubePlatform
-from .kick import KickPlatform
 
 __all__ = [
+    'KickPlatform',
     'TwitchPlatform',
     'YouTubePlatform',
-    'KickPlatform',
 ]

@@ -6,13 +6,12 @@ SocialPlatform now comes from hypeman-social, shared with the other daemons.
 """
 
 import logging
-from typing import Optional, Tuple
 
 from hypeman_social.social.base import SocialPlatform
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['StreamingPlatform', 'SocialPlatform']
+__all__ = ['SocialPlatform', 'StreamingPlatform']
 
 
 class StreamingPlatform:
@@ -28,7 +27,7 @@ class StreamingPlatform:
         self.name = name
         self.enabled = False
     
-    def is_live(self, username: str) -> Tuple[bool, Optional[dict]]:
+    def is_live(self, username: str) -> tuple[bool, dict | None]:
         """
         Check if user is live.
         

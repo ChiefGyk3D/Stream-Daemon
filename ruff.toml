@@ -6,3 +6,5 @@ extend-select = ["S"]
 
 [lint.per-file-ignores]
 "tests/**" = ["S"]
+# S311: random here picks a fallback announcement template, nothing security-relevant
+"stream_daemon/messaging.py" = ["S311"]

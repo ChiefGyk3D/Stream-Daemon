@@ -8,23 +8,37 @@ then tell the entire goddamn internet about it. This is what we do with Computer
 degrees now. Your parents are so proud.
 """
 
-import os
-import time
-import sys
 import logging
+import os
+import sys
+import time
+
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
-from typing import Dict
+from hypeman_social.observability import HealthState, start_health_server
+
+from stream_daemon.ai import AIMessageGenerator
 
 # Import from modularized package
-from stream_daemon.config import get_config, get_bool_config, get_int_config, get_usernames
+from stream_daemon.config import (
+    get_bool_config,
+    get_config,
+    get_int_config,
+    get_usernames,
+)
 from stream_daemon.models import StreamState, StreamStatus
-from stream_daemon.ai import AIMessageGenerator
-from stream_daemon.utils import parse_sectioned_message_file
-from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, DiscordPlatform, MatrixPlatform
-from stream_daemon.platforms.streaming import TwitchPlatform, YouTubePlatform, KickPlatform
+from stream_daemon.platforms.social import (
+    BlueskyPlatform,
+    DiscordPlatform,
+    MastodonPlatform,
+    MatrixPlatform,
+)
+from stream_daemon.platforms.streaming import (
+    KickPlatform,
+    TwitchPlatform,
+    YouTubePlatform,
+)
 from stream_daemon.publisher import post_to_social_async
-from hypeman_social.observability import HealthState, start_health_server
+from stream_daemon.utils import parse_sectioned_message_file
 
 # Configure logging to use local timezone instead of UTC
 logging.Formatter.converter = time.localtime
@@ -185,7 +199,7 @@ def main():
     
     # Get usernames for each platform and create StreamStatus trackers
     # Key format: "PlatformName/username" for unique identification
-    stream_statuses: Dict[str, StreamStatus] = {}
+    stream_statuses: dict[str, StreamStatus] = {}
     for platform in enabled_streaming:
         usernames = get_usernames(platform.name)
         if usernames:
@@ -255,9 +269,8 @@ def main():
                         
                         # Update Discord embeds with fresh stream data (viewer count, thumbnail)
                         for social in enabled_social:
-                            if isinstance(social, DiscordPlatform) and status.stream_data:
-                                if social.update_stream(status.platform_name, status.stream_data, status.url):
-                                    logger.info(f"  ✓ Updated Discord embed for {status.platform_name}/{status.username} (viewers: {status.stream_data.get('viewer_count', 'N/A')})")
+                            if isinstance(social, DiscordPlatform) and status.stream_data and social.update_stream(status.platform_name, status.stream_data, status.url):
+                                logger.info(f"  ✓ Updated Discord embed for {status.platform_name}/{status.username} (viewers: {status.stream_data.get('viewer_count', 'N/A')})")
                     else:
                         logger.debug(f"  {status.platform_name}/{status.username}: Still offline ({status.consecutive_offline_checks} checks)")
             
@@ -303,7 +316,7 @@ def main():
                     if posted_count > 0:
                         logger.info(f"✓ Posted to {posted_count}/{len(enabled_social)} platform(s)")
                     else:
-                        logger.warning(f"⚠ Failed to post to any platforms")
+                        logger.warning("⚠ Failed to post to any platforms")
                 
                 else:
                     # SEPARATE or THREAD MODE: Post for each platform
@@ -352,7 +365,7 @@ def main():
                         if posted_count > 0:
                             logger.info(f"✓ Posted to {posted_count}/{len(enabled_social)} platform(s)")
                         else:
-                            logger.warning(f"⚠ Failed to post to any platforms")
+                            logger.warning("⚠ Failed to post to any platforms")
             
             # ================================================================
             # HANDLE PLATFORMS THAT WENT OFFLINE
@@ -415,7 +428,7 @@ def main():
                             platforms_that_went_live.clear()
                             last_live_post_ids.clear()
                     else:
-                        logger.debug(f"  Waiting for all streams to end (mode: single_when_all_end)")
+                        logger.debug("  Waiting for all streams to end (mode: single_when_all_end)")
                 
                 elif end_threading_mode == 'combined':
                     # COMBINED MODE: Single post for all platforms that ended
@@ -477,10 +490,9 @@ def main():
                         # Handle Discord separately (update embed)
                         discord_count = 0
                         for social in enabled_social:
-                            if isinstance(social, DiscordPlatform):
-                                if social.end_stream(status.platform_name, status.stream_data or {}, status.url):
-                                    discord_count += 1
-                                    logger.debug(f"  ✓ Updated Discord embed to show stream ended")
+                            if isinstance(social, DiscordPlatform) and social.end_stream(status.platform_name, status.stream_data or {}, status.url):
+                                discord_count += 1
+                                logger.debug("  ✓ Updated Discord embed to show stream ended")
                         
                         # Determine reply_to_ids for threading
                         reply_to_ids = None
@@ -526,7 +538,7 @@ def main():
         except KeyboardInterrupt:
             logger.info("\n👋 Stream Daemon stopped by user")
             sys.exit(0)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
             logger.error(f"💥 Unexpected error: {e}")
             import traceback
             logger.error(traceback.format_exc())

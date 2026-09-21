@@ -1,10 +1,9 @@
 """Stream state and status tracking models."""
 
 import logging
-from enum import Enum
 from dataclasses import dataclass
-from typing import Optional, Dict
-from datetime import datetime
+from datetime import datetime, timezone
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +20,14 @@ class StreamStatus:
     platform_name: str
     username: str
     state: StreamState = StreamState.OFFLINE
-    title: Optional[str] = None
-    last_title: Optional[str] = None  # Preserved title from when stream was live (for end messages)
-    stream_data: Optional[dict] = None  # Full stream data (title, viewers, thumbnail, etc.)
-    went_live_at: Optional[datetime] = None
+    title: str | None = None
+    last_title: str | None = None  # Preserved title from when stream was live (for end messages)
+    stream_data: dict | None = None  # Full stream data (title, viewers, thumbnail, etc.)
+    went_live_at: datetime | None = None
     last_check_live: bool = False
     consecutive_live_checks: int = 0
     consecutive_offline_checks: int = 0
-    last_post_ids: Dict[str, str] = None  # social_platform_name -> post_id for threading
+    last_post_ids: dict[str, str] = None  # social_platform_name -> post_id for threading
     
     def __post_init__(self):
         """Initialize mutable default values."""
@@ -49,11 +48,11 @@ class StreamStatus:
                 return f"https://kick.com/{self.username}"
             else:
                 return f"https://{self.platform_name.lower()}.com/{self.username}"
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
             logger.error(f"Error generating URL for {self.platform_name}/{self.username}: {e}")
             return f"https://{self.platform_name.lower()}.com/{self.username}"
     
-    def update(self, is_live: bool, stream_data: Optional[dict] = None) -> bool:
+    def update(self, is_live: bool, stream_data: dict | None = None) -> bool:
         """
         Update status based on current check.
         Returns True if state actually changed (offline->live or live->offline).
@@ -80,7 +79,7 @@ class StreamStatus:
                 if self.state == StreamState.OFFLINE and self.consecutive_live_checks >= 2:
                     self.state = StreamState.LIVE
                     self.title = title
-                    self.went_live_at = datetime.now()
+                    self.went_live_at = datetime.now(timezone.utc)
                     self.last_post_ids = {}  # Reset threading for new stream
                     logger.info(f"🔴 {self.platform_name}/{self.username} went LIVE: {title}")
                     return True  # State changed!
@@ -96,14 +95,14 @@ class StreamStatus:
                 # Require 2 consecutive offline checks to confirm (debouncing)
                 if self.state == StreamState.LIVE and self.consecutive_offline_checks >= 2:
                     self.state = StreamState.OFFLINE
-                    duration = datetime.now() - self.went_live_at if self.went_live_at else None
+                    duration = datetime.now(timezone.utc) - self.went_live_at if self.went_live_at else None
                     logger.info(f"🔵 {self.platform_name}/{self.username} went OFFLINE (duration: {duration})")
                     self.last_title = self.title  # Preserve title for end messages
                     self.title = None
                     self.stream_data = None
                     self.went_live_at = None
                     return True  # State changed!
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
             logger.error(f"Error updating stream status for {self.platform_name}/{self.username}: {e}")
             return False
         

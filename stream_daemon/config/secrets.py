@@ -20,6 +20,6 @@ from hypeman_social.config.secrets import (
 __all__ = [
     'get_secret',
     'load_secrets_from_aws',
-    'load_secrets_from_vault',
     'load_secrets_from_doppler',
+    'load_secrets_from_vault',
 ]
