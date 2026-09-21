@@ -28,7 +28,7 @@ protobuf==7.34.1
 # CVE-2024-45590, CVE-2024-42473: Fixed in requests >= 2.32.2
 # CVE-2024-6472: Fixed in requests >= 2.32.4
 # Using latest stable version 2.32.5
-requests==2.33.1
+requests==2.34.2
 # NOTE: discord.py and matrix-nio removed — never imported; Discord uses
 # webhooks and Matrix uses the client-server HTTP API via requests.
 # CVE-2024-5569: Infinite loop in zipp, fixed in >= 3.19.1
