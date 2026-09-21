@@ -7,6 +7,10 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
+    # A release that turns out to be malicious is usually pulled within days;
+    # waiting a week before proposing it costs nothing.
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 10
     labels:
       - "dependencies"
@@ -26,6 +30,10 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
+    # A release that turns out to be malicious is usually pulled within days;
+    # waiting a week before proposing it costs nothing.
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
@@ -40,6 +48,10 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
+    # A release that turns out to be malicious is usually pulled within days;
+    # waiting a week before proposing it costs nothing.
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 5
     labels:
       - "dependencies"

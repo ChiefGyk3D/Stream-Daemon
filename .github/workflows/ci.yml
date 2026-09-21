@@ -19,11 +19,12 @@ concurrency:
 
 jobs:
   ci:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-ci.yml@main
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-ci.yml@d5d9556afeeb06f78419b91ecb5d146e789c6d51 # v1.0.0
     permissions:
       contents: read
       id-token: write   # Doppler OIDC: CODECOV_TOKEN
-    secrets: inherit
+    secrets:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}   # optional Service Token fallback; unset means OIDC only
     with:
       python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
       coverage-python-version: "3.14"

@@ -15,6 +15,10 @@ on:
     tags: ['v*.*.*']
   pull_request:
     branches: [main]
+  schedule:
+    # Weekly rebuild of `latest` from main so base-image fixes reach the
+    # published image between commits. Monday 05:00 UTC.
+    - cron: '0 5 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -22,14 +26,15 @@ permissions:
 
 jobs:
   container:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-docker-release.yml@main
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-docker-release.yml@d5d9556afeeb06f78419b91ecb5d146e789c6d51 # v1.0.0
     permissions:
       contents: read
       packages: write
       id-token: write
       attestations: write
       security-events: write
-    secrets: inherit
+    secrets:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}   # optional Service Token fallback; unset means OIDC only
     with:
       dockerfile: Docker/Dockerfile
       push: ${{ github.event_name != 'pull_request' }}

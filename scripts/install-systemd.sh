@@ -10,6 +10,24 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Verify the image signature before running it. Every published image is
+# signed keyless by the release workflow in ChiefGyk3D/git-your-ship-together
+# (see SECURITY.md). With cosign installed a bad or missing signature aborts;
+# without it the check is skipped and says so.
+verify_image() {
+    local image="$1"
+    if ! command -v cosign >/dev/null 2>&1; then
+        echo "⚠️  cosign is not installed; the image signature was NOT verified."
+        echo "   https://docs.sigstore.dev/cosign/system_config/installation/"
+        return 0
+    fi
+    echo "🔏 Verifying the image signature with cosign..."
+    cosign verify "$image" \
+        --certificate-identity-regexp '^https://github.com/ChiefGyk3D/git-your-ship-together/' \
+        --certificate-oidc-issuer https://token.actions.githubusercontent.com >/dev/null
+    echo "✓ Signature verified"
+}
+
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
     echo -e "${RED}ERROR: This script must be run as root (use sudo)${NC}"
@@ -229,6 +247,7 @@ elif [ "$DEPLOYMENT_MODE" = "2" ]; then
             if $DOCKER_CMD pull "$GHCR_IMAGE"; then
                 echo ""
                 echo -e "${GREEN}✓${NC} Image pulled successfully!"
+                verify_image "$GHCR_IMAGE"
                 
                 # Tag it as stream-daemon:latest for local use
                 $DOCKER_CMD tag "$GHCR_IMAGE" "$IMAGE_NAME:latest"
