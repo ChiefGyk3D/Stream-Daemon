@@ -24,7 +24,7 @@ python-dotenv==1.2.2
 google-api-python-client==2.193.0
 # CVE-2025-4565 fix: Requires protobuf >= 4.25.8 (v4), >= 5.29.5 (v5), or >= 6.31.1 (v6)
 # Using v4 for compatibility; upgrade to v5/v6 requires testing
-protobuf==7.34.1
+protobuf==7.36.1
 # CVE-2024-45590, CVE-2024-42473: Fixed in requests >= 2.32.2
 # CVE-2024-6472: Fixed in requests >= 2.32.4
 # Using latest stable version 2.32.5
