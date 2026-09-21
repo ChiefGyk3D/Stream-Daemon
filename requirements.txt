@@ -20,7 +20,7 @@
 hypeman-social[all,aws,vault,doppler]>=0.2.0,<0.3
 
 twitchAPI==4.5.0
-python-dotenv==1.2.2
+python-dotenv==1.2.3
 google-api-python-client==2.200.0
 # CVE-2025-4565 fix: Requires protobuf >= 4.25.8 (v4), >= 5.29.5 (v5), or >= 6.31.1 (v6)
 # Using v4 for compatibility; upgrade to v5/v6 requires testing
