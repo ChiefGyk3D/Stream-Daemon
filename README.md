@@ -1224,6 +1224,18 @@ pip install black
 black stream-daemon.py stream_daemon/
 ```
 
+### Dependency lock
+
+`requirements.in` lists the direct dependencies. `requirements.txt` is
+generated from it and pins every dependency, transitive ones included, to a
+version and its SHA-256 hashes. pip enters hash-checking mode by itself when it
+reads the file, so `pip install -r requirements.txt` verifies every download,
+and CI and the Docker image install with `--require-hashes`: a package
+re-uploaded under the same version fails to install instead of shipping. To
+add or bump a dependency, edit `requirements.in` and regenerate the lock with
+the command in its header; never edit `requirements.txt` by hand. Dependabot
+regenerates it for version bumps.
+
 ### Pull Request Guidelines
 
 1. **Fork** the repository
