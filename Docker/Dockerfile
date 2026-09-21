@@ -65,7 +65,7 @@ COPY requirements.txt /app/
 # `python -m ensurepip` (the bundled wheel stays).
 # Cache bust: 2026-01-20 - Added ollama==0.6.1 support
 RUN pip install --no-cache-dir --upgrade "pip>=25.3" && \
-    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir --require-hashes -r requirements.txt && \
     pip uninstall -y pip && \
     /usr/local/bin/python -m pip uninstall -y pip
 
