@@ -26,7 +26,7 @@ permissions:
 
 jobs:
   container:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-docker-release.yml@f6538c8277d5b02b1c8c8f817dc354c0faaa4622 # v1.2.0
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-docker-release.yml@5df66539de085aff73dcf1f2957615689b846298 # v1.2.1
     permissions:
       contents: read
       packages: write
