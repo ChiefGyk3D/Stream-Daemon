@@ -35,8 +35,6 @@ jobs:
       test-command: pytest tests/ -v --cov=stream_daemon --cov-report=xml --cov-report=term
       codecov: true
       lint-command: ruff check stream_daemon/ stream-daemon.py --output-format=github
-      # Lint was advisory before the migration and stays so until the tree is
-      # clean; then delete this line and let it gate.
       dockerfile: Docker/Dockerfile
       docker-test-command: docker run --rm "$IMAGE" python -c "import stream_daemon; print('Import successful')"
       doppler-project: stream-daemon
