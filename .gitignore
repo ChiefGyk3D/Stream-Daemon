@@ -26,6 +26,8 @@ config.ini
 # Docker user configuration
 Docker/docker-compose.yml
 !Docker/docker-compose.example.yml
+Docker/docker-compose.override.yml
+docker-compose.override.yml
 
 # Test outputs
 tests/__pycache__/
