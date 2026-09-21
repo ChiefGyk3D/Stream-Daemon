@@ -51,11 +51,23 @@ ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 # and shipped an image missing dependencies, so it's gone.
 COPY requirements.txt /app/
 
-# Install any needed packages specified in requirements.txt
-# Upgrade pip to 25.3+ to fix CVE-2025-8869 (symbolic link extraction vulnerability)
+# Install the pinned requirements, then take the installer out of the image.
+# Upgrade pip to 25.3+ first for CVE-2025-8869 (symbolic link extraction).
+#
+# pip 26.x ships a CycloneDX SBOM for the libraries it vendors
+# (pip/_vendor/bom.cdx.json) and Trivy reads it as installed packages, so the
+# image scan reports pip's private copies of msgpack 1.1.2
+# (GHSA-6v7p-g79w-8964) and setuptools 70.3.0 (CVE-2025-47273,
+# CVE-2026-59890). No pip release carries fixed copies yet, nothing here calls
+# them, and the running daemon never needs pip, so the runtime image ships
+# without one: both the venv's copy and the base image's /usr/local copy are
+# removed. Anyone who needs it back in a container can run
+# `python -m ensurepip` (the bundled wheel stays).
 # Cache bust: 2026-01-20 - Added ollama==0.6.1 support
 RUN pip install --no-cache-dir --upgrade "pip>=25.3" && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip uninstall -y pip && \
+    /usr/local/bin/python -m pip uninstall -y pip
 
 # Copy the entire project structure from parent directory
 COPY stream-daemon.py /app/
