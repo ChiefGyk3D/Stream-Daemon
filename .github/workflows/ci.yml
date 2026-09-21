@@ -37,6 +37,6 @@ jobs:
       lint-command: ruff check stream_daemon/ stream-daemon.py --output-format=github
       dockerfile: Docker/Dockerfile
       docker-test-command: docker run --rm "$IMAGE" python -c "import stream_daemon; print('Import successful')"
-      doppler-project: stream-daemon
+      doppler-project: ci
       doppler-config: ci
       doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}

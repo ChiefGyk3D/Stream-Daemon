@@ -17,8 +17,8 @@ Doppler project.
 
 No secret is stored in this repository's GitHub secrets. A job authenticates
 to Doppler with a short-lived token minted from its own GitHub OIDC identity
-(a Doppler Service Account Identity) and reads the `ci` config of the
-`stream-daemon` project, which holds only what the pipelines need:
+(a Doppler Service Account Identity) and reads the `ci` config of the shared
+`ci` Doppler project, which holds only what the pipelines need:
 
 | Name | Used by |
 |---|---|

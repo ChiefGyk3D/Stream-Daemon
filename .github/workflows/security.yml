@@ -29,6 +29,6 @@ jobs:
       codeql-queries: security-extended,security-and-quality
       pip-audit-requirements: requirements.txt
       snyk: true
-      doppler-project: stream-daemon
+      doppler-project: ci
       doppler-config: ci
       doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}
