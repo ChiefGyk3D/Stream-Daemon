@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   security:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@d5d9556afeeb06f78419b91ecb5d146e789c6d51 # v1.0.0
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@d57b0b6b08b84c68b5c33d5198e83eed8030c455 # v1.1.0
     permissions:
       contents: read
       security-events: write
