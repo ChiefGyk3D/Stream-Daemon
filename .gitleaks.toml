@@ -1,0 +1,32 @@
+# gitleaks configuration for the Security workflow (git-your-ship-together).
+#
+# Extends the default ruleset without disabling any rule. The allowlist names
+# the documented placeholders that trip the generic detectors, so a real leak
+# still fails the job. Every entry is anchored: a placeholder must match
+# whole, not merely contain the pattern.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented placeholders and committed scan reports"
+regexTarget = "secret"
+regexes = [
+  # docs: `curl -H "x-apikey: YOUR_VT_KEY"`, `OLD_ACCESS_TOKEN`
+  '''^YOUR_[A-Z0-9_]+$''',
+  '''^OLD_[A-Z0-9_]+$''',
+  '''(?i)^your_[a-z0-9_]+$''',
+  # Discord role / client ids in examples: counting digits, not a snowflake
+  '''^123456789012345678$''',
+  '''^987654321098765432$''',
+  # a Google-shaped key too short to be one, used in the configuration docs
+  '''^AIzaSyABC123XYZ789''',
+  # `SECRETS_SECRET_MANAGER=doppler/aws/vault`, `doppler_secret_env=`
+  '''^doppler[/_]''',
+]
+paths = [
+  # Snyk reports that were once committed; they quote example fixes from
+  # other public repositories. Removed from the tree, still in history.
+  '''^snyk\.sarif$''',
+  '''^snyk-code\.sarif$''',
+]

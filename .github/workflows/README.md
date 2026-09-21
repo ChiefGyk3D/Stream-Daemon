@@ -79,8 +79,10 @@ and GitHub Actions.
 - Bandit and `safety check` were dropped: `safety check` is deprecated
   upstream and needs an account, and both ran as advisory-only. CodeQL covers
   SAST and pip-audit covers the advisory database.
-- Ruff lint and pip-audit stay advisory (`lint-continue-on-error`,
-  `pip-audit-continue-on-error`) until the tree is clean; delete those lines
-  to make them gate.
+- pip-audit gates. Ruff lint stays advisory (`lint-continue-on-error`) until
+  the tree is clean; delete that line to make it gate.
+- `.gitleaks.toml` allowlists the documented placeholders (`YOUR_*`,
+  `AIzaSyABC123XYZ789`, counting-digit Discord ids) and the scan reports that
+  were once committed, so gitleaks fails only on a real credential.
 - Images are now signed, carry an SBOM and provenance, and the multi-arch
   build uses the GitHub Actions cache instead of `no-cache: true`.

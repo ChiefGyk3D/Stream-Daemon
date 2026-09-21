@@ -27,9 +27,6 @@ jobs:
     with:
       codeql-queries: security-extended,security-and-quality
       pip-audit-requirements: requirements.txt
-      # pip-audit was advisory before the migration and stays so until the
-      # pins are clean; then delete this line and let it gate.
-      pip-audit-continue-on-error: true
       snyk: true
       doppler-project: stream-daemon
       doppler-config: ci
