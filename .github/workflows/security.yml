@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   security:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@f6538c8277d5b02b1c8c8f817dc354c0faaa4622 # v1.2.0
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@5df66539de085aff73dcf1f2957615689b846298 # v1.2.1
     permissions:
       contents: read
       security-events: write
@@ -29,6 +29,7 @@ jobs:
       codeql-queries: security-extended,security-and-quality
       pip-audit-requirements: requirements.txt
       snyk: true
+      egress-policy: block
       doppler-project: ci
       doppler-config: ci
       doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}
