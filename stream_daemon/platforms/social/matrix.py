@@ -13,4 +13,4 @@ def _is_url_for_domain(url: str, domain: str) -> bool:
     return is_url_for_domain(url, domain)
 
 
-__all__ = ['MatrixPlatform', 'is_url_for_domain', '_is_url_for_domain']
+__all__ = ['MatrixPlatform', '_is_url_for_domain', 'is_url_for_domain']

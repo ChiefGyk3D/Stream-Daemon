@@ -7,9 +7,8 @@ Revolutionary stuff. We're really pushing the boundaries of human achievement he
 Forget curing cancer - someone needs to know when xXGamerBoi420Xx starts his Fortnite stream.
 """
 
-import logging
 import asyncio
-from typing import Optional, Tuple
+import logging
 
 from twitchAPI.twitch import Twitch
 
@@ -35,14 +34,13 @@ class TwitchPlatform(StreamingPlatform):
         """Authenticate with Twitch API with error handling."""
         try:
             self.client_id = get_secret('Twitch', 'client_id', 
-                                  secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',
-                                  secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',
-                                  doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')
+                                  secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
+                                  secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
+                                  doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
             self.client_secret = get_secret('Twitch', 'client_secret',
-                                       secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',
-                                       secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',
-                                       doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')
-            
+                                       secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
+                                       secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
+                                       doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
             if not all([self.client_id, self.client_secret]):
                 logger.warning("✗ Twitch credentials not found")
                 return False
@@ -66,12 +64,12 @@ class TwitchPlatform(StreamingPlatform):
             logger.info("✓ Twitch authenticated")
             return True
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
             logger.error(f"✗ Twitch authentication failed: {e}")
             self.enabled = False
             return False
     
-    def is_live(self, username: str) -> Tuple[bool, Optional[dict]]:
+    def is_live(self, username: str) -> tuple[bool, dict | None]:
         """
         Check if Twitch stream is live with retry logic and error handling.
         
@@ -90,8 +88,8 @@ class TwitchPlatform(StreamingPlatform):
         # Check if we're in error cooldown period (10 minutes after hitting max errors)
         if self.consecutive_errors >= self.max_consecutive_errors:
             if self.error_cooldown_time:
-                from datetime import datetime, timedelta
-                time_since_error = datetime.now() - self.error_cooldown_time
+                from datetime import datetime, timedelta, timezone
+                time_since_error = datetime.now(timezone.utc) - self.error_cooldown_time
                 if time_since_error < timedelta(minutes=10):
                     # Still in cooldown period
                     remaining_min = 10 - (time_since_error.seconds // 60)
@@ -99,13 +97,13 @@ class TwitchPlatform(StreamingPlatform):
                     return False, None
                 else:
                     # Cooldown expired, reset and try again
-                    logger.info(f"Twitch error cooldown expired, resetting error count and resuming checks")
+                    logger.info("Twitch error cooldown expired, resetting error count and resuming checks")
                     self.consecutive_errors = 0
                     self.error_cooldown_time = None
             else:
                 # First time hitting max errors - start cooldown
-                from datetime import datetime
-                self.error_cooldown_time = datetime.now()
+                from datetime import datetime, timezone
+                self.error_cooldown_time = datetime.now(timezone.utc)
                 logger.warning(f"⚠ Twitch disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
                 return False, None
             
@@ -158,7 +156,7 @@ class TwitchPlatform(StreamingPlatform):
                     if client:
                         try:
                             await client.close()
-                        except Exception as e:
+                        except Exception as e:  # noqa: BLE001  # best-effort cleanup; error is logged
                             logger.debug(f"Error closing Twitch client: {e}")
             
             result = asyncio.run(check_live())
@@ -169,12 +167,12 @@ class TwitchPlatform(StreamingPlatform):
             self.consecutive_errors += 1
             logger.error(f"⚠ Twitch API timeout for {username}")
             logger.error(f"   Consecutive errors: {self.consecutive_errors}/{self.max_consecutive_errors}")
-            logger.error(f"   → Network timeout: Check internet connection and firewall settings")
-            logger.error(f"   → Consider increasing timeout or check Twitch API status")
+            logger.error("   → Network timeout: Check internet connection and firewall settings")
+            logger.error("   → Consider increasing timeout or check Twitch API status")
             if self.consecutive_errors >= self.max_consecutive_errors:
-                logger.error(f"   ⏰ Twitch will enter cooldown to prevent API abuse")
+                logger.error("   ⏰ Twitch will enter cooldown to prevent API abuse")
             return False, None
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
             self.consecutive_errors += 1
             error_str = str(e)
             error_type = type(e).__name__
@@ -184,19 +182,19 @@ class TwitchPlatform(StreamingPlatform):
             
             # Provide specific guidance based on error type
             if '401' in error_str or 'unauthorized' in error_str.lower():
-                logger.error(f"   → 401 Unauthorized: OAuth token invalid or expired")
-                logger.error(f"   → Re-authenticate or check TWITCH_CLIENT_ID/CLIENT_SECRET")
+                logger.error("   → 401 Unauthorized: OAuth token invalid or expired")
+                logger.error("   → Re-authenticate or check TWITCH_CLIENT_ID/CLIENT_SECRET")
             elif '403' in error_str or 'forbidden' in error_str.lower():
-                logger.error(f"   → 403 Forbidden: Check OAuth scopes or API permissions")
+                logger.error("   → 403 Forbidden: Check OAuth scopes or API permissions")
             elif '404' in error_str or 'not found' in error_str.lower():
                 logger.error(f"   → 404 Not Found: User '{username}' may not exist")
             elif 'rate limit' in error_str.lower() or '429' in error_str:
-                logger.error(f"   → Rate Limited: Too many API requests, will retry with backoff")
+                logger.error("   → Rate Limited: Too many API requests, will retry with backoff")
             elif 'connection' in error_str.lower():
-                logger.error(f"   → Connection error: Check network connectivity to twitch.tv")
+                logger.error("   → Connection error: Check network connectivity to twitch.tv")
             else:
-                logger.error(f"   → Check Twitch credentials and network configuration")
+                logger.error("   → Check Twitch credentials and network configuration")
             
             if self.consecutive_errors >= self.max_consecutive_errors:
-                logger.error(f"   ⏰ Twitch will enter cooldown to prevent API abuse")
+                logger.error("   ⏰ Twitch will enter cooldown to prevent API abuse")
             return False, None
