@@ -1,0 +1,8 @@
+# Ruff configuration. The `S` rules are bandit's security checks, so dropping
+# the separate bandit step from CI lost nothing; the tests are exempt from
+# them because assert and hard-coded fixtures are what tests are made of.
+[lint]
+extend-select = ["S"]
+
+[lint.per-file-ignores]
+"tests/**" = ["S"]

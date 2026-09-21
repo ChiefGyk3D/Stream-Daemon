@@ -44,3 +44,6 @@ tests/test_results/
 Thumbs.db
 
 .coverage
+
+# Scanner output is a CI artifact, never a committed file
+*.sarif

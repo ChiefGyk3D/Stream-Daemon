@@ -1,0 +1,34 @@
+# CodeQL, gitleaks, pip-audit, dependency review on pull requests, and Snyk
+# (token from Doppler). The jobs live in ChiefGyk3D/git-your-ship-together.
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Weekly, Monday 06:00 UTC, so new advisories surface between commits
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/security.yml@d5d9556afeeb06f78419b91ecb5d146e789c6d51 # v1.0.0
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      id-token: write
+    secrets:
+      DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}   # optional Service Token fallback; unset means OIDC only
+    with:
+      codeql-queries: security-extended,security-and-quality
+      pip-audit-requirements: requirements.txt
+      snyk: true
+      doppler-project: stream-daemon
+      doppler-config: ci
+      doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}
