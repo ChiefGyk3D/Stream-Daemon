@@ -31,7 +31,7 @@ jobs:
       lint-python-version: "3.14"
       install-command: |
         python -m pip install --upgrade "pip>=25.3"
-        pip install -r requirements.txt
+        pip install --require-hashes -r requirements.txt
       test-command: pytest tests/ -v --cov=stream_daemon --cov-report=xml --cov-report=term
       codecov: true
       lint-command: ruff check stream_daemon/ stream-daemon.py --output-format=github
