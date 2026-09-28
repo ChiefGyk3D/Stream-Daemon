@@ -40,7 +40,7 @@ requests==2.34.2
 # NOTE: discord.py and matrix-nio removed — never imported; Discord uses
 # webhooks and Matrix uses the client-server HTTP API via requests.
 # CVE-2024-5569: Infinite loop in zipp, fixed in >= 3.19.1
-zipp==3.23.0
+zipp==4.1.0
 # CVE-2024-37891, CVE-2024-37080: Fixed in urllib3 >= 2.2.2
 # CVE-2025-78866: Open redirect fixed in urllib3 >= 2.5.0
 # GHSA-qccp-gfcp-xxvc (header leak on proxied redirects) & GHSA-mf9v-mfxr-j63j
