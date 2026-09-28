@@ -46,7 +46,7 @@ zipp==3.23.0
 # GHSA-qccp-gfcp-xxvc (header leak on proxied redirects) & GHSA-mf9v-mfxr-j63j
 # (decompression-bomb bypass): both fixed in urllib3 >= 2.7.0
 # Using latest stable v2.x (v1.26.19 is legacy Python 2.7 support)
-urllib3==2.7.0
+urllib3==2.8.0
 # pip symbolic link extraction vulnerability fix
 # Ensures pip >= 24.2 for CVE fixes
 # GHSA-58qw-9mgm-455v, GHSA-jp4c-xjxw-mgf9, GHSA-wf93-45jw-7689: fixed in pip >= 26.1.2
