@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-ci.yml@34536f91c5207effb397d065e6bb98cc348c6e2b # v1.5.0
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-ci.yml@0ba5e76fb39d44c983b15f2486b3a726caf90fa4 # v1.5.1
     permissions:
       contents: read
       id-token: write   # Doppler OIDC: CODECOV_TOKEN
