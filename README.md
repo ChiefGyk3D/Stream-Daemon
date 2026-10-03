@@ -162,6 +162,23 @@ See [docs/features/llm-model-recommendations.md](docs/features/llm-model-recomme
 - **Quality logging** - Clear visibility into issues and retry outcomes
 - See [docs/features/llm-guardrails.md](docs/features/llm-guardrails.md) for full details
 
+**🔁 Provider Failover & Auto-Recovery (via [hypeman-social](https://github.com/ChiefGyk3D/hypeman)):**
+
+The AI layer is powered by [`hypeman-social`](https://pypi.org/project/hypeman-social/),
+the shared library behind Boon-Tube-Daemon, Star-Daemon, and yomama-as-a-service —
+a fix that lands there protects every daemon at once. It adds two things the
+old built-in providers couldn't do:
+
+- **Automatic reconnection** — taking your Ollama box offline costs you
+  template-fallback posts, not a daemon restart. The daemon keeps probing and
+  picks the model back up the moment the server returns.
+- **Opt-in failover** — set `LLM_FALLBACK_PROVIDER=gemini` and a local outage
+  fails over to the cloud (strictly opt-in, so local-only stays local), then
+  switches back automatically when your box recovers. Use
+  `LLM_OLLAMA_MODEL` / `LLM_GEMINI_MODEL` so each provider names its own model.
+
+Full key reference: [hypeman-social configuration docs](https://github.com/ChiefGyk3D/hypeman/blob/main/docs/CONFIGURATION.md).
+
 ### 🔐 Enterprise-Grade Secrets Management
 - **Doppler** - Modern secrets platform with environment-specific tokens (dev/staging/prod)
 - **AWS Secrets Manager** - Secure cloud-based credential storage with IAM integration
@@ -555,6 +572,22 @@ For platform-specific setup guides, advanced features, and troubleshooting:
 **[View Full Documentation](#-documentation)**
 
 ---
+
+### Health Endpoint
+
+Set `HEALTH_PORT` to expose the daemon's health over HTTP (binds to
+`127.0.0.1`), served by [hypeman-social](https://github.com/ChiefGyk3D/hypeman)'s
+observability module:
+
+```env
+HEALTH_PORT=9103
+```
+
+- `GET /healthz` — 200 while every initialized platform is working, 503 when one is broken
+- `GET /status` — full detail: social platforms, streaming platforms, LLM provider state, last check, uptime
+
+A downed AI server reports as **degraded, not unhealthy** — announcements
+still go out from your message files.
 
 ## 📚 Documentation
 
@@ -1009,12 +1042,18 @@ services:
       - ./messages.txt:/app/messages.txt
       - ./end_messages.txt:/app/end_messages.txt
     
+      # Optional: expose the daemon's health endpoint (see below)
+      # - HEALTH_PORT=9103
+
     healthcheck:
-      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
-      interval: 30s
+      test: ["CMD", "python", "-c", "import os,sys,urllib.request;port=os.getenv('HEALTH_PORT');urllib.request.urlopen(f'http://127.0.0.1:{port}/healthz', timeout=4) if port else sys.exit(0)"]
+      interval: 60s
       timeout: 10s
       retries: 3
 ```
+
+> The image also ships a built-in `HEALTHCHECK` that probes `/healthz`
+> automatically when `HEALTH_PORT` is set.
 
 **Option 2: Build from Source**
 
@@ -1184,6 +1223,18 @@ python3 tests/test_doppler_all.py
 pip install black
 black stream-daemon.py stream_daemon/
 ```
+
+### Dependency lock
+
+`requirements.in` lists the direct dependencies. `requirements.txt` is
+generated from it and pins every dependency, transitive ones included, to a
+version and its SHA-256 hashes. pip enters hash-checking mode by itself when it
+reads the file, so `pip install -r requirements.txt` verifies every download,
+and CI and the Docker image install with `--require-hashes`: a package
+re-uploaded under the same version fails to install instead of shipping. To
+add or bump a dependency, edit `requirements.in` and regenerate the lock with
+the command in its header; never edit `requirements.txt` by hand. Dependabot
+regenerates it for version bumps.
 
 ### Pull Request Guidelines
 

@@ -10,7 +10,6 @@ This is what cutting-edge streaming infrastructure looks like in 2026, folks.
 """
 
 import logging
-from typing import Optional, Tuple
 
 import requests
 
@@ -39,19 +38,18 @@ class KickPlatform(StreamingPlatform):
         
         # Try to get credentials for authenticated API
         client_id = get_secret('Kick', 'client_id',
-                              secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',
-                              secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',
-                              doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')
+                              secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
+                              secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
+                              doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
         client_secret = get_secret('Kick', 'client_secret',
-                                   secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',
-                                   secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',
-                                   doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')
-        
+                                   secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
+                                   secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
+                                   doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
         if client_id and client_secret:
             # Try to get access token using OAuth client credentials flow
             try:
                 # Use correct OAuth server endpoint (id.kick.com, not api.kick.com)
-                token_url = "https://id.kick.com/oauth/token"
+                token_url = "https://id.kick.com/oauth/token"  # noqa: S105  # not a credential, it is the OAuth endpoint URL
                 headers = {
                     'Content-Type': 'application/x-www-form-urlencoded'
                 }
@@ -71,7 +69,7 @@ class KickPlatform(StreamingPlatform):
                     return True
                 else:
                     logger.warning(f"⚠ Kick authentication failed (status {response.status_code}), falling back to public API")
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
                 logger.warning(f"⚠ Kick authentication error: {e}, falling back to public API")
         
         # Fall back to public API
@@ -82,7 +80,7 @@ class KickPlatform(StreamingPlatform):
         logger.info("✓ Kick enabled (using public API)")
         return True
     
-    def is_live(self, username: str) -> Tuple[bool, Optional[dict]]:
+    def is_live(self, username: str) -> tuple[bool, dict | None]:
         """
         Check if Kick stream is live.
         
@@ -98,8 +96,8 @@ class KickPlatform(StreamingPlatform):
         # Check if we're in error cooldown period (10 minutes after hitting max errors)
         if self.consecutive_errors >= self.max_consecutive_errors:
             if self.error_cooldown_time:
-                from datetime import datetime, timedelta
-                time_since_error = datetime.now() - self.error_cooldown_time
+                from datetime import datetime, timedelta, timezone
+                time_since_error = datetime.now(timezone.utc) - self.error_cooldown_time
                 if time_since_error < timedelta(minutes=10):
                     # Still in cooldown period
                     remaining_min = 10 - (time_since_error.seconds // 60)
@@ -107,13 +105,13 @@ class KickPlatform(StreamingPlatform):
                     return False, None
                 else:
                     # Cooldown expired, reset and try again
-                    logger.info(f"Kick error cooldown expired, resetting error count and resuming checks")
+                    logger.info("Kick error cooldown expired, resetting error count and resuming checks")
                     self.consecutive_errors = 0
                     self.error_cooldown_time = None
             else:
                 # First time hitting max errors - start cooldown
-                from datetime import datetime
-                self.error_cooldown_time = datetime.now()
+                from datetime import datetime, timezone
+                self.error_cooldown_time = datetime.now(timezone.utc)
                 logger.warning(f"⚠ Kick disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
                 return False, None
         
@@ -124,7 +122,7 @@ class KickPlatform(StreamingPlatform):
             else:
                 # Fall back to public scraping API
                 return self._check_public(username)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
             self.consecutive_errors += 1
             error_str = str(e)
             error_type = type(e).__name__
@@ -134,28 +132,28 @@ class KickPlatform(StreamingPlatform):
             
             # Provide specific guidance based on error type
             if '401' in error_str or 'unauthorized' in error_str.lower():
-                logger.error(f"   → 401 Unauthorized: OAuth token invalid or expired")
-                logger.error(f"   → Re-authenticate or check KICK_CLIENT_ID/CLIENT_SECRET")
+                logger.error("   → 401 Unauthorized: OAuth token invalid or expired")
+                logger.error("   → Re-authenticate or check KICK_CLIENT_ID/CLIENT_SECRET")
             elif '403' in error_str or 'forbidden' in error_str.lower():
-                logger.error(f"   → 403 Forbidden: Check OAuth permissions")
+                logger.error("   → 403 Forbidden: Check OAuth permissions")
             elif '404' in error_str or 'not found' in error_str.lower():
                 logger.error(f"   → 404 Not Found: Channel '{username}' may not exist")
             elif 'timeout' in error_str.lower() or 'timed out' in error_str.lower():
-                logger.error(f"   → Network timeout: Check internet connection and firewall settings")
+                logger.error("   → Network timeout: Check internet connection and firewall settings")
             elif 'connection' in error_str.lower():
-                logger.error(f"   → Connection error: Check network connectivity to kick.com")
+                logger.error("   → Connection error: Check network connectivity to kick.com")
             elif 'cloudflare' in error_str.lower() or 'captcha' in error_str.lower():
-                logger.error(f"   → Cloudflare protection: May need OAuth authentication")
-                logger.error(f"   → Set KICK_ENABLE_AUTH=True and configure OAuth")
+                logger.error("   → Cloudflare protection: May need OAuth authentication")
+                logger.error("   → Set KICK_ENABLE_AUTH=True and configure OAuth")
             else:
-                logger.error(f"   → Check Kick credentials and network configuration")
+                logger.error("   → Check Kick credentials and network configuration")
             
             if self.consecutive_errors >= self.max_consecutive_errors:
-                logger.error(f"   ⏰ Kick will enter cooldown to prevent API abuse")
+                logger.error("   ⏰ Kick will enter cooldown to prevent API abuse")
             
             return False, None
     
-    def _check_authenticated(self, username: str) -> Tuple[bool, Optional[dict]]:
+    def _check_authenticated(self, username: str) -> tuple[bool, dict | None]:
         """Check stream status using authenticated official Kick API."""
         try:
             # Use the /channels endpoint with slug parameter (works better than searching livestreams)
@@ -209,58 +207,54 @@ class KickPlatform(StreamingPlatform):
             return True, stream_data
 
             
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
             error_str = str(e)
             error_type = type(e).__name__
             logger.warning(f"Authenticated Kick check failed ({error_type}): {e}")
             
             # Provide specific guidance
             if '401' in error_str or 'unauthorized' in error_str.lower():
-                logger.warning(f"   → OAuth token may be expired, falling back to public API")
+                logger.warning("   → OAuth token may be expired, falling back to public API")
             elif '403' in error_str or 'forbidden' in error_str.lower():
-                logger.warning(f"   → API access forbidden, falling back to public API")
+                logger.warning("   → API access forbidden, falling back to public API")
             else:
-                logger.warning(f"   → Falling back to public API")
+                logger.warning("   → Falling back to public API")
             
             return self._check_public(username)
     
-    def _check_public(self, username: str) -> Tuple[bool, Optional[dict]]:
+    def _check_public(self, username: str) -> tuple[bool, dict | None]:
         """Check stream status using public API (fallback)."""
-        try:
-            # Old public API endpoint
-            url = f"https://kick.com/api/v2/channels/{username}/livestream"
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
-                'Accept': 'application/json',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Referer': 'https://kick.com/'
-            }
-            response = requests.get(url, headers=headers, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if data and data.get('data'):
-                    livestream = data['data']
-                    if livestream.get('is_live'):
-                        title = livestream.get('session_title', 'Live Stream')
-                        viewer_count = livestream.get('viewer_count') or livestream.get('viewers')
-                        thumbnail_url = livestream.get('thumbnail', {}).get('url') if livestream.get('thumbnail') else None
-                        category = livestream.get('category', {})
-                        game_name = category.get('name') if category else None
-                        
-                        stream_data = {
-                            'title': title,
-                            'viewer_count': int(viewer_count) if viewer_count else None,
-                            'thumbnail_url': thumbnail_url,
-                            'game_name': game_name
-                        }
-                        # Reset error counter on success
-                        self.consecutive_errors = 0
-                        return True, stream_data
-            
-            # Reset error counter even if offline (successful API call)
-            self.consecutive_errors = 0
-            return False, None
-            
-        except Exception as e:
-            raise  # Re-raise to be caught by parent
+        # Old public API endpoint
+        url = f"https://kick.com/api/v2/channels/{username}/livestream"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://kick.com/'
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data and data.get('data'):
+                livestream = data['data']
+                if livestream.get('is_live'):
+                    title = livestream.get('session_title', 'Live Stream')
+                    viewer_count = livestream.get('viewer_count') or livestream.get('viewers')
+                    thumbnail_url = livestream.get('thumbnail', {}).get('url') if livestream.get('thumbnail') else None
+                    category = livestream.get('category', {})
+                    game_name = category.get('name') if category else None
+                    
+                    stream_data = {
+                        'title': title,
+                        'viewer_count': int(viewer_count) if viewer_count else None,
+                        'thumbnail_url': thumbnail_url,
+                        'game_name': game_name
+                    }
+                    # Reset error counter on success
+                    self.consecutive_errors = 0
+                    return True, stream_data
+        
+        # Reset error counter even if offline (successful API call)
+        self.consecutive_errors = 0
+        return False, None

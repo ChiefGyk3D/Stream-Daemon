@@ -1,12 +1,11 @@
 """Message file parsing utilities."""
 
 import logging
-from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
 
-def parse_sectioned_message_file(filepath: str) -> Dict[str, List[str]]:
+def parse_sectioned_message_file(filepath: str) -> dict[str, list[str]]:
     """
     Parse a message file with platform-specific sections.
     
@@ -57,6 +56,6 @@ def parse_sectioned_message_file(filepath: str) -> Dict[str, List[str]]:
     except FileNotFoundError:
         logger.warning(f"⚠ Message file not found: {filepath}")
         return {}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # keep the daemon alive; error is logged
         logger.error(f"Error parsing message file {filepath}: {e}")
         return {}

@@ -1,5 +1,5 @@
 """Streaming and social platform integrations."""
 
-from .base import StreamingPlatform, SocialPlatform
+from .base import SocialPlatform, StreamingPlatform
 
-__all__ = ['StreamingPlatform', 'SocialPlatform']
+__all__ = ['SocialPlatform', 'StreamingPlatform']

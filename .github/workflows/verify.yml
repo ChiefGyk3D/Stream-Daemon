@@ -1,0 +1,23 @@
+# Nightly: pull the published image, verify its signature, SBOM attestation
+# and provenance against this account's identity, and run the same check the
+# release ran, on both platforms. The producer signs; this proves it verifies.
+name: Verify published image
+
+on:
+  schedule:
+    - cron: '0 6 * * *'  # 06:00 UTC daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/verify-published.yml@8fd4d799a1aabf017afd1aa67350cf8ac8b2e930 # v1.6.1
+    permissions:
+      contents: read  # gh attestation verify reads with the workflow's own token
+      packages: read  # pull the public image from GHCR
+    with:
+      image: ghcr.io/chiefgyk3d/stream-daemon:latest
+      test-command: |
+        docker run --rm "$IMAGE" python -c "import stream_daemon; print('Import successful')"

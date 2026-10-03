@@ -5,7 +5,6 @@ platforms simultaneously, because apparently one wasn't enough. Gotta saturate t
 """
 
 import logging
-from typing import Optional, Dict, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from stream_daemon.ai import AIMessageGenerator
@@ -21,9 +20,9 @@ def post_to_social_async(enabled_social: list,
                          username: str,
                          title: str,
                          url: str,
-                         fallback_messages: List[str],
-                         stream_data: Optional[dict] = None,
-                         reply_to_ids: Optional[Dict[str, str]] = None) -> Dict[str, Optional[str]]:
+                         fallback_messages: list[str],
+                         stream_data: dict | None = None,
+                         reply_to_ids: dict[str, str] | None = None) -> dict[str, str | None]:
     """
     Post to all social platforms asynchronously using ThreadPoolExecutor.
     
@@ -80,7 +79,7 @@ def post_to_social_async(enabled_social: list,
                 logger.debug(f"  ✗ Failed to post to {social.name}")
                 
             return (social.name, post_id)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # one platform failing must not block the others; error is logged
             logger.error(f"✗ Error posting to {social.name}: {e}")
             return (social.name, None)
     

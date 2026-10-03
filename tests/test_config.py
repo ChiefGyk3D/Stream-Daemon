@@ -127,10 +127,15 @@ class TestSecretLoading:
     
     def test_secret_priority_manager_over_env(self):
         """Test that secrets manager takes priority over environment variables."""
-        # Check if ANY secrets manager is actually configured with credentials
+        # Check if ANY secrets manager is actually configured with credentials.
+        # AWS and Vault lookups only happen when SECRETS_MANAGER selects them,
+        # so stray ambient AWS credentials (CI runners, proxies) don't count.
+        secrets_manager = (os.getenv('SECRETS_MANAGER') or '').lower()
         has_doppler = bool(os.getenv('DOPPLER_TOKEN'))
-        has_aws = bool(os.getenv('AWS_ACCESS_KEY_ID') and os.getenv('AWS_SECRET_ACCESS_KEY'))
-        has_vault = bool(os.getenv('SECRETS_VAULT_URL') and os.getenv('SECRETS_VAULT_TOKEN'))
+        has_aws = secrets_manager == 'aws' and bool(
+            os.getenv('AWS_ACCESS_KEY_ID') and os.getenv('AWS_SECRET_ACCESS_KEY'))
+        has_vault = secrets_manager == 'vault' and bool(
+            os.getenv('SECRETS_VAULT_URL') and os.getenv('SECRETS_VAULT_TOKEN'))
         
         if not (has_doppler or has_aws or has_vault):
             pytest.skip("No secrets manager credentials available (expected in CI)")
