@@ -2,6 +2,7 @@
 
 from .config import get_bool_config, get_config, get_int_config, get_usernames
 from .secrets import (
+    backend_env_names,
     get_secret,
     load_secrets_from_aws,
     load_secrets_from_doppler,
@@ -9,6 +10,7 @@ from .secrets import (
 )
 
 __all__ = [
+    'backend_env_names',
     'get_bool_config',
     'get_config',
     'get_int_config',

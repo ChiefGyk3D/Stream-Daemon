@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 from googleapiclient.discovery import build
 
-from stream_daemon.config import get_config, get_secret
+from stream_daemon.config import backend_env_names, get_config, get_secret
 from stream_daemon.platforms.base import StreamingPlatform
 
 logger = logging.getLogger(__name__)
@@ -37,10 +37,7 @@ class YouTubePlatform(StreamingPlatform):
     def authenticate(self) -> bool:
         """Authenticate with YouTube API with error handling."""
         try:
-            api_key = get_secret('YouTube', 'api_key',
-                                secret_name_env='SECRETS_AWS_YOUTUBE_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
-                                secret_path_env='SECRETS_VAULT_YOUTUBE_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
-                                doppler_secret_env='SECRETS_DOPPLER_YOUTUBE_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
+            api_key = get_secret('YouTube', 'api_key', **backend_env_names('YouTube'))
             self.username = get_config('YouTube', 'username')
             
             # Optional: Channel ID for direct lookup (faster, but username works too)
