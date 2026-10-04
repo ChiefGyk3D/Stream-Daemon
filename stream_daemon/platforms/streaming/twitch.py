@@ -12,7 +12,7 @@ import logging
 
 from twitchAPI.twitch import Twitch
 
-from stream_daemon.config import get_secret
+from stream_daemon.config import backend_env_names, get_secret
 from stream_daemon.platforms.base import StreamingPlatform
 
 logger = logging.getLogger(__name__)
@@ -33,14 +33,8 @@ class TwitchPlatform(StreamingPlatform):
     def authenticate(self) -> bool:
         """Authenticate with Twitch API with error handling."""
         try:
-            self.client_id = get_secret('Twitch', 'client_id', 
-                                  secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
-                                  secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
-                                  doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
-            self.client_secret = get_secret('Twitch', 'client_secret',
-                                       secret_name_env='SECRETS_AWS_TWITCH_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
-                                       secret_path_env='SECRETS_VAULT_TWITCH_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
-                                       doppler_secret_env='SECRETS_DOPPLER_TWITCH_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
+            self.client_id = get_secret('Twitch', 'client_id', **backend_env_names('Twitch'))
+            self.client_secret = get_secret('Twitch', 'client_secret', **backend_env_names('Twitch'))
             if not all([self.client_id, self.client_secret]):
                 logger.warning("✗ Twitch credentials not found")
                 return False

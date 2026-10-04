@@ -1,29 +1,11 @@
-# Snyk policy file. Snyk Code (SAST) triage, reviewed 2026-10-03.
-# Every entry is a false positive; see the reason on each. Nothing is ignored
-# repository-wide.
+# Snyk policy. Snyk Code does not honour per-rule `ignore:` entries from this
+# file (measured 2026-10-03: findings stayed open with "Ignored issues: 0"), so
+# this file only excludes paths from code analysis, and nothing from Snyk Open
+# Source. Review by 2027-04-01.
 version: v1.25.0
-ignore:
-  python/HardcodedNonCryptoSecret:
-    - 'stream_daemon/platforms/streaming/kick.py':
-        reason: >-
-          Flagged strings are the NAMES of environment variables passed as
-          secret_name_env/secret_path_env/doppler_secret_env to get_secret();
-          the secret values are resolved at runtime from the secrets manager.
-        expires: 2027-04-01T00:00:00.000Z
-    - 'stream_daemon/platforms/streaming/twitch.py':
-        reason: >-
-          Flagged strings are environment variable names passed to
-          get_secret(), not credential values.
-        expires: 2027-04-01T00:00:00.000Z
-    - 'stream_daemon/platforms/streaming/youtube.py':
-        reason: >-
-          Flagged strings are environment variable names passed to
-          get_secret(), not credential values.
-        expires: 2027-04-01T00:00:00.000Z
-    - 'tests/**':
-        reason: Obviously fake test fixture values, not real secrets.
-        expires: 2027-04-01T00:00:00.000Z
-  python/NoHardcodedCredentials/test:
-    - 'tests/**':
-        reason: Obviously fake test fixture usernames and passwords, not real credentials.
-        expires: 2027-04-01T00:00:00.000Z
+exclude:
+  code:
+    # Test fixtures: fake usernames and placeholder values assigned to names
+    # like password and secret are what tests are made of, and the 52 LOW
+    # findings here were all of that kind. The source tree stays scanned.
+    - tests/**

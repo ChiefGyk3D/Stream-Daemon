@@ -13,7 +13,7 @@ import logging
 
 import requests
 
-from stream_daemon.config import get_bool_config, get_secret
+from stream_daemon.config import backend_env_names, get_bool_config, get_secret
 from stream_daemon.platforms.base import StreamingPlatform
 
 logger = logging.getLogger(__name__)
@@ -37,14 +37,8 @@ class KickPlatform(StreamingPlatform):
             return False
         
         # Try to get credentials for authenticated API
-        client_id = get_secret('Kick', 'client_id',
-                              secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
-                              secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
-                              doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
-        client_secret = get_secret('Kick', 'client_secret',
-                                   secret_name_env='SECRETS_AWS_KICK_SECRET_NAME',  # noqa: S106  # not a credential, it is the env var name
-                                   secret_path_env='SECRETS_VAULT_KICK_SECRET_PATH',  # noqa: S106  # not a credential, it is the env var name
-                                   doppler_secret_env='SECRETS_DOPPLER_KICK_SECRET_NAME')  # noqa: S106  # not a credential, it is the env var name
+        client_id = get_secret('Kick', 'client_id', **backend_env_names('Kick'))
+        client_secret = get_secret('Kick', 'client_secret', **backend_env_names('Kick'))
         if client_id and client_secret:
             # Try to get access token using OAuth client credentials flow
             try:
