@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   ci:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-ci.yml@8fd4d799a1aabf017afd1aa67350cf8ac8b2e930 # v1.6.1
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/python-ci.yml@804400181a9d3e2f78dfcda5161e2bd960bc011a # v1.15.0
     permissions:
       contents: read
       id-token: write   # Doppler OIDC: CODECOV_TOKEN
@@ -39,6 +39,7 @@ jobs:
       dockerfile: Docker/Dockerfile
       docker-test-command: docker run --rm "$IMAGE" python -c "import stream_daemon; print('Import successful')"
       egress-policy: block
+      extra-allowed-endpoints: www.sqlite.org:443
       doppler-project: ci
       doppler-config: ci
       doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}
