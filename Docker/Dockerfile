@@ -21,14 +21,18 @@ ARG BUILDPLATFORM
 WORKDIR /tmp/sqlite
 # `apt-get upgrade` applies pending Debian security updates (the base image lags
 # them, and the image scan fails on any fixed HIGH finding such as libpcre2).
+# Apt versions are left unpinned on purpose: the base image is pinned by digest,
+# and Debian removes superseded package versions, so exact apt pins would break
+# the build at every security update.
+# hadolint ignore=DL3008
 RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
-    gcc=4:14.2.0-1 \
-    libc6-dev=2.41-12+deb13u4 \
-    libffi-dev=3.4.8-2 \
-    libssl-dev=3.5.7-1~deb13u3 \
-    wget=1.25.0-2 \
-    make=4.4.1-2 \
-    tcl=8.6.16 \
+    gcc \
+    libc6-dev \
+    libffi-dev \
+    libssl-dev \
+    wget \
+    make \
+    tcl \
     && wget --progress=dot:giga -O sqlite.tar.gz https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz \
     && tar xzf sqlite.tar.gz --strip-components=1 \
     && ./configure --prefix=/usr --enable-fts5 \
