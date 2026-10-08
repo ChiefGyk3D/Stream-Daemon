@@ -39,6 +39,7 @@ jobs:
       dockerfile: Docker/Dockerfile
       docker-test-command: docker run --rm "$IMAGE" python -c "import stream_daemon; print('Import successful')"
       egress-policy: block
+      extra-allowed-endpoints: www.sqlite.org:443
       doppler-project: ci
       doppler-config: ci
       doppler-identity-id: ${{ vars.DOPPLER_IDENTITY_ID }}

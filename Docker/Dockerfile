@@ -19,7 +19,9 @@ ARG BUILDPLATFORM
 # Build in a dedicated directory instead of `cd`-ing around (DL3003); the
 # build tree is removed in the same layer, together with the build-only tools.
 WORKDIR /tmp/sqlite
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# `apt-get upgrade` applies pending Debian security updates (the base image lags
+# them, and the image scan fails on any fixed HIGH finding such as libpcre2).
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     gcc=4:14.2.0-1 \
     libc6-dev=2.41-12+deb13u4 \
     libffi-dev=3.4.8-2 \
