@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     make \
     tcl \
     && cd /tmp \
-    && wget https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz \
+    && wget --tries=5 --waitretry=10 --retry-connrefused https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz \
     && tar xzf sqlite-autoconf-3500400.tar.gz \
     && cd sqlite-autoconf-3500400 \
     && ./configure --prefix=/usr --enable-fts5 \
