@@ -10,16 +10,22 @@ FROM python:3.14-slim@sha256:c3e521df8b2b498a7a682e7e18676771cb80c6b75b8699af886
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
 
-# Set the working directory in the container to /app
-WORKDIR /app
-
 # Install system dependencies and upgrade SQLite to fix CVE-2025-7709
 # CVE-2025-7709: Integer overflow in SQLite FTS5 extension (fixed in 3.50.3)
 # Debian trixie ships 3.46.1-7, so we compile SQLite 3.50.4 from source
 # Because a database vulnerability in our stream announcement tool is clearly
 # a national security threat. The terrorists might hack our "going live" messages.
 # Better compile from source. For the children.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Build in a dedicated directory instead of `cd`-ing around (DL3003); the
+# build tree is removed in the same layer, together with the build-only tools.
+WORKDIR /tmp/sqlite
+# `apt-get upgrade` applies pending Debian security updates (the base image lags
+# them, and the image scan fails on any fixed HIGH finding such as libpcre2).
+# Apt versions are left unpinned on purpose: the base image is pinned by digest,
+# and Debian removes superseded package versions, so exact apt pins would break
+# the build at every security update.
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     gcc \
     libc6-dev \
     libffi-dev \
@@ -27,19 +33,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     make \
     tcl \
-    && cd /tmp \
-    && wget https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz \
-    && tar xzf sqlite-autoconf-3500400.tar.gz \
-    && cd sqlite-autoconf-3500400 \
+    && wget --progress=dot:giga -O sqlite.tar.gz https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz \
+    && tar xzf sqlite.tar.gz --strip-components=1 \
     && ./configure --prefix=/usr --enable-fts5 \
-    && make -j$(nproc) \
+    && make -j"$(nproc)" \
     && make install \
     && ldconfig \
-    && cd / \
-    && rm -rf /tmp/sqlite-autoconf-3500400* \
+    && rm -rf /tmp/sqlite \
     && apt-get purge -y wget make tcl \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
 
 # Create and activate virtual environment
 ENV VIRTUAL_ENV=/opt/venv
@@ -74,6 +79,13 @@ COPY stream-daemon.py /app/
 COPY stream_daemon/ /app/stream_daemon/
 COPY messages.txt /app/
 COPY end_messages.txt /app/
+
+# Dedicated non-root user. UID/GID 1000: the compose deployment mounts only
+# read-only message files, so there is no existing writable mount to match.
+RUN groupadd --gid 1000 streamdaemon \
+    && useradd --uid 1000 --gid 1000 --create-home --shell /usr/sbin/nologin streamdaemon \
+    && chown -R streamdaemon:streamdaemon /app
+USER 1000:1000
 
 # Health check: probe the daemon's /healthz endpoint (hypeman-social
 # observability) when HEALTH_PORT is set; otherwise verify PID 1 is alive so
