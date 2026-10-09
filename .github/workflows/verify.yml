@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   verify:
-    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/verify-published.yml@1360d100a45897b2d658272441bc5238d6532743 # v1.16.0
+    uses: ChiefGyk3D/git-your-ship-together/.github/workflows/verify-published.yml@cc7fa6f48a612183ecd900ed15810da61b30288a # v1.17.0
     permissions:
       contents: read  # gh attestation verify reads with the workflow's own token
       packages: read  # pull the public image from GHCR
