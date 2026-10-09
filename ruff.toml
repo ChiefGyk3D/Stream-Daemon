@@ -1,6 +1,9 @@
 # Ruff configuration. The `S` rules are bandit's security checks, so dropping
 # the separate bandit step from CI lost nothing; the tests are exempt from
 # them because assert and hard-coded fixtures are what tests are made of.
+# 3.10 is the oldest interpreter CI tests on, so the UP rules must not suggest
+# 3.11+ names such as datetime.UTC. Declared because ruff's default target moved.
+target-version = "py310"
 [lint]
 extend-select = ["S"]
 
