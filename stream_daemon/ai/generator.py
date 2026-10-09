@@ -105,11 +105,14 @@ class AIMessageGenerator:
 
     @property
     def _message_cache(self):
-        return self.engine._message_cache
+        # hypeman-social >= 0.3.1 keeps one history per platform; this shim
+        # exposes the platform-less ("generic") bucket, which is what
+        # _add_to_message_cache / _is_duplicate_message use.
+        return self.engine._message_caches.setdefault('generic', [])
 
     @_message_cache.setter
     def _message_cache(self, value) -> None:
-        self.engine._message_cache = value
+        self.engine._message_caches['generic'] = value
 
     def authenticate(self) -> bool:
         """
