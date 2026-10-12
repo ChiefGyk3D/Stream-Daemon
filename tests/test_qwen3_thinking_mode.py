@@ -1,7 +1,7 @@
 """Tests for Qwen3 thinking mode support in AI message generator."""
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 # We'll test the extraction logic directly
 class TestQwen3ThinkingModeExtraction:
@@ -113,7 +113,7 @@ class TestQwen3ThinkingModeExtraction:
         That's too short, let me try again...
         """
         
-        result = self.generator._extract_from_thinking(thinking)
+        self.generator._extract_from_thinking(thinking)
         # "Hi!" is too short (< 20 chars), should not be extracted
         # May fall back to other patterns or return None
     
