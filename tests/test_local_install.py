@@ -6,7 +6,6 @@ Validates all dependencies and core functionality
 
 import sys
 import importlib
-import subprocess
 from pathlib import Path
 
 # Add parent directory to path for imports

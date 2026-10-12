@@ -5,7 +5,6 @@ Tests streaming platform authentication, social media posting, and LLM generatio
 """
 
 import sys
-import os
 import logging
 from pathlib import Path
 from dotenv import load_dotenv
@@ -15,7 +14,6 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import from modularized package
-from stream_daemon.config import get_config
 from stream_daemon.platforms.social import MastodonPlatform, BlueskyPlatform, DiscordPlatform, MatrixPlatform
 from stream_daemon.platforms.streaming import TwitchPlatform, YouTubePlatform, KickPlatform
 from stream_daemon.ai import AIMessageGenerator

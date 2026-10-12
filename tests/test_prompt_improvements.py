@@ -12,7 +12,7 @@ try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    pass
+    pass  # python-dotenv is optional; real env vars still work
 
 from stream_daemon.ai.generator import AIMessageGenerator
 

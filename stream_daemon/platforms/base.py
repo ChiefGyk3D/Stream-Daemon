@@ -5,11 +5,7 @@ StreamingPlatform (Twitch/YouTube/Kick monitoring) is stream-daemon's own.
 SocialPlatform now comes from hypeman-social, shared with the other daemons.
 """
 
-import logging
-
 from hypeman_social.social.base import SocialPlatform
-
-logger = logging.getLogger(__name__)
 
 __all__ = ['SocialPlatform', 'StreamingPlatform']
 

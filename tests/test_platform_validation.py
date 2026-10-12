@@ -20,7 +20,6 @@ Run specific: pytest tests/test_platform_validation.py::TestTwitchValidation -v
 import pytest
 import os
 
-from dotenv import load_dotenv
 from stream_daemon.config import get_config, get_secret, get_bool_config
 
 # Import refactored platforms
