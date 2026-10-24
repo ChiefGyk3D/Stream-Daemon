@@ -24,19 +24,19 @@ services:
       # TWITCH - Get credentials from: https://dev.twitch.tv/console
       TWITCH_ENABLE: "True"
       TWITCH_USERNAME: "your_twitch_username"
-      TWITCH_CLIENT_ID: "your_twitch_client_id_here"
-      TWITCH_CLIENT_SECRET: "your_twitch_client_secret_here"
+      TWITCH_CLIENT_ID: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
+      TWITCH_CLIENT_SECRET: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       
       # YOUTUBE - Get API key from: https://console.cloud.google.com/
       YOUTUBE_ENABLE: "False"
       YOUTUBE_CHANNEL_ID: "your_youtube_channel_id"
-      YOUTUBE_API_KEY: "your_youtube_api_key"
+      YOUTUBE_API_KEY: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       
       # KICK - Get credentials from: https://kick.com/settings/developer
       KICK_ENABLE: "False"
       KICK_USERNAME: "your_kick_username"
-      KICK_CLIENT_ID: "your_kick_client_id"
-      KICK_CLIENT_SECRET: "your_kick_client_secret"
+      KICK_CLIENT_ID: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
+      KICK_CLIENT_SECRET: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       
       # ===========================================
       # SOCIAL PLATFORMS (Enable at least ONE)
@@ -46,24 +46,24 @@ services:
       MASTODON_ENABLE_POSTING: "True"
       MASTODON_APP_NAME: "StreamDaemon"
       MASTODON_API_BASE_URL: "https://mastodon.social"  # Change to your instance
-      MASTODON_CLIENT_ID: "your_mastodon_client_id"
-      MASTODON_CLIENT_SECRET: "your_mastodon_client_secret"
-      MASTODON_ACCESS_TOKEN: "your_mastodon_access_token"
+      MASTODON_CLIENT_ID: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
+      MASTODON_CLIENT_SECRET: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
+      MASTODON_ACCESS_TOKEN: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       
       # BLUESKY - Get app password from: https://bsky.app/settings/app-passwords
       BLUESKY_ENABLE_POSTING: "False"
       BLUESKY_HANDLE: "yourname.bsky.social"
-      BLUESKY_APP_PASSWORD: "your-app-password"
+      BLUESKY_APP_PASSWORD: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       
       # DISCORD - Create webhook in server settings
       DISCORD_ENABLE_POSTING: "False"
-      DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/YOUR_WEBHOOK"
+      DISCORD_WEBHOOK_URL: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       
       # MATRIX - Use bot account or personal account
       MATRIX_ENABLE_POSTING: "False"
       MATRIX_HOMESERVER: "https://matrix.org"
       MATRIX_USERNAME: "@bot:matrix.org"
-      MATRIX_PASSWORD: "your_bot_password"
+      MATRIX_PASSWORD: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       MATRIX_ROOM_ID: "!roomid:matrix.org"
       
       # ===========================================
@@ -74,7 +74,7 @@ services:
       # ===========================================
       LLM_ENABLE: "False"
       LLM_PROVIDER: "gemini"
-      LLM_GEMINI_API_KEY: "your_gemini_api_key"
+      LLM_GEMINI_API_KEY: ""  # REQUIRED when this feature is on: set it, or the daemon refuses to start
       # LLM_MODEL is read from .env or Doppler - do not set here!
       
       # ===========================================
