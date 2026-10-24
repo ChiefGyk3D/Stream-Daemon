@@ -281,3 +281,9 @@ def test_main_runs_preflight_before_any_platform(monkeypatch):
     monkeypatch.setattr(module, 'TwitchPlatform', boom)
     with pytest.raises(SystemExit):
         module.main()
+
+
+def test_vault_real_token_is_accepted(monkeypatch):
+    monkeypatch.setenv('SECRETS_MANAGER', 'vault')
+    monkeypatch.setenv('SECRETS_VAULT_TOKEN', REAL)
+    assert preflight.check_required_secrets() == []

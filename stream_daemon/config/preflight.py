@@ -52,9 +52,9 @@ REASON_TEXT = {
     Reason.NEEDS_ONE_OF: "at least one of these must be set to a real value",
 }
 
-# Variable names that are not secrets themselves: the secrets-manager tokens.
-_DOPPLER_TOKEN = 'DOPPLER_TOKEN'
-_VAULT_TOKEN = 'SECRETS_VAULT_TOKEN'
+# Names of the secrets-manager credential variables (names only, never values).
+_DOPPLER_VAR = 'DOPPLER_TOKEN'
+_VAULT_VAR = 'SECRETS_VAULT_TOKEN'
 _GEMINI_FALLBACK = 'GEMINI_API_KEY'
 
 
@@ -64,7 +64,7 @@ def _one_of_label(platform: str) -> str:
 
 # Every legal Finding.variable: constants from the tables, nothing else.
 _ALLOWED_VARIABLES = frozenset(
-    {_DOPPLER_TOKEN, _VAULT_TOKEN, _GEMINI_FALLBACK}
+    {_DOPPLER_VAR, _VAULT_VAR, _GEMINI_FALLBACK}
     | {known_env_name(p, k)
        for p, spec in SOCIAL_SECRETS.items() for keys in spec.values() for k in keys}
     | {known_env_name(p, k) for p, keys in LLM_SECRETS.items() for k in keys}
@@ -147,10 +147,10 @@ def check_required_secrets() -> list[Finding]:
 
     doppler = os.getenv('DOPPLER_TOKEN', '')
     if doppler.strip() and is_placeholder(doppler):
-        found.append(Finding(_DOPPLER_TOKEN, Reason.PLACEHOLDER))
-    if os.getenv('SECRETS_MANAGER', 'none').lower() == 'vault':
-        if is_placeholder(os.getenv('SECRETS_VAULT_TOKEN')):
-            found.append(Finding(_VAULT_TOKEN, Reason.UNUSABLE))
+        found.append(Finding(_DOPPLER_VAR, Reason.PLACEHOLDER))
+    if os.getenv('SECRETS_MANAGER', 'none').lower() == 'vault' \
+            and is_placeholder(os.getenv('SECRETS_VAULT_TOKEN')):
+        found.append(Finding(_VAULT_VAR, Reason.UNUSABLE))
     if found:
         # A bad manager token would make every lookup below call out with it.
         return found
