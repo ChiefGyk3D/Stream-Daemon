@@ -1,0 +1,938 @@
+{
+  "version": "2.6.2",
+  "summary": {
+    "title": "Stream Daemon data flow",
+    "owner": "",
+    "description": "Streaming-to-social bridge: polls Twitch, YouTube and Kick, optionally asks an LLM to write the announcement, posts to Mastodon, Bluesky, Discord and Matrix. Built from a read of the repository at origin/main plus hypeman-social 0.3.4 (the library that holds social, LLM, config and health code). Every threat description cites file:function. A model records what was read; it does not prove the system safe."
+  },
+  "detail": {
+    "diagrams": [
+      {
+        "id": 0,
+        "title": "Stream Daemon",
+        "diagramType": "STRIDE",
+        "cells": [
+          {
+            "id": "b-host",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 400,
+              "y": 60
+            },
+            "size": {
+              "width": 1000,
+              "height": 760
+            },
+            "data": {
+              "name": "B1: operator host or container",
+              "description": "The daemon process, its environment, message files and local config. Dockerfile runs it as non-root user 1000 (USER 1000:1000)."
+            }
+          },
+          {
+            "id": "b-stream",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 40,
+              "y": 60
+            },
+            "size": {
+              "width": 320,
+              "height": 760
+            },
+            "data": {
+              "name": "B2: streaming platform APIs",
+              "description": "Twitch, YouTube, Kick. Third-party services; their responses (stream title, viewers, thumbnail) are untrusted input."
+            }
+          },
+          {
+            "id": "b-social",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 1440,
+              "y": 60
+            },
+            "size": {
+              "width": 320,
+              "height": 760
+            },
+            "data": {
+              "name": "B3: social platforms",
+              "description": "Mastodon, Bluesky, Discord webhook, Matrix. Third-party services that receive public posts and credentials."
+            }
+          },
+          {
+            "id": "b-llm",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 400,
+              "y": 860
+            },
+            "size": {
+              "width": 480,
+              "height": 300
+            },
+            "data": {
+              "name": "B4: LLM endpoint",
+              "description": "Ollama (operator-chosen host, plain http by default) or Gemini (cloud). Optional: LLM_ENABLE."
+            }
+          },
+          {
+            "id": "b-secrets",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 920,
+              "y": 860
+            },
+            "size": {
+              "width": 480,
+              "height": 300
+            },
+            "data": {
+              "name": "B5: secrets backends",
+              "description": "Doppler, AWS Secrets Manager, Vault, or environment variables, resolved by hypeman_social.config.secrets.get_secret."
+            }
+          },
+          {
+            "id": "b-ci",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 1440,
+              "y": 860
+            },
+            "size": {
+              "width": 320,
+              "height": 700
+            },
+            "data": {
+              "name": "B6: CI, release and supply chain",
+              "description": "GitHub Actions callers of GYST reusable workflows, PyPI packages, base image, registries (GHCR, Docker Hub)."
+            }
+          },
+          {
+            "id": "b-health",
+            "shape": "trust-boundary-box",
+            "position": {
+              "x": 40,
+              "y": 860
+            },
+            "size": {
+              "width": 320,
+              "height": 300
+            },
+            "data": {
+              "name": "B7: health endpoint",
+              "description": "Optional HTTP /healthz and /status, off unless HEALTH_PORT is set; library default bind is 127.0.0.1."
+            }
+          },
+          {
+            "id": "a-owner",
+            "shape": "actor",
+            "position": {
+              "x": 80,
+              "y": 120
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Channel owner or editor",
+              "description": "Whoever can set the stream title on a monitored channel (owner, moderator, editor). Title text flows to the LLM prompt, fallback templates. Evidence: stream_daemon/platforms/streaming/twitch.py:is_live builds stream_data['title']; kick.py _check_public/_check_authenticated; models/stream_state.py:update.",
+              "threats": [
+                {
+                  "id": "threat-1",
+                  "number": 1,
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Tampering",
+                  "title": "Stream title carries instructions or mass-mention text",
+                  "description": "A party who controls the title of a monitored channel controls text that reaches the prompt (generator.py:_prompt_stream_start interpolates title inside double quotes with no escaping or delimiting), the fallback template via {stream_title} (messaging.py:get_message_for_stream). Prerequisite: title control on a channel the operator monitors, which is normally the operator or a trusted collaborator.",
+                  "mitigation": "No control found in code or config; see description."
+                }
+              ]
+            }
+          },
+          {
+            "id": "a-operator",
+            "shape": "actor",
+            "position": {
+              "x": 80,
+              "y": 300
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Operator",
+              "description": "Person who deploys and configures the daemon (env vars, .env, Docker/docker-compose.example.yml, messages.txt). Trusted.",
+              "threats": []
+            }
+          },
+          {
+            "id": "a-audience",
+            "shape": "actor",
+            "position": {
+              "x": 1480,
+              "y": 120
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Public audience",
+              "description": "Followers who read the posts on Mastodon, Bluesky, Discord and Matrix; they trust the posts as coming from the operator.",
+              "threats": [
+                {
+                  "id": "threat-2",
+                  "number": 2,
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Repudiation",
+                  "title": "No record of the exact text posted or the prompt that produced it",
+                  "description": "stream-daemon.py logs only lengths and ids for AI posts (generator.py logs 'Generated stream start message (N chars ...)'; publisher.py logs the post id at debug). The full prompt and output are not recorded, so a bad or injected public post is hard to reconstruct afterward.",
+                  "mitigation": "No control found in code or config; see description."
+                }
+              ]
+            }
+          },
+          {
+            "id": "a-upstream",
+            "shape": "actor",
+            "position": {
+              "x": 1480,
+              "y": 900
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Upstream publishers",
+              "description": "Publishers of PyPI packages (hypeman-social and its SDK deps), the python:3.14-slim base image, www.sqlite.org source tarball and GitHub Actions/GYST workflows.",
+              "threats": []
+            }
+          },
+          {
+            "id": "x-stream",
+            "shape": "actor",
+            "position": {
+              "x": 80,
+              "y": 460
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Twitch / YouTube / Kick APIs",
+              "description": "Polled for live status. Twitch via twitchAPI (client id/secret), YouTube Data API v3 (API key), Kick OAuth client credentials (id.kick.com) plus api.kick.com or the unauthenticated kick.com/api/v2 endpoint. Evidence: platforms/streaming/*.py.",
+              "threats": [
+                {
+                  "id": "threat-3",
+                  "number": 3,
+                  "status": "Mitigated",
+                  "severity": "Low",
+                  "type": "Spoofing",
+                  "title": "Forged or intercepted platform API response",
+                  "description": "A forged response would produce false live state and attacker-chosen title text.",
+                  "mitigation": "All calls use requests or vendor SDKs with default TLS verification and explicit timeout=10 (kick.py:_check_public, _check_authenticated); no verify=False anywhere in stream_daemon/ or in hypeman-social 0.3.4 (grep). StreamStatus.update (models/stream_state.py) needs 2 consecutive checks to flip state."
+                }
+              ]
+            }
+          },
+          {
+            "id": "x-social",
+            "shape": "actor",
+            "position": {
+              "x": 1480,
+              "y": 460
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Mastodon / Bluesky / Discord / Matrix",
+              "description": "Receive posts and credentials. Posting code lives in the hypeman-social library (stream_daemon/platforms/social/*.py are re-export shims).",
+              "threats": [
+                {
+                  "id": "threat-4",
+                  "number": 4,
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Information disclosure",
+                  "title": "Matrix homeserver URL accepted as cleartext http",
+                  "description": "hypeman-social 0.3.4 (pinned in requirements.txt; read from its v0.3.4 tag, not vendored in this repo): social/matrix.py prepends https:// only when the value does not start with 'http'; an operator-supplied http:// homeserver would carry the account password or token in cleartext. Operator misconfiguration, not attacker-reachable by default.",
+                  "mitigation": "No control found in code or config; see description."
+                }
+              ]
+            }
+          },
+          {
+            "id": "p-main",
+            "shape": "process",
+            "position": {
+              "x": 460,
+              "y": 120
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Main loop (stream-daemon.py)",
+              "description": "main() in stream-daemon.py: authenticates platforms, loads message files, polls every check_interval minutes, tracks StreamStatus per platform/user, triggers posts. Errors in one cycle are caught so the loop keeps running.",
+              "threats": []
+            }
+          },
+          {
+            "id": "p-poll",
+            "shape": "process",
+            "position": {
+              "x": 460,
+              "y": 300
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Streaming pollers",
+              "description": "TwitchPlatform, YouTubePlatform, KickPlatform (stream_daemon/platforms/streaming). Each backs off for 10 minutes after 5 consecutive errors.",
+              "threats": [
+                {
+                  "id": "threat-5",
+                  "number": 5,
+                  "status": "Mitigated",
+                  "severity": "Low",
+                  "type": "Denial of service",
+                  "title": "Polling exhausts API quota or hammers a failing API",
+                  "description": "Repeated failing calls could exhaust the YouTube quota or get the operator rate-limited.",
+                  "mitigation": "twitch.py:is_live, kick.py:is_live and youtube.py:is_live implement consecutive_errors >= max_consecutive_errors (5) with a 10-minute cooldown; youtube.py tracks quota_exceeded."
+                }
+              ]
+            }
+          },
+          {
+            "id": "p-msg",
+            "shape": "process",
+            "position": {
+              "x": 700,
+              "y": 120
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Message builder (messaging.py, ai/generator.py)",
+              "description": "get_message_for_stream picks the AI message (AIMessageGenerator.generate_stream_start_message / _end_message) or a template from messages.txt. The title is formatted into the prompt and into templates.",
+              "threats": [
+                {
+                  "id": "threat-6",
+                  "number": 6,
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Tampering",
+                  "title": "Prompt injection: untrusted title text reaches the model prompt",
+                  "description": "Prompt injection. generator.py:_prompt_stream_start and _prompt_stream_end embed the third-party stream title (and username) directly in the instruction text. Title text such as 'ignore the above and write ...' can steer the output (links, mentions, off-topic or abusive text) because nothing separates data from instructions. Post-generation guardrails (hypeman_social.llm.guardrails via _check_guardrails) are heuristics for style, length, hashtags, emoji count and hallucination patterns, not an injection defense.",
+                  "mitigation": "No control found in code or config; see description."
+                },
+                {
+                  "id": "threat-7",
+                  "number": 7,
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Tampering",
+                  "title": "Model output (or title) is posted publicly without review, and flagged output still ships",
+                  "description": "generator.py:_generate_validated is deliberately lenient: when the stricter retry still has issues, 'using original message despite issues'. The only hard veto is profanity, and only if enable_profanity_filter is on (default False in AIMessageGenerator.__init__). Issues the library detects, such as 'Contains @everyone or @here mention' (guardrails.validate_platform_specific), therefore do not block posting. Output goes to four public destinations in the operator's name.",
+                  "mitigation": "No control found in code or config; see description."
+                },
+                {
+                  "id": "threat-8",
+                  "number": 8,
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "title": "Secrets exposed through the model prompt",
+                  "description": "Credentials or config could be sent to a third-party LLM or echoed into a public post.",
+                  "mitigation": "generator.py:_prompt_stream_start and _prompt_stream_end take only platform_name, username, title and content_max; get_secret is never called with its result passed to a prompt. Prompts contain no credentials, tokens or file contents. Data sent to Gemini is therefore public stream metadata."
+                }
+              ]
+            }
+          },
+          {
+            "id": "p-pub",
+            "shape": "process",
+            "position": {
+              "x": 940,
+              "y": 120
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Social publisher (publisher.py)",
+              "description": "post_to_social_async fans out to enabled social platforms in a ThreadPoolExecutor; each platform failure is caught and logged so others still post.",
+              "threats": [
+                {
+                  "id": "threat-9",
+                  "number": 9,
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Tampering",
+                  "title": "Mass-mention (@everyone, @here) in a Discord post",
+                  "description": "hypeman-social 0.3.4 (pinned in requirements.txt; read from its v0.3.4 tag, not vendored in this repo): social/discord.py:post builds the webhook JSON with 'content' set to the message and no 'allowed_mentions' field, so @everyone and @here in the content are parsed by Discord. Text can arrive through the stream title (templates use {stream_title} in messages.txt, no LLM needed) or through injected model output (see the injection threat). No sanitizing step exists in messaging.py or publisher.py. Prerequisite: control of a monitored title, or a poisoned model, plus a webhook whose channel permits mentions.",
+                  "mitigation": "No control found in code or config; see description."
+                },
+                {
+                  "id": "threat-10",
+                  "number": 10,
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "title": "Discord webhook token written to logs on a request error",
+                  "description": "hypeman-social 0.3.4 (pinned in requirements.txt; read from its v0.3.4 tag, not vendored in this repo): social/discord.py:post logs 'Discord post failed: {type(e).__name__}: {e}'. The requests exception text includes the request URL path, and the webhook URL path carries the webhook token (checked locally against a closed loopback port: the ConnectionError text contained the full path and query). The log line is at ERROR level, so it lands in container logs (json-file driver in docker-compose.example.yml) and any log shipper. Anyone with the token can post as the webhook.",
+                  "mitigation": "No control found in code or config; see description."
+                }
+              ]
+            }
+          },
+          {
+            "id": "p-health",
+            "shape": "process",
+            "position": {
+              "x": 100,
+              "y": 920
+            },
+            "size": {
+              "width": 200,
+              "height": 80
+            },
+            "data": {
+              "name": "Health server (optional)",
+              "description": "start_health_server(health, HEALTH_PORT) in stream-daemon.py; port 0 or unset means no server. Serves /healthz and /status from hypeman_social.observability.health.",
+              "threats": [
+                {
+                  "id": "threat-11",
+                  "number": 11,
+                  "status": "Mitigated",
+                  "severity": "Low",
+                  "type": "Information disclosure",
+                  "title": "Status endpoint exposes platform and LLM state to the network",
+                  "description": "/status lists which platforms and LLM provider are enabled and the last poll time.",
+                  "mitigation": "hypeman-social 0.3.4 (pinned in requirements.txt; read from its v0.3.4 tag, not vendored in this repo): observability/health.py:start_health_server defaults host='127.0.0.1' and stream-daemon.py passes no host; server is off unless HEALTH_PORT is set. Docker/docker-compose.example.yml publishes no ports. Binding wider is an operator choice."
+                }
+              ]
+            }
+          },
+          {
+            "id": "p-llm",
+            "shape": "process",
+            "position": {
+              "x": 460,
+              "y": 920
+            },
+            "size": {
+              "width": 200,
+              "height": 80
+            },
+            "data": {
+              "name": "LLM provider (Ollama or Gemini)",
+              "description": "Generate-only calls through hypeman_social.llm.LLMManager (Ollama client at LLM_OLLAMA_HOST, default http://localhost, or Gemini with an API key). stream_daemon/ai/generator.py uses engine.generate(prompt) only.",
+              "threats": [
+                {
+                  "id": "threat-12",
+                  "number": 12,
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Information disclosure",
+                  "title": "LLM traffic is cleartext and unauthenticated for a remote Ollama host",
+                  "description": "hypeman-social 0.3.4 (pinned in requirements.txt; read from its v0.3.4 tag, not vendored in this repo): llm/ollama.py builds the host as http://<host>:<port> when no scheme is given and creates ollama.Client(host=self.host) with no credentials. A remote Ollama box on a shared network sees and can answer prompts without authentication. Prompts carry only public stream metadata. Gemini uses the vendor SDK over TLS.",
+                  "mitigation": "No control found in code or config; see description."
+                },
+                {
+                  "id": "threat-13",
+                  "number": 13,
+                  "status": "Mitigated",
+                  "severity": "Low",
+                  "type": "Elevation of privilege",
+                  "title": "Model host egress or tool reach from the daemon",
+                  "description": "A compromised or steered model could be given reach beyond text generation.",
+                  "mitigation": "No tool or function calling: generator.py calls engine.generate(prompt) only and consumes a string; no tools= usage appears in hypeman-social 0.3.4 llm/ (grep). The model's own network egress is outside this repository and depends on how the operator deploys Ollama."
+                }
+              ]
+            }
+          },
+          {
+            "id": "p-ci",
+            "shape": "process",
+            "position": {
+              "x": 1480,
+              "y": 1040
+            },
+            "size": {
+              "width": 200,
+              "height": 80
+            },
+            "data": {
+              "name": "CI and release pipeline",
+              "description": ".github/workflows ci.yml, security.yml, release.yml, verify.yml, dependabot-auto-merge.yml; each calls a GYST reusable workflow pinned to commit 8fdb8d1... # v1.24.0.",
+              "threats": [
+                {
+                  "id": "threat-14",
+                  "number": 14,
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Tampering",
+                  "title": "Workflow or action tampering through a moving ref or over-broad token",
+                  "description": "A moved tag on a reusable workflow, or a broad GITHUB_TOKEN, would let upstream changes alter builds.",
+                  "mitigation": "ci.yml, release.yml, security.yml, verify.yml and dependabot-auto-merge.yml pin the reusable workflow by 40-char commit with a version comment; each declares top-level permissions: contents: read and grants extra scopes per job; ci/release/security set egress-policy: block with named extra endpoints. security.yml runs CodeQL, gitleaks (config .gitleaks.toml), pip-audit; python-ci runs actionlint and zizmor (checked in GYST at the pinned commit)."
+                }
+              ]
+            }
+          },
+          {
+            "id": "p-image",
+            "shape": "process",
+            "position": {
+              "x": 1480,
+              "y": 1240
+            },
+            "size": {
+              "width": 200,
+              "height": 80
+            },
+            "data": {
+              "name": "Container image build (Docker/Dockerfile)",
+              "description": "Builds python:3.14-slim base (digest-pinned), compiles SQLite 3.50.4 from a downloaded tarball, installs requirements.txt with --require-hashes, drops pip, runs as UID 1000.",
+              "threats": [
+                {
+                  "id": "threat-15",
+                  "number": 15,
+                  "status": "Open",
+                  "severity": "Medium",
+                  "type": "Tampering",
+                  "title": "Build downloads SQLite source with no checksum and installs an unhashed pip",
+                  "description": "Docker/Dockerfile fetches https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz with wget and builds it as root with no sha256 or signature check; TLS to the host is the only integrity control. The same RUN also does pip install --upgrade 'pip>=25.3' without hashes before the hashed install. A compromised download or index would land code in the image's libsqlite3 or pip. Prerequisite: compromise of the upstream host or a TLS-level attacker on the build runner (egress is restricted to www.sqlite.org:443 by the CI egress policy).",
+                  "mitigation": "No control found in code or config; see description."
+                },
+                {
+                  "id": "threat-16",
+                  "number": 16,
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Elevation of privilege",
+                  "title": "Daemon compromise runs as root in the container",
+                  "description": "A bug in the daemon or a dependency would otherwise execute with root rights in the container.",
+                  "mitigation": "Docker/Dockerfile creates user streamdaemon (UID/GID 1000, shell /usr/sbin/nologin), chowns /app and sets USER 1000:1000; the compose example mounts only read-only localtime files and publishes no ports."
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-msgs",
+            "shape": "store",
+            "position": {
+              "x": 1000,
+              "y": 300
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Message files (messages.txt, end_messages.txt)",
+              "description": "Sectioned templates parsed by utils/messages.py:parse_sectioned_message_file; used as the fallback when the LLM is off or fails. Copied into the image by Docker/Dockerfile.",
+              "threats": [
+                {
+                  "id": "threat-17",
+                  "number": 17,
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Tampering",
+                  "title": "Template file edited to post arbitrary public text",
+                  "description": "Whatever is in messages.txt is posted verbatim (after .format) to every enabled network. Write access to the file is write access to the operator's public voice. There is no integrity check in code; protection is whatever the deployment gives the file (the image copy is owned by the non-root user, so a process compromise could rewrite it).",
+                  "mitigation": "No control found in code or config; see description."
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-env",
+            "shape": "store",
+            "position": {
+              "x": 700,
+              "y": 300
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Environment and .env config",
+              "description": "Config and credentials read via hypeman_social.config.get_config / get_secret; stream-daemon.py calls load_dotenv(). docker-compose.example.yml passes credentials as environment variables (placeholders only).",
+              "threats": [
+                {
+                  "id": "threat-18",
+                  "number": 18,
+                  "status": "Open",
+                  "severity": "Low",
+                  "type": "Information disclosure",
+                  "title": "Credentials in plain environment variables are readable on the host",
+                  "description": "When Doppler, AWS or Vault is not used, tokens (Twitch, Kick, Mastodon, Bluesky app password, Discord webhook, Matrix password, Gemini key) live in the container environment and any .env file, visible to anyone with docker inspect or host access. The code supports stronger backends (stream_daemon/config/secrets.py, backend_env_names) but does not require them.",
+                  "mitigation": "No control found in code or config; see description."
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-secrets",
+            "shape": "store",
+            "position": {
+              "x": 960,
+              "y": 920
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Secrets backend (Doppler / AWS / Vault)",
+              "description": "Lookup order Doppler, AWS Secrets Manager, Vault, env, default per stream_daemon/config/secrets.py docstring and hypeman_social.config.secrets.",
+              "threats": [
+                {
+                  "id": "threat-19",
+                  "number": 19,
+                  "status": "Mitigated",
+                  "severity": "Medium",
+                  "type": "Information disclosure",
+                  "title": "Credentials leaked into the repository or CI history",
+                  "description": "Committed credentials would be public because the repository is public.",
+                  "mitigation": "SECURITY.md and security.yml: gitleaks scans full history with .gitleaks.toml (documented placeholders only) via the GYST security workflow; CI reads secrets from Doppler over OIDC rather than repository secrets (ci.yml doppler-identity-id). docker-compose.example.yml holds placeholders. Lookup errors in the library log only the exception type (config/secrets.py: 'Failed to load AWS secret: {type(e).__name__}')."
+                }
+              ]
+            }
+          },
+          {
+            "id": "s-registry",
+            "shape": "store",
+            "position": {
+              "x": 1000,
+              "y": 1040
+            },
+            "size": {
+              "width": 220,
+              "height": 80
+            },
+            "data": {
+              "name": "Image and package registries",
+              "description": "GHCR and Docker Hub (published image), PyPI (requirements.txt), via python-docker-release.yml (release.yml) and verify-published.yml (verify.yml).",
+              "threats": [
+                {
+                  "id": "threat-20",
+                  "number": 20,
+                  "status": "Mitigated",
+                  "severity": "High",
+                  "type": "Tampering",
+                  "title": "Published image or dependency swapped in transit or at rest",
+                  "description": "A replaced image or package would run with the operator's social credentials.",
+                  "mitigation": "requirements.txt is installed with --require-hashes (Dockerfile RUN, ci.yml install-command); base image pinned by sha256 digest (Dockerfile FROM); Dependabot uses a 7-day cooldown (.github/dependabot.yml); release.yml calls python-docker-release.yml, whose inputs include cosign signing, syft SBOM attestation and SLSA provenance and Trivy scanning (checked in GYST at the pinned commit); verify.yml re-verifies the published image nightly. SECURITY.md documents the cosign and gh attestation commands."
+                }
+              ]
+            }
+          },
+          {
+            "id": "f1",
+            "shape": "flow",
+            "source": {
+              "cell": "a-owner"
+            },
+            "target": {
+              "cell": "x-stream"
+            },
+            "data": {
+              "name": "Owner sets title",
+              "description": "Channel owner or editor changes the stream title on the platform (untrusted text enters here).",
+              "threats": []
+            }
+          },
+          {
+            "id": "f2",
+            "shape": "flow",
+            "source": {
+              "cell": "x-stream"
+            },
+            "target": {
+              "cell": "p-poll"
+            },
+            "data": {
+              "name": "Poll results",
+              "description": "Live flag, title, viewer count, thumbnail URL returned over HTTPS to the pollers (twitch.py, youtube.py, kick.py). Crosses B2 to B1.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f3",
+            "shape": "flow",
+            "source": {
+              "cell": "p-poll"
+            },
+            "target": {
+              "cell": "p-main"
+            },
+            "data": {
+              "name": "StreamStatus update",
+              "description": "stream_data dict handed to StreamStatus.update (models/stream_state.py); title is stored in StreamStatus.title / last_title.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f4",
+            "shape": "flow",
+            "source": {
+              "cell": "p-main"
+            },
+            "target": {
+              "cell": "p-pub"
+            },
+            "data": {
+              "name": "Announcement request",
+              "description": "post_to_social_async(...) called with title, url, username, stream_data (stream-daemon.py).",
+              "threats": []
+            }
+          },
+          {
+            "id": "f5",
+            "shape": "flow",
+            "source": {
+              "cell": "p-pub"
+            },
+            "target": {
+              "cell": "p-msg"
+            },
+            "data": {
+              "name": "Message request",
+              "description": "publisher.py:post_to_single_platform calls get_message_for_stream per social network.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f6",
+            "shape": "flow",
+            "source": {
+              "cell": "p-msg"
+            },
+            "target": {
+              "cell": "p-llm"
+            },
+            "data": {
+              "name": "Prompt (title inside)",
+              "description": "Prompt text with platform name, username and title sent to Ollama or Gemini. Crosses B1 to B4. See the prompt injection and cleartext threats.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f7",
+            "shape": "flow",
+            "source": {
+              "cell": "p-llm"
+            },
+            "target": {
+              "cell": "p-msg"
+            },
+            "data": {
+              "name": "Generated text",
+              "description": "Model output returned as a string; trimmed and guardrail-checked, then used as the post. Crosses B4 to B1.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f8",
+            "shape": "flow",
+            "source": {
+              "cell": "s-msgs"
+            },
+            "target": {
+              "cell": "p-msg"
+            },
+            "data": {
+              "name": "Fallback templates",
+              "description": "Template lines from messages.txt formatted with stream_title, username, platform when AI is off or returns None (messaging.py).",
+              "threats": []
+            }
+          },
+          {
+            "id": "f9",
+            "shape": "flow",
+            "source": {
+              "cell": "p-pub"
+            },
+            "target": {
+              "cell": "x-social"
+            },
+            "data": {
+              "name": "Public posts",
+              "description": "Posts, embeds and Matrix messages sent with per-platform credentials. Crosses B1 to B3. Discord webhook URL is itself a credential.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f10",
+            "shape": "flow",
+            "source": {
+              "cell": "x-social"
+            },
+            "target": {
+              "cell": "a-audience"
+            },
+            "data": {
+              "name": "Posts read by followers",
+              "description": "Public posts shown to the audience in the operator's name.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f11",
+            "shape": "flow",
+            "source": {
+              "cell": "s-secrets"
+            },
+            "target": {
+              "cell": "s-env"
+            },
+            "data": {
+              "name": "Secret lookup",
+              "description": "get_secret resolves credentials from Doppler, AWS, Vault, then env (hypeman_social.config.secrets). Crosses B5 to B1.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f12",
+            "shape": "flow",
+            "source": {
+              "cell": "s-env"
+            },
+            "target": {
+              "cell": "p-main"
+            },
+            "data": {
+              "name": "Config and credentials",
+              "description": "Process reads env and .env at start; platform classes call get_secret in authenticate().",
+              "threats": []
+            }
+          },
+          {
+            "id": "f13",
+            "shape": "flow",
+            "source": {
+              "cell": "a-operator"
+            },
+            "target": {
+              "cell": "s-env"
+            },
+            "data": {
+              "name": "Operator configuration",
+              "description": "Operator sets env, compose file and message files.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f14",
+            "shape": "flow",
+            "source": {
+              "cell": "a-operator"
+            },
+            "target": {
+              "cell": "p-health"
+            },
+            "data": {
+              "name": "Health probe",
+              "description": "Local probe of /healthz or /status; Dockerfile HEALTHCHECK uses 127.0.0.1:HEALTH_PORT. Crosses B7.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f15",
+            "shape": "flow",
+            "source": {
+              "cell": "p-main"
+            },
+            "target": {
+              "cell": "p-health"
+            },
+            "data": {
+              "name": "Health state",
+              "description": "HealthState updated each cycle (stream-daemon.py: health.record_event, set_component, register('llm', ...)).",
+              "threats": []
+            }
+          },
+          {
+            "id": "f16",
+            "shape": "flow",
+            "source": {
+              "cell": "a-upstream"
+            },
+            "target": {
+              "cell": "p-image"
+            },
+            "data": {
+              "name": "Dependencies and base image",
+              "description": "PyPI packages, base image and SQLite tarball pulled at build. Crosses B6.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f17",
+            "shape": "flow",
+            "source": {
+              "cell": "p-ci"
+            },
+            "target": {
+              "cell": "s-registry"
+            },
+            "data": {
+              "name": "Publish",
+              "description": "release.yml pushes a signed multi-arch image on main and version tags (push only when not a pull request).",
+              "threats": []
+            }
+          },
+          {
+            "id": "f18",
+            "shape": "flow",
+            "source": {
+              "cell": "s-registry"
+            },
+            "target": {
+              "cell": "a-operator"
+            },
+            "data": {
+              "name": "Pull image",
+              "description": "Operator pulls ghcr.io/chiefgyk3d/stream-daemon (or Docker Hub) and may verify signatures per SECURITY.md.",
+              "threats": []
+            }
+          },
+          {
+            "id": "f19",
+            "shape": "flow",
+            "source": {
+              "cell": "p-image"
+            },
+            "target": {
+              "cell": "s-registry"
+            },
+            "data": {
+              "name": "Build output",
+              "description": "Built image goes to the release workflow and registries.",
+              "threats": []
+            }
+          }
+        ]
+      }
+    ],
+    "threatTop": 20
+  }
+}
