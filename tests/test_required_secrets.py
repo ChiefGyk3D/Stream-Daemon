@@ -11,6 +11,7 @@ import logging
 import pytest
 
 from stream_daemon.config import preflight, secrets
+from stream_daemon.config.preflight import REASON_TEXT, Finding, Reason
 
 REAL = "k3Jd9sLq2VxP7mTz"  # random-looking, not a placeholder
 
@@ -69,6 +70,10 @@ def test_get_secret_accepts_real_value(monkeypatch):
     assert secrets.get_secret('Mastodon', 'access_token') == REAL
 
 
+def _text(finding):
+    return f"{finding.variable}: {REASON_TEXT[finding.reason]}"
+
+
 def test_nothing_enabled_no_problems():
     assert preflight.check_required_secrets() == []
 
@@ -88,9 +93,9 @@ def test_enabled_platform_bad_secret_is_a_problem(monkeypatch, platform, var, va
         monkeypatch.setenv(var, value)
     problems = preflight.check_required_secrets()
     assert len(problems) == 1
-    assert var in problems[0]
+    assert var in problems[0].variable
     if value:
-        assert value not in problems[0]
+        assert value not in _text(problems[0])
 
 
 def test_enabled_platform_real_secret_ok(monkeypatch):
@@ -109,7 +114,7 @@ def test_mastodon_optional_pair_placeholder_rejected(monkeypatch):
     monkeypatch.setenv('MASTODON_ACCESS_TOKEN', REAL)
     monkeypatch.setenv('MASTODON_CLIENT_ID', 'your_mastodon_client_id')
     problems = preflight.check_required_secrets()
-    assert len(problems) == 1 and 'MASTODON_CLIENT_ID' in problems[0]
+    assert len(problems) == 1 and 'MASTODON_CLIENT_ID' in problems[0].variable
 
 
 def test_discord_placeholder_webhook_rejected(monkeypatch):
@@ -117,8 +122,8 @@ def test_discord_placeholder_webhook_rejected(monkeypatch):
     hook = 'https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN'
     monkeypatch.setenv('DISCORD_WEBHOOK_URL', hook)
     problems = preflight.check_required_secrets()
-    assert problems and all('DISCORD_WEBHOOK_URL' in p for p in problems)
-    assert all('YOUR_WEBHOOK_TOKEN' not in p for p in problems)
+    assert problems and all('DISCORD_WEBHOOK_URL' in p.variable for p in problems)
+    assert all('YOUR_WEBHOOK_TOKEN' not in _text(p) for p in problems)
 
 
 def test_discord_needs_one_webhook(monkeypatch):
@@ -141,8 +146,8 @@ def test_matrix_placeholder_password_rejected_even_with_token(monkeypatch):
     monkeypatch.setenv('MATRIX_ACCESS_TOKEN', REAL)
     monkeypatch.setenv('MATRIX_PASSWORD', 'your_bot_password')
     problems = preflight.check_required_secrets()
-    assert len(problems) == 1 and 'MATRIX_PASSWORD' in problems[0]
-    assert 'your_bot_password' not in problems[0]
+    assert len(problems) == 1 and 'MATRIX_PASSWORD' in problems[0].variable
+    assert 'your_bot_password' not in _text(problems[0])
 
 
 def test_gemini_enabled_placeholder_key_rejected(monkeypatch):
@@ -150,8 +155,8 @@ def test_gemini_enabled_placeholder_key_rejected(monkeypatch):
     monkeypatch.setenv('LLM_PROVIDER', 'gemini')
     monkeypatch.setenv('GEMINI_API_KEY', 'your_gemini_api_key_here')
     problems = preflight.check_required_secrets()
-    assert len(problems) == 1 and 'GEMINI_API_KEY' in problems[0]
-    assert 'your_gemini_api_key_here' not in problems[0]
+    assert len(problems) == 1 and 'GEMINI_API_KEY' in problems[0].variable
+    assert 'your_gemini_api_key_here' not in _text(problems[0])
     monkeypatch.setenv('GEMINI_API_KEY', REAL)
     assert preflight.check_required_secrets() == []
 
@@ -177,15 +182,15 @@ def test_llm_disabled_ignores_gemini_placeholder(monkeypatch):
 def test_placeholder_doppler_token_rejected(monkeypatch):
     monkeypatch.setenv('DOPPLER_TOKEN', 'dp.st.your_token_here')
     problems = preflight.check_required_secrets()
-    assert len(problems) == 1 and 'DOPPLER_TOKEN' in problems[0]
-    assert 'your_token_here' not in problems[0]
+    assert len(problems) == 1 and 'DOPPLER_TOKEN' in problems[0].variable
+    assert 'your_token_here' not in _text(problems[0])
 
 
 def test_placeholder_vault_token_rejected(monkeypatch):
     monkeypatch.setenv('SECRETS_MANAGER', 'vault')
     monkeypatch.setenv('SECRETS_VAULT_TOKEN', 'your_vault_token')
     problems = preflight.check_required_secrets()
-    assert len(problems) == 1 and 'SECRETS_VAULT_TOKEN' in problems[0]
+    assert len(problems) == 1 and 'SECRETS_VAULT_TOKEN' in problems[0].variable
 
 
 def test_vault_token_ignored_when_vault_not_selected(monkeypatch):
@@ -201,6 +206,54 @@ def test_enforce_exits_without_echoing_value(monkeypatch, caplog):
     assert exc.value.code == 1
     assert 'BLUESKY_APP_PASSWORD' in caplog.text
     assert 'your_bluesky_app_password' not in caplog.text
+
+
+@pytest.mark.parametrize('setup, variable, reason', [
+    ({'BLUESKY_ENABLE_POSTING': 'True'}, 'BLUESKY_APP_PASSWORD', Reason.MISSING),
+    ({'BLUESKY_ENABLE_POSTING': 'True', 'BLUESKY_APP_PASSWORD': 'your_pw'},
+     'BLUESKY_APP_PASSWORD', Reason.PLACEHOLDER),
+    ({'LLM_ENABLE': 'True', 'LLM_PROVIDER': 'gemini'}, 'GEMINI_API_KEY', Reason.UNUSABLE),
+    ({'DISCORD_ENABLE_POSTING': 'True'}, 'DISCORD_WEBHOOK_URL or DISCORD_WEBHOOK_YOUTUBE or '
+     'DISCORD_WEBHOOK_TIKTOK or DISCORD_WEBHOOK_TWITCH or DISCORD_WEBHOOK_KICK',
+     Reason.NEEDS_ONE_OF),
+])
+def test_enforce_logs_only_the_fixed_vocabulary(monkeypatch, caplog, setup, variable, reason):
+    for name, value in setup.items():
+        monkeypatch.setenv(name, value)
+    with caplog.at_level(logging.ERROR), pytest.raises(SystemExit):
+        preflight.enforce_required_secrets()
+    assert f"\u2717 {variable}: {REASON_TEXT[reason]}" in [r.getMessage() for r in caplog.records]
+
+
+def test_every_reason_has_fixed_text():
+    assert set(REASON_TEXT) == set(Reason)
+    assert all(isinstance(text, str) and '%' not in text for text in REASON_TEXT.values())
+
+
+def test_finding_rejects_a_variable_outside_the_constant_set():
+    # The guard bites: a name that did not come from the tables cannot be logged.
+    with pytest.raises(ValueError):
+        Finding('your_real_looking_k3Jd9sLq2VxP7mTz', Reason.MISSING)
+    with pytest.raises(TypeError):
+        Finding('BLUESKY_APP_PASSWORD', 'missing')
+
+
+def test_get_secret_warning_uses_constant_name(monkeypatch, caplog):
+    monkeypatch.setenv('BLUESKY_APP_PASSWORD', 'your_bluesky_app_password')
+    with caplog.at_level(logging.WARNING):
+        assert secrets.get_secret('Bluesky', 'app_password') is None
+    assert [r.getMessage() for r in caplog.records] == [
+        "\u26a0 BLUESKY_APP_PASSWORD is empty or still a template placeholder; "
+        "treating it as not set"]
+
+
+def test_get_secret_warning_falls_back_for_unknown_names(monkeypatch, caplog):
+    monkeypatch.setenv('ODDBALL_API_KEY', 'your_oddball_key')
+    with caplog.at_level(logging.WARNING):
+        assert secrets.get_secret('Oddball', 'api_key') is None
+    assert secrets.known_env_name('Oddball', 'api_key') is None
+    assert secrets.GENERIC_VARIABLE in caplog.text
+    assert 'ODDBALL' not in caplog.text and 'your_oddball_key' not in caplog.text
 
 
 def test_enforce_passes_when_clean(monkeypatch):
