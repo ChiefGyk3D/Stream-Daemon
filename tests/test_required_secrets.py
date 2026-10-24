@@ -207,3 +207,24 @@ def test_enforce_passes_when_clean(monkeypatch):
     _enable(monkeypatch, 'BLUESKY')
     monkeypatch.setenv('BLUESKY_APP_PASSWORD', REAL)
     preflight.enforce_required_secrets()
+
+
+def test_main_runs_preflight_before_any_platform(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).parent.parent / 'stream-daemon.py'
+    spec = importlib.util.spec_from_file_location('stream_daemon_main', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    def refuse():
+        raise SystemExit(1)
+
+    def boom(*args, **kwargs):
+        raise AssertionError('a platform was constructed before the secret check')
+
+    monkeypatch.setattr(module, 'enforce_required_secrets', refuse)
+    monkeypatch.setattr(module, 'TwitchPlatform', boom)
+    with pytest.raises(SystemExit):
+        module.main()
