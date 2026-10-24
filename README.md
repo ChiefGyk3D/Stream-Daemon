@@ -284,6 +284,26 @@ That's it! Stream Daemon will now monitor your streams and post announcements au
 - **[AI Messages Guide](docs/features/ai-messages.md)** - Complete Ollama & Gemini setup
 - **[Ollama Migration](docs/features/ollama-migration.md)** - Switching from Gemini to Ollama
 
+### Required secrets
+
+Stream Daemon does not ship working defaults. A secret is **required** when the feature that uses it is on. If it is empty, unset, or still a template value (`your_*`, `YOUR_*`, `changeme*`, `<...>`, `example`, `placeholder`, `xxx*`, `dp.st.your*`; case-insensitive), the daemon logs the variable name and exits with status 1 before it contacts any service. It never prints the value.
+
+| Secret | Needed by | Without it |
+|---|---|---|
+| `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | Twitch monitoring | Twitch is skipped with a warning; the daemon exits if no streaming platform is left |
+| `YOUTUBE_API_KEY` | YouTube monitoring | YouTube is skipped with a warning |
+| `KICK_CLIENT_ID`, `KICK_CLIENT_SECRET` | Kick (optional) | Kick uses its public API |
+| `MASTODON_ACCESS_TOKEN` | `MASTODON_ENABLE_POSTING=True` | Refuses to start |
+| `MASTODON_CLIENT_ID`, `MASTODON_CLIENT_SECRET` | Optional | Leave empty, or set both; a template value refuses to start |
+| `BLUESKY_APP_PASSWORD` | `BLUESKY_ENABLE_POSTING=True` | Refuses to start |
+| `DISCORD_WEBHOOK_URL` (or a per-platform `DISCORD_WEBHOOK_*`) | `DISCORD_ENABLE_POSTING=True` | Refuses to start |
+| `MATRIX_PASSWORD` or `MATRIX_ACCESS_TOKEN` | `MATRIX_ENABLE_POSTING=True` | Refuses to start |
+| `GEMINI_API_KEY` | `LLM_ENABLE=True` with `gemini` as provider or fallback | Refuses to start |
+| `SECRETS_VAULT_TOKEN` | `SECRETS_MANAGER=vault` | Refuses to start |
+| `DOPPLER_TOKEN` | Doppler (optional) | Leave empty to not use Doppler; a template value refuses to start |
+
+Put each one in the environment or `.env` (local development), or in Doppler, AWS Secrets Manager, or HashiCorp Vault (production; they override `.env`). `TWITCH_ENABLE` and `YOUTUBE_ENABLE` are not read by the code today: those two start whenever their credentials are present. Copy `.env.example` to `.env` and fill in only the features you use.
+
 ### Docker Quick Start
 
 **Option 1: Use Pre-Built Image from GitHub Container Registry (Recommended)**
