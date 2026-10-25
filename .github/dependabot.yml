@@ -58,3 +58,6 @@ updates:
       - "github-actions"
     commit-message:
       prefix: "ci"
+    groups:
+      actions:
+        patterns: ["*"]
