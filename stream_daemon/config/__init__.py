@@ -4,6 +4,7 @@ from .config import get_bool_config, get_config, get_int_config, get_usernames
 from .secrets import (
     backend_env_names,
     get_secret,
+    is_placeholder,
     load_secrets_from_aws,
     load_secrets_from_doppler,
     load_secrets_from_vault,
@@ -16,6 +17,7 @@ __all__ = [
     'get_int_config',
     'get_secret',
     'get_usernames',
+    'is_placeholder',
     'load_secrets_from_aws',
     'load_secrets_from_doppler',
     'load_secrets_from_vault'

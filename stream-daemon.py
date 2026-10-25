@@ -25,6 +25,7 @@ from stream_daemon.config import (
     get_int_config,
     get_usernames,
 )
+from stream_daemon.config.preflight import enforce_required_secrets
 from stream_daemon.models import StreamState, StreamStatus
 from stream_daemon.platforms.social import (
     BlueskyPlatform,
@@ -73,6 +74,9 @@ def main():
     logger.info("🚀 Stream Daemon Starting...")
     logger.info("="*60)
     
+    # Refuse to start if an enabled feature has an empty or placeholder secret.
+    enforce_required_secrets()
+
     # Initialize streaming platforms
     streaming_platforms = [
         TwitchPlatform(),

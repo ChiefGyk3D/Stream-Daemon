@@ -10,12 +10,107 @@ A production secrets manager now genuinely overrides local .env values.
 This module keeps the old import path working.
 """
 
+import logging
+import re
+
+from hypeman_social.config.secrets import get_secret as _library_get_secret
 from hypeman_social.config.secrets import (
-    get_secret,
     load_secrets_from_aws,
     load_secrets_from_doppler,
     load_secrets_from_vault,
 )
+
+logger = logging.getLogger(__name__)
+
+# The one placeholder rule for this project. Case-insensitive. The library
+# only rejects the upper-case 'YOUR_' prefix, so the lower-case your_* values
+# in the example file used to be accepted as real secrets.
+_PLACEHOLDER_PREFIXES = (
+    'your_', 'your-', 'changeme', 'xxx', 'placeholder', 'dp.st.your',
+)
+_PLACEHOLDER_WORDS = ('example', 'placeholder')
+
+
+def is_placeholder(value: str | None) -> bool:
+    """True if VALUE is empty, unset, or an unedited template placeholder.
+
+    Matches (case-insensitive): empty or whitespace, a value starting with
+    your_, your-, changeme, xxx, placeholder or dp.st.your, the bare words
+    example or placeholder, <...>, and any URL or path segment starting with
+    your_ (the Discord webhook template).
+    """
+    if value is None:
+        return True
+    text = str(value).strip().lower()
+    if not text or text in _PLACEHOLDER_WORDS:
+        return True
+    if text.startswith(_PLACEHOLDER_PREFIXES):
+        return True
+    if text.startswith('<') and text.endswith('>'):
+        return True
+    return any(seg.startswith('your_') for seg in re.split(r'[/:?&=]', text))
+
+
+def secret_env_name(platform: str, key: str) -> str:
+    """Name of the plain environment variable for a secret, e.g. MASTODON_ACCESS_TOKEN."""
+    return f"{platform.upper()}_{key.upper()}"
+
+
+# platform -> secret keys the daemon asks for. For the social platforms,
+# 'all' must each be usable; 'one_of' needs at least one usable; 'optional'
+# may be empty but never a placeholder.
+SOCIAL_SECRETS = {
+    'Mastodon': {'all': ['access_token'], 'optional': ['client_id', 'client_secret']},
+    'Bluesky': {'all': ['app_password']},
+    'Discord': {'one_of': ['webhook_url', 'webhook_youtube', 'webhook_tiktok',
+                           'webhook_twitch', 'webhook_kick']},
+    'Matrix': {'one_of': ['password', 'access_token']},
+}
+STREAMING_SECRETS = {
+    'Twitch': ['client_id', 'client_secret'],
+    'Kick': ['client_id', 'client_secret'],
+    'YouTube': ['api_key'],
+}
+LLM_SECRETS = {'LLM': ['gemini_api_key']}
+
+
+def _all_secret_keys():
+    for platform, spec in SOCIAL_SECRETS.items():
+        for keys in spec.values():
+            for key in keys:
+                yield platform, key
+    for table in (STREAMING_SECRETS, LLM_SECRETS):
+        for platform, keys in table.items():
+            for key in keys:
+                yield platform, key
+
+
+# The closed set of secret variable names, built from the tables above and
+# nothing else. Log lines take their variable name from here, never from an
+# argument or the environment, so no secret lookup can reach a log sink.
+_KNOWN_ENV_NAMES = {(p, k): secret_env_name(p, k) for p, k in _all_secret_keys()}
+GENERIC_VARIABLE = "a required variable"
+
+
+def known_env_name(platform: str, key: str) -> str | None:
+    """The constant env var name for a table entry, or None if not in the tables."""
+    return _KNOWN_ENV_NAMES.get((platform, key))
+
+
+def get_secret(platform: str, key: str, default: str | None = None, **backends) -> str | None:
+    """hypeman-social's get_secret, plus this project's placeholder rule.
+
+    A value that is_placeholder() is treated as not set: the default comes
+    back and the log names the variable (never the value).
+    """
+    value = _library_get_secret(platform, key, default, **backends)
+    if value is not None and value != default and is_placeholder(value):
+        logger.warning(
+            "⚠ %s is empty or still a template placeholder; treating it as not set",
+            known_env_name(platform, key) or GENERIC_VARIABLE,
+        )
+        return default
+    return value
 
 
 def backend_env_names(platform: str) -> dict[str, str]:
@@ -39,7 +134,10 @@ def backend_env_names(platform: str) -> dict[str, str]:
 __all__ = [
     'backend_env_names',
     'get_secret',
+    'is_placeholder',
+    'known_env_name',
     'load_secrets_from_aws',
     'load_secrets_from_doppler',
     'load_secrets_from_vault',
+    'secret_env_name',
 ]
