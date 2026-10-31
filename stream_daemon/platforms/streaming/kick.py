@@ -10,6 +10,7 @@ This is what cutting-edge streaming infrastructure looks like in 2026, folks.
 """
 
 import logging
+from datetime import UTC
 
 import requests
 
@@ -90,8 +91,8 @@ class KickPlatform(StreamingPlatform):
         # Check if we're in error cooldown period (10 minutes after hitting max errors)
         if self.consecutive_errors >= self.max_consecutive_errors:
             if self.error_cooldown_time:
-                from datetime import datetime, timedelta, timezone
-                time_since_error = datetime.now(timezone.utc) - self.error_cooldown_time
+                from datetime import datetime, timedelta
+                time_since_error = datetime.now(UTC) - self.error_cooldown_time
                 if time_since_error < timedelta(minutes=10):
                     # Still in cooldown period
                     remaining_min = 10 - (time_since_error.seconds // 60)
@@ -104,8 +105,8 @@ class KickPlatform(StreamingPlatform):
                     self.error_cooldown_time = None
             else:
                 # First time hitting max errors - start cooldown
-                from datetime import datetime, timezone
-                self.error_cooldown_time = datetime.now(timezone.utc)
+                from datetime import datetime
+                self.error_cooldown_time = datetime.now(UTC)
                 logger.warning(f"⚠ Kick disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
                 return False, None
         

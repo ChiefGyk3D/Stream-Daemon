@@ -2,7 +2,7 @@
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class StreamStatus:
                 if self.state == StreamState.OFFLINE and self.consecutive_live_checks >= 2:
                     self.state = StreamState.LIVE
                     self.title = title
-                    self.went_live_at = datetime.now(timezone.utc)
+                    self.went_live_at = datetime.now(UTC)
                     self.last_post_ids = {}  # Reset threading for new stream
                     logger.info(f"🔴 {self.platform_name}/{self.username} went LIVE: {title}")
                     return True  # State changed!
@@ -95,7 +95,7 @@ class StreamStatus:
                 # Require 2 consecutive offline checks to confirm (debouncing)
                 if self.state == StreamState.LIVE and self.consecutive_offline_checks >= 2:
                     self.state = StreamState.OFFLINE
-                    duration = datetime.now(timezone.utc) - self.went_live_at if self.went_live_at else None
+                    duration = datetime.now(UTC) - self.went_live_at if self.went_live_at else None
                     logger.info(f"🔵 {self.platform_name}/{self.username} went OFFLINE (duration: {duration})")
                     self.last_title = self.title  # Preserve title for end messages
                     self.title = None

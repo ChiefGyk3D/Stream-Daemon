@@ -8,7 +8,7 @@
 
 *Or: An over-engineered solution to a problem nobody asked us to solve, but we solved it anyway because we could.*
 
-[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MPL 2.0](https://img.shields.io/badge/License-MPL%202.0-brightgreen.svg)](https://www.mozilla.org/en-US/MPL/2.0/)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
@@ -222,7 +222,7 @@ When streaming to multiple platforms simultaneously (e.g., Twitch + YouTube + Ki
 
 ### Prerequisites
 
-- **Python 3.10+** (3.11+ recommended)
+- **Python 3.11+**
 - API credentials for at least one streaming platform (Twitch, YouTube, or Kick)
 - Credentials for at least one social platform (Mastodon, Bluesky, Discord, or Matrix)
 - (Optional) [Doppler account](https://doppler.com) for enterprise secrets management

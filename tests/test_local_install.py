@@ -18,10 +18,10 @@ print("="*70)
 # Test 1: Python version
 print("\n[1/7] Checking Python version...")
 py_version = sys.version_info
-if py_version.major == 3 and py_version.minor >= 10:
+if py_version.major == 3 and py_version.minor >= 11:
     print(f"✅ Python {py_version.major}.{py_version.minor}.{py_version.micro}")
 else:
-    print(f"❌ Python {py_version.major}.{py_version.minor}.{py_version.micro} (need 3.10+)")
+    print(f"❌ Python {py_version.major}.{py_version.minor}.{py_version.micro} (need 3.11+)")
     sys.exit(1)
 
 # Test 2: Core dependencies

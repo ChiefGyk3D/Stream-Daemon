@@ -39,7 +39,7 @@ python3 tests/test_local_install.py
 ```
 
 **Tests:**
-- ✅ Python 3.10+ version
+- ✅ Python 3.11+ version
 - ✅ Core dependencies (Twitch, Mastodon, Bluesky, Discord, Matrix)
 - ✅ AI dependencies (Gemini, Ollama) - optional
 - ✅ Security providers (AWS, Vault, Doppler) - optional

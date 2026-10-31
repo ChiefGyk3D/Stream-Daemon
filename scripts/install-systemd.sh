@@ -92,8 +92,6 @@ if [ "$DEPLOYMENT_MODE" = "1" ]; then
         PYTHON_CMD="python3.13"
     elif command -v python3.11 &> /dev/null; then
         PYTHON_CMD="python3.11"
-    elif command -v python3.10 &> /dev/null; then
-        PYTHON_CMD="python3.10"
     elif command -v python3 &> /dev/null; then
         PYTHON_CMD="python3"
     else

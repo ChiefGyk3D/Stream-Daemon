@@ -90,7 +90,7 @@ Helps set up Matrix bot credentials and room configuration.
 - Run from the project root directory (not from within scripts/)
 
 **create-secrets.sh requires:**
-- Python 3.10+ installed
+- Python 3.11+ installed
 - Platform-specific tools (optional):
   - Doppler CLI for Doppler integration
   - AWS CLI for AWS Secrets Manager
@@ -99,7 +99,7 @@ Helps set up Matrix bot credentials and room configuration.
 **install-systemd.sh requires:**
 - Root/sudo access
 - systemd (Linux)
-- For Python mode: Python 3.10+, pip
+- For Python mode: Python 3.11+, pip
 - For Docker mode: Docker, Docker Compose
 
 **uninstall-systemd.sh requires:**

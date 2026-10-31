@@ -2,7 +2,7 @@
 # dependency pinned and hashed; regenerate it after editing here:
 #
 #   pip install uv
-#   uv pip compile requirements.in --universal --generate-hashes --python-version 3.10 -o requirements.txt
+#   uv pip compile requirements.in --universal --generate-hashes --python-version 3.11 -o requirements.txt
 #
 # pip enters hash-checking mode by itself when it reads requirements.txt, so
 # `pip install -r requirements.txt` verifies every download against the lock.

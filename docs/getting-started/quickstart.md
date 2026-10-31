@@ -10,7 +10,7 @@ This guide gets you from zero to posting stream announcements as fast as possibl
 
 Before starting, make sure you have:
 
-- **Python 3.10+** installed ([python.org/downloads](https://www.python.org/downloads/))
+- **Python 3.11+** installed ([python.org/downloads](https://www.python.org/downloads/))
 - API credentials for **at least one** streaming platform (Twitch, YouTube, or Kick)
 - Account on **at least one** social platform (Mastodon, Bluesky, Discord, or Matrix)
 - (Optional) **AI Provider:** [Ollama](https://ollama.com) for local AI messages (recommended) or [Google Gemini API](https://aistudio.google.com/app/apikey) for cloud AI

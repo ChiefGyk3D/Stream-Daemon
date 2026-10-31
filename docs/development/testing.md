@@ -17,7 +17,7 @@ This guide covers testing procedures for Stream Daemon in both local and Docker 
 - Access to social platform APIs (Bluesky, Mastodon, Discord, Matrix)
 
 ### Local Testing Requirements
-- Python 3.10+
+- Python 3.11+
 - pip or pip3
 - Virtual environment (recommended)
 
@@ -37,7 +37,7 @@ python3 test_local_install.py
 ```
 
 This test validates:
-- ✅ Python version (3.10+)
+- ✅ Python version (3.11+)
 - ✅ Core dependencies (TwitchAPI, Mastodon, Bluesky, Discord, Matrix)
 - ✅ AI/LLM dependencies (Gemini, Ollama)
 - ✅ Security providers (AWS Secrets, Vault, Doppler)
@@ -274,15 +274,15 @@ python3 -m py_compile stream_daemon/**/*.py
 
 ### Python Version Mismatch
 
-**Error:** `Python 3.10+ required, found 3.9.x`
+**Error:** `Python 3.11+ required, found 3.9.x or 3.10.x`
 
 **Solution:**
 ```bash
 # Ubuntu/Debian
-sudo apt install python3.10 python3.10-venv
+sudo apt install python3.11 python3.11-venv
 
 # Update alternatives
-sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1
+sudo update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 1
 ```
 
 ### Missing Dependencies
