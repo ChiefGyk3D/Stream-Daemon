@@ -9,6 +9,7 @@ Forget curing cancer - someone needs to know when xXGamerBoi420Xx starts his For
 
 import asyncio
 import logging
+from datetime import UTC
 
 from twitchAPI.twitch import Twitch
 
@@ -82,8 +83,8 @@ class TwitchPlatform(StreamingPlatform):
         # Check if we're in error cooldown period (10 minutes after hitting max errors)
         if self.consecutive_errors >= self.max_consecutive_errors:
             if self.error_cooldown_time:
-                from datetime import datetime, timedelta, timezone
-                time_since_error = datetime.now(timezone.utc) - self.error_cooldown_time
+                from datetime import datetime, timedelta
+                time_since_error = datetime.now(UTC) - self.error_cooldown_time
                 if time_since_error < timedelta(minutes=10):
                     # Still in cooldown period
                     remaining_min = 10 - (time_since_error.seconds // 60)
@@ -96,8 +97,8 @@ class TwitchPlatform(StreamingPlatform):
                     self.error_cooldown_time = None
             else:
                 # First time hitting max errors - start cooldown
-                from datetime import datetime, timezone
-                self.error_cooldown_time = datetime.now(timezone.utc)
+                from datetime import datetime
+                self.error_cooldown_time = datetime.now(UTC)
                 logger.warning(f"⚠ Twitch disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
                 return False, None
             
@@ -140,7 +141,7 @@ class TwitchPlatform(StreamingPlatform):
                         return True, stream_data
                     return False, None
                     
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.error(f"Twitch API timeout checking {username}")
                     raise
                 except Exception as e:
@@ -157,7 +158,7 @@ class TwitchPlatform(StreamingPlatform):
             self.consecutive_errors = 0  # Reset on success
             return result
             
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self.consecutive_errors += 1
             logger.error(f"⚠ Twitch API timeout for {username}")
             logger.error(f"   Consecutive errors: {self.consecutive_errors}/{self.max_consecutive_errors}")

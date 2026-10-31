@@ -10,7 +10,7 @@ a drunk walking a tightrope. In the dark. On fire.
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from googleapiclient.discovery import build
 
@@ -129,7 +129,7 @@ class YouTubePlatform(StreamingPlatform):
         # Check if we're in error cooldown period (10 minutes after hitting max errors)
         if self.consecutive_errors >= self.max_consecutive_errors:
             if self.error_cooldown_time:
-                time_since_error = datetime.now(timezone.utc) - self.error_cooldown_time
+                time_since_error = datetime.now(UTC) - self.error_cooldown_time
                 if time_since_error < timedelta(minutes=10):
                     # Still in cooldown period
                     remaining_min = 10 - (time_since_error.seconds // 60)
@@ -142,13 +142,13 @@ class YouTubePlatform(StreamingPlatform):
                     self.error_cooldown_time = None
             else:
                 # First time hitting max errors - start cooldown
-                self.error_cooldown_time = datetime.now(timezone.utc)
+                self.error_cooldown_time = datetime.now(UTC)
                 logger.warning(f"⚠ YouTube disabled temporarily due to {self.consecutive_errors} consecutive errors (10 minute cooldown)")
                 return False, None
         
         # Check if quota was exceeded recently (skip checks for 1 hour to avoid spam)
         if self.quota_exceeded and self.quota_exceeded_time:
-            time_since_quota_error = datetime.now(timezone.utc) - self.quota_exceeded_time
+            time_since_quota_error = datetime.now(UTC) - self.quota_exceeded_time
             if time_since_quota_error < timedelta(hours=1):
                 # Still in cooldown period
                 logger.debug(f"YouTube API quota exceeded, skipping check (cooldown: {60 - time_since_quota_error.seconds // 60} min remaining)")
@@ -292,7 +292,7 @@ class YouTubePlatform(StreamingPlatform):
                 if not self.quota_exceeded:
                     # First time hitting quota limit
                     self.quota_exceeded = True
-                    self.quota_exceeded_time = datetime.now(timezone.utc)
+                    self.quota_exceeded_time = datetime.now(UTC)
                     logger.error("❌ YouTube API quota exceeded! Pausing YouTube checks for 1 hour.")
                     logger.error("   YouTube has strict daily quotas. Consider:")
                     logger.error("   • Increasing check interval (SETTINGS_CHECK_INTERVAL)")

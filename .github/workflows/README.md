@@ -9,7 +9,7 @@ Doppler project.
 
 | Workflow | Triggers | Calls | What it does |
 |---|---|---|---|
-| `ci.yml` | push to main/develop/copilot/**, PRs, manual | `python-ci.yml` | Lint (ruff), tests on Python 3.10–3.14 with coverage to Codecov, Docker build with an import check, one `CI green` gate job for branch protection |
+| `ci.yml` | push to main/develop/copilot/**, PRs, manual | `python-ci.yml` | Lint (ruff), tests on Python 3.11–3.14 with coverage to Codecov, Docker build with an import check, one `CI green` gate job for branch protection |
 | `release.yml` | push to main, `v*.*.*` tags, PRs, manual | `python-docker-release.yml` | Build and test on every PR; on main and tags publish a multi-arch (amd64 + arm64) image to `ghcr.io/chiefgyk3d/stream-daemon` and Docker Hub, signed with cosign, with a syft SBOM attached and SLSA provenance recorded; Trivy scan to the Security tab |
 | `security.yml` | push to main/develop, PRs, weekly, manual | `security.yml` | CodeQL, gitleaks over the full history, pip-audit, dependency review on PRs, Snyk |
 

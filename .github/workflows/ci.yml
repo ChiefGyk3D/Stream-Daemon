@@ -1,4 +1,4 @@
-# Lint, tests on Python 3.10-3.14 with coverage, Docker build. The jobs live in
+# Lint, tests on Python 3.11-3.14 with coverage, Docker build. The jobs live in
 # ChiefGyk3D/git-your-ship-together; this file only says what is specific to
 # Stream Daemon.
 name: CI
@@ -27,7 +27,7 @@ jobs:
       DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}   # optional Service Token fallback; unset means OIDC only
     with:
       runners: '["ubuntu-24.04", "ubuntu-24.04-arm"]'
-      python-versions: '["3.10", "3.11", "3.12", "3.13", "3.14"]'
+      python-versions: '["3.11", "3.12", "3.13", "3.14"]'
       coverage-python-version: "3.14"
       lint-python-version: "3.14"
       install-command: |

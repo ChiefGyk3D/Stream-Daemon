@@ -23,7 +23,7 @@ This guide covers all ways to install and run Stream Daemon, from simple Python 
 ### Minimum Requirements
 
 - **OS:** Linux, macOS, Windows, or any Docker-compatible platform
-- **Python:** 3.10 or higher (3.11+ recommended)
+- **Python:** 3.11 or higher
 - **RAM:** 128MB minimum, 256MB recommended
 - **Disk:** 100MB for code + dependencies
 - **Network:** Internet connection for API calls
@@ -70,7 +70,7 @@ brew install python3 git
 
 **Verify installation:**
 ```bash
-python3 --version  # Should be 3.10 or higher
+python3 --version  # Should be 3.11 or higher
 pip3 --version
 ```
 
