@@ -4,7 +4,7 @@
 # Can't use 3.13. That would be barbaric. We need 3.14 to tell people about Fortnite streams.
 # The base image is pinned by digest so a rebuild is reproducible and a
 # retagged upstream image cannot slip in; Dependabot moves the digest.
-FROM python:3.14-slim@sha256:c3e521df8b2b498a7a682e7e18676771cb80c6b75b8699af886b2d554ce40151
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 
 # Set build arguments for platform detection (automatically set by buildx)
 ARG TARGETPLATFORM
