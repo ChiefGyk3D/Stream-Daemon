@@ -28,6 +28,20 @@
 hypeman-social[all,aws,vault,doppler]>=0.3.4,<0.4
 
 twitchAPI==4.5.0
+# CVE-2026-114605 / GHSA-45c3-73f7-pv4m: dnspython (pulled in transitively via
+# hypeman-social -> atproto) must be >=2.9.0 for excessive-CPU-use fix in
+# dns.name.from_wire_parser(). atproto allows dnspython<3,>=2.4.0, so this floor
+# is within range; pinned explicitly per this file's policy of trusting no
+# transitive resolution for security-relevant packages.
+# GHSA-vvf4-9x63-8xvv: a second dnspython DoS advisory landed after that fix;
+# patched in 2.9.2, so raise the floor again.
+dnspython>=2.9.2,<3
+
+# GHSA-mf5v-w3w3-f6cg: opentelemetry-api (pulled in transitively via
+# hypeman-social) has a fix in 1.45.2; pinned explicitly for the same reason
+# as dnspython above.
+opentelemetry-api>=1.45.2
+
 python-dotenv==1.2.4
 google-api-python-client==2.202.0
 # CVE-2025-4565 fix: Requires protobuf >= 4.25.8 (v4), >= 5.29.5 (v5), or >= 6.31.1 (v6)
