@@ -1518,6 +1518,12 @@ Stream Daemon is built on the shoulders of giants:
 
 If you find Stream Daemon useful, consider supporting development:
 
+<div align="center">
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/A0A4E59UP)
+
+</div>
+
 **Donate**:
 
 <div align="center">
